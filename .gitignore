@@ -41,3 +41,8 @@ CineWindows.exe
 CineWindows-*.exe
 data/gschemas.compiled
 src/cine.gresource
+
+# Generated Windows resources
+CineWindows.ico
+*.res
+src/launcher.o

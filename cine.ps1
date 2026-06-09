@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Launches CineWindows on Windows via MSYS2 MINGW64.
+    Launches CineWindows on Windows using bundled or MSYS2 Python runtime.
 .DESCRIPTION
-    Sets up the required environment (PATH, GSettings schema dir,
-    locale) and launches CineWindows. Supports passing video files as arguments.
+    Uses bundled runtime first (from \runtime\bin\), falls back to MSYS2 MINGW64.
+    Supports passing video files as arguments.
 .PARAMETER FilePath
     One or more video files to open.
 .EXAMPLE
@@ -19,20 +19,28 @@ param(
 
 $ErrorActionPreference = "Stop"
 $CineDir = Split-Path -Parent $PSCommandPath
-$Msys2Dir = "C:\msys64"
-$MingwDir = "$Msys2Dir\mingw64"
+$BundledPython = "$CineDir\runtime\bin\python.exe"
 
-if (-not (Test-Path "$MingwDir\bin\python.exe")) {
-    Write-Error "MSYS2 MINGW64 not found at $Msys2Dir. Please run setup_windows.ps1 first."
-    exit 1
+if (Test-Path $BundledPython) {
+    $env:PATH = "$CineDir\runtime\bin;$env:PATH"
+    $env:GSETTINGS_SCHEMA_DIR = "$CineDir\data"
+    $env:LANG = "C"
+    $env:LC_ALL = "C"
+    $python = $BundledPython
+} else {
+    $Msys2Dir = "C:\msys64"
+    $MingwDir = "$Msys2Dir\mingw64"
+    if (-not (Test-Path "$MingwDir\bin\python.exe")) {
+        Write-Error "No Python runtime found. Please reinstall CineWindows using the official installer."
+        exit 1
+    }
+    $env:PATH = "$MingwDir\bin;$env:PATH"
+    $env:GSETTINGS_SCHEMA_DIR = "$CineDir\data"
+    $env:LANG = "C"
+    $env:LC_ALL = "C"
+    $python = "$MingwDir\bin\python.exe"
 }
 
-$env:PATH = "$MingwDir\bin;$env:PATH"
-$env:GSETTINGS_SCHEMA_DIR = "$CineDir\data"
-$env:LANG = "C"
-$env:LC_ALL = "C"
-
-$python = "$MingwDir\bin\python.exe"
 $script = "$CineDir\start_cine.py"
 
 if ($FilePath.Count -gt 0) {

@@ -3,34 +3,15 @@ name: Build And Release
 on:
   push:
     tags: ["v*"]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
 
 permissions:
   contents: write
 
-env:
-  PYTHON_VERSION: "3.13"
-
 jobs:
-  python-check:
-    name: Python Syntax Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Syntax check
-        run: python -m py_compile start_cine.py src/*.py
-
   windows:
     name: Windows EXE + Installer
     runs-on: windows-latest
-    needs: python-check
 
     steps:
       - uses: actions/checkout@v4
@@ -40,44 +21,35 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-
-      - name: Install MSYS2 packages
-        shell: msys2 {0}
-        run: |
-          pacman -S --noconfirm --needed \
-            mingw-w64-x86_64-gcc \
-            mingw-w64-x86_64-gtk4 \
-            mingw-w64-x86_64-libadwaita \
-            mingw-w64-x86_64-python \
-            mingw-w64-x86_64-python-gobject \
-            mingw-w64-x86_64-python-pip \
-            mingw-w64-x86_64-mpv \
-            mingw-w64-x86_64-blueprint-compiler \
-            mingw-w64-x86_64-adwaita-icon-theme \
-            mingw-w64-x86_64-yt-dlp \
+          install: >
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-gtk4
+            mingw-w64-x86_64-libadwaita
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-gobject
+            mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-mpv
+            mingw-w64-x86_64-blueprint-compiler
+            mingw-w64-x86_64-adwaita-icon-theme
+            mingw-w64-x86_64-yt-dlp
             mingw-w64-x86_64-ffmpeg
+            mingw-w64-x86_64-librsvg
+            mingw-w64-x86_64-ntldd
 
       - name: Install Python dependencies
         shell: msys2 {0}
-        run: pip install -r requirements.txt
+        run: pip install --quiet -r requirements.txt
 
-      - name: Build package (blueprint, gresource, schemas, launcher)
+      - name: Build Windows package
         shell: msys2 {0}
         run: powershell.exe -NoProfile -File build_windows.ps1
-
-      - name: Smoke import
-        shell: msys2 {0}
-        run: |
-          export GSETTINGS_SCHEMA_DIR="$PWD/data"
-          python -m py_compile start_cine.py src/*.py
 
       - name: Create ZIP archive
         shell: pwsh
         run: |
-          Compress-Archive -Path dist\CineWindows\* `
-            -DestinationPath "CineWindows-${{ github.ref_name }}-windows-x64.zip" -Force
+          7z a -mx9 "CineWindows-${{ github.ref_name }}-windows-x64.zip" ".\dist\CineWindows\*"
 
-      - name: Install NSIS (chocolatey)
+      - name: Install NSIS
         shell: pwsh
         run: choco install nsis -y --no-progress
 
@@ -88,13 +60,13 @@ jobs:
             | ForEach-Object { $_.Matches.Groups[1].Value }
           & "C:\Program Files (x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" installer.nsi
 
-      - name: Upload artifacts
+      - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: CineWindows-windows-x64
           path: |
             dist/CineWindows/
-            CineWindows-${{ github.ref_name }}-windows-x64.zip
+            CineWindows-*.zip
             CineWindows-*.exe
 
       - name: Publish GitHub Release

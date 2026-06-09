@@ -35,7 +35,7 @@ from .compat import (
     get_display_param,
     GL_FRAMEBUFFER_BINDING,
 )
-from .constants import APP_NAME, RESOURCE_PREFIX
+from .constants import APP_ID, APP_NAME, RESOURCE_PREFIX
 
 from .save_session import (
     save_last_playlist_file,
@@ -315,6 +315,18 @@ class CineWindow(Adw.ApplicationWindow):
     def _setup_elements(self):
         self.set_default_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
         self.set_title(_(APP_NAME))
+
+        if IS_WINDOWS:
+            _icon_path = os.path.normpath(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "..", "data", "icons", "hicolor", "scalable", "apps",
+                             "io.github.gyrolet.CineWindows.png")
+            )
+            if os.path.exists(_icon_path):
+                try:
+                    self.start_page.set_icon(Gio.FileIcon.new(Gio.File.new_for_path(_icon_path)))
+                except Exception:
+                    pass
 
         for widget in [
             self.controls_wrap_box,

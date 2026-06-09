@@ -1,0 +1,32 @@
+#include <winres.h>
+
+APP_ICON ICON "CineWindows.ico"
+
+APP_VERSION VERSIONINFO
+FILEVERSION     1,5,2,0
+PRODUCTVERSION  1,5,2,0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     0x0L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "gyrolet"
+      VALUE "FileDescription", "CineWindows Media Player"
+      VALUE "FileVersion", "1.5.2"
+      VALUE "InternalName", "CineWindows"
+      VALUE "LegalCopyright", "(C) 2026 gyrolet. GPL-3.0"
+      VALUE "OriginalFilename", "CineWindows.exe"
+      VALUE "ProductName", "CineWindows"
+      VALUE "ProductVersion", "1.5.2"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

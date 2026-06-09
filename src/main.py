@@ -233,9 +233,15 @@ class CineApplication(Adw.Application):
     def _on_about_action(self, *args):
         """Callback for the app.about action."""
         APP_VERSION = getattr(sys.modules["__main__"], "VERSION")
+
+        if IS_WINDOWS:
+            _icon = self._load_windows_app_icon()
+        else:
+            _icon = APP_ID
+
         about = Adw.AboutDialog(
             application_name=_(APP_NAME),
-            application_icon=APP_ID,
+            application_icon=_icon,
             developer_name=APP_DEVELOPER,
             version=APP_VERSION,
             copyright=f"(C) 2026 {APP_DEVELOPER}",
@@ -260,6 +266,21 @@ class CineApplication(Adw.Application):
         )
 
         about.present(self.props.active_window)
+
+    def _load_windows_app_icon(self):
+        """Load application icon from file for Windows (icon theme unavailable)."""
+        icon_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "data", "icons", "hicolor", "scalable", "apps",
+            "io.github.gyrolet.CineWindows.png"
+        )
+        icon_path = os.path.normpath(icon_path)
+        if os.path.exists(icon_path):
+            try:
+                return Gio.FileIcon.new(Gio.File.new_for_path(icon_path))
+            except Exception:
+                pass
+        return APP_ID
 
     def _create_action(self, name, callback, shortcuts=None):
         """Add an application action."""
