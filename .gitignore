@@ -1,10 +1,43 @@
-_build
-build-dir
-build
-repo
-.flatpak
-.flatpak-builder
-.git
-.vscode
-/src/__pycache__
-io.github.diegopvlk.Cine.flatpak
+# Build directories
+_build/
+build/
+build-dir/
+repo/
+dist/
+
+# Local junction (cine/ -> src/)
+cine/
+
+# Flatpak
+.flatpak/
+.flatpak-builder/
+*.flatpak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+*.pid
+
+# Compiled launcher (built from src/launcher.c)
+cine.exe
+CineWindows.exe
+*.zip
+CineWindows-*.exe
+data/gschemas.compiled
+src/cine.gresource

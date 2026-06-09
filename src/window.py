@@ -27,6 +27,16 @@ from urllib.parse import urlparse
 from time import time
 import shlex
 
+from .compat import (
+    IS_WINDOWS,
+    MPV_CONFIG_DIR,
+    load_egl,
+    load_gl,
+    get_display_param,
+    GL_FRAMEBUFFER_BINDING,
+)
+from .constants import APP_NAME, RESOURCE_PREFIX
+
 from .save_session import (
     save_last_playlist_file,
     restore_last_playlist,
@@ -44,7 +54,6 @@ from .utils import (
     KEY_REMAP,
     SUB_EXTS,
     SCREENSHOT_DIR,
-    CONFIG_DIR,
     INPUT_CONF,
 )
 
@@ -58,33 +67,24 @@ gi.require_version("Gio", "2.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
-gi.require_version("GdkWayland", "4.0")
-gi.require_version("GdkX11", "4.0")
 gi.require_version("GObject", "2.0")
 from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject
-from gi.repository import (
-    GdkWayland,  # pyright: ignore[reportAttributeAccessIssue]
-    GdkX11,
-)
 
-libegl = ctypes.CDLL("libEGL.so.1")
-egl_get_proc_address = libegl.eglGetProcAddress
-egl_get_proc_address.restype = ctypes.c_void_p
-egl_get_proc_address.argtypes = [ctypes.c_char_p]
+if not IS_WINDOWS:
+    gi.require_version("GdkWayland", "4.0")
+    gi.require_version("GdkX11", "4.0")
+    from gi.repository import GdkWayland, GdkX11  # pyright: ignore[reportAttributeAccessIssue]
 
-GL_FRAMEBUFFER_BINDING = 0x8CA6
-libgl = ctypes.CDLL("libGL.so.1")
-glGetIntegerv = libgl.glGetIntegerv
-glGetIntegerv.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_int)]
+_egl, egl_get_proc_address = load_egl()
+_gl, _glGetIntegerv = load_gl()
 
 gtk_setts: Gtk.Settings | None = Gtk.Settings.get_default()
-gtk = ctypes.CDLL("libgtk-4.so.1")
 display = Gdk.Display.get_default()
 
 DEFAULT_WIDTH, DEFAULT_HEIGHT = 1120, 630
 
 
-@Gtk.Template(resource_path="/io/github/diegopvlk/Cine/window.ui")
+@Gtk.Template(resource_path=f"{RESOURCE_PREFIX}/window.ui")
 class CineWindow(Adw.ApplicationWindow):
     __gtype_name__ = "CineWindow"
 
@@ -143,7 +143,7 @@ class CineWindow(Adw.ApplicationWindow):
         self.offload: Gtk.GraphicsOffload = Gtk.GraphicsOffload(child=self.gl_area)
         self.offload.set_black_background(True)
 
-        vendor: str | None = get_gpu_vendor(display, libgl)
+        vendor: str | None = get_gpu_vendor(display, _gl)
         if vendor and "nvidia" in vendor:
             self.offload.set_enabled(Gtk.GraphicsOffloadEnabled.DISABLED)
 
@@ -187,17 +187,17 @@ class CineWindow(Adw.ApplicationWindow):
         self.hide_timeout_id: int = 0
         self.is_fs: bool = False
         self.is_inactive: bool = False
-        self.mpv_ctx: mpv.MpvRenderContext
+        self.mpv_ctx: mpv.MpvRenderContext | None
 
         self.mpv = mpv.MPV(
             # terminal=True,
             # log_handler=print,
             loglevel="info",
-            audio_client_name=_("Cine"),
+            audio_client_name=_(APP_NAME),
             screenshot_directory=SCREENSHOT_DIR,
             screenshot_template="cine_%n",
             config=True,
-            config_dir=CONFIG_DIR,
+            config_dir=MPV_CONFIG_DIR,
             input_default_bindings=False,
             input_vo_keyboard=True,
             load_scripts=True,
@@ -303,7 +303,7 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _present_shortcuts(self, *args):
         builder = Gtk.Builder.new_from_resource(
-            "/io/github/diegopvlk/Cine/shortcuts-dialog.ui"
+            f"{RESOURCE_PREFIX}/shortcuts-dialog.ui"
         )
         self.shortcuts_dialog = cast(
             Adw.ShortcutsDialog,  # pyright: ignore[reportAttributeAccessIssue]
@@ -314,7 +314,7 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _setup_elements(self):
         self.set_default_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
-        self.set_title(_("Cine"))
+        self.set_title(_(APP_NAME))
 
         for widget in [
             self.controls_wrap_box,
@@ -1637,32 +1637,7 @@ class CineWindow(Adw.ApplicationWindow):
         return True
 
     def _get_display_param(self):
-        param = {}
-
-        # see https://gist.github.com/omnp/6ac3385e2b3f6cab987d84e6477e636a
-
-        def get_pointer(display):
-            ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
-            ctypes.pythonapi.PyCapsule_GetPointer.argtypes = (ctypes.py_object,)
-            return ctypes.pythonapi.PyCapsule_GetPointer(display.__gpointer__, None)
-
-        try:
-            if isinstance(display, GdkWayland.WaylandDisplay):
-                gtk.gdk_wayland_display_get_wl_display.restype = ctypes.c_void_p
-                gtk.gdk_wayland_display_get_wl_display.argtypes = [ctypes.c_void_p]
-                ptr = gtk.gdk_wayland_display_get_wl_display(get_pointer(display))
-                if ptr:
-                    param["wl_display"] = ptr
-            elif isinstance(display, GdkX11.X11Display):
-                gtk.gdk_x11_display_get_xdisplay.restype = ctypes.c_void_p
-                gtk.gdk_x11_display_get_xdisplay.argtypes = [ctypes.c_void_p]
-                ptr = gtk.gdk_x11_display_get_xdisplay(get_pointer(display))
-                if ptr:
-                    param["x11_display"] = ptr
-        except Exception as e:
-            print(f"Error getting display param: {e}")
-
-        return param
+        return get_display_param(display)
 
     def _on_realize_area(self, area):
         area.make_current()
@@ -1693,7 +1668,7 @@ class CineWindow(Adw.ApplicationWindow):
         if not self.mpv_ctx:
             return
         try:
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING, self.fbo)
+            _glGetIntegerv(GL_FRAMEBUFFER_BINDING, self.fbo)
             scale = area.props.scale_factor
 
             self.mpv_ctx.render(
@@ -1706,7 +1681,6 @@ class CineWindow(Adw.ApplicationWindow):
             )
         except Exception as e:
             print(f"Render error: {e}")
-            return
 
     def _set_window_size(self, width, height):
         if width <= 0 or height <= 0:
@@ -1766,9 +1740,13 @@ class CineWindow(Adw.ApplicationWindow):
         for idx, item in enumerate(cast(list, self.mpv.playlist)):
             new_items.append(PlaylistItemObj(item, idx))
 
+            try:
+                has_doc_path = f"/run/user/{os.getuid()}/doc/" not in item.get("filename")
+            except AttributeError:
+                has_doc_path = True
             if (
                 self.has_some_doc_path
-                or f"/run/user/{os.getuid()}/doc/" not in item.get("filename")
+                or has_doc_path
                 or has_host_permission
             ):
                 continue
@@ -1999,7 +1977,8 @@ class CineWindow(Adw.ApplicationWindow):
 
                 self.start_page.set_visible(idle_active)
                 self.controls_box.set_visible(not idle_active)
-                self.gl_area.set_visible(not idle_active)
+                if self.gl_area is not None:
+                    self.gl_area.set_visible(not idle_active)
 
                 if idle_active:
                     self.mpv.playlist_clear()

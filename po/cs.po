@@ -1,11 +1,11 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the io.github.diegopvlk.Cine package.
+# This file is distributed under the same license as the io.github.gyrolet.CineWindows package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: io.github.diegopvlk.Cine\n"
+"Project-Id-Version: io.github.gyrolet.CineWindows\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-02 20:07-0300\n"
 "PO-Revision-Date: 2026-04-21 12:10+0000\n"
@@ -18,75 +18,75 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
 "X-Generator: Weblate 5.17.1-dev\n"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:2 src/main.py:229 src/mpris.py:147
+#: data/io.github.gyrolet.CineWindows.desktop.in:2 src/main.py:229 src/mpris.py:147
 #: src/mpris.py:365 src/window.py:193 src/window.py:314 src/window.blp:6
 #: src/window.blp:461
 msgid "Cine"
 msgstr "Cine"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:3
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:23
+#: data/io.github.gyrolet.CineWindows.desktop.in:3
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:23
 msgid "Play your videos"
-msgstr "Přehrávejte svá videa"
+msgstr "PÅ™ehrÃ¡vejte svÃ¡ videa"
 
 #. TRANSLATORS: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
-#: data/io.github.diegopvlk.Cine.desktop.in:10
+#: data/io.github.gyrolet.CineWindows.desktop.in:10
 msgid "Audio;Video;Movie;TV;Film;Clip;Player;Cine;mpv;"
-msgstr "Zvuk;Video;Film;TV;Klip;Přehrávač;Cine;mpv;"
+msgstr "Zvuk;Video;Film;TV;Klip;PÅ™ehrÃ¡vaÄ;Cine;mpv;"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:18 src/shortcuts-dialog.blp:11
+#: data/io.github.gyrolet.CineWindows.desktop.in:18 src/shortcuts-dialog.blp:11
 #: src/window.blp:136
 msgid "New Window"
-msgstr "Nové okno"
+msgstr "NovÃ© okno"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:25
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:25
 #, fuzzy
 msgid ""
 "Cine combines a clean interface with a high-performance engine to deliver a "
 "seamless viewing experience."
 msgstr ""
-"Cine poskytuje bezproblémový zážitek ze sledování kombinací čistého rozhraní "
-"s vysokovýkonostním základem."
+"Cine poskytuje bezproblÃ©movÃ½ zÃ¡Å¾itek ze sledovÃ¡nÃ­ kombinacÃ­ ÄistÃ©ho rozhranÃ­ "
+"s vysokovÃ½konostnÃ­m zÃ¡kladem."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:27
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:27
 msgid "Simple Design: A refined, distraction-free interface"
-msgstr "Jednoduchý design: vyladěné rozhraní bez žádných rozptýlení"
+msgstr "JednoduchÃ½ design: vyladÄ›nÃ© rozhranÃ­ bez Å¾Ã¡dnÃ½ch rozptÃ½lenÃ­"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:28
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:28
 msgid ""
 "MPV-Based: Leverages the robust power of MPV for great playback and format "
 "support"
 msgstr ""
-"Založeno na MPV: využívá robustního výkonu MPV pro skvělé přehrávání a "
-"podporu formátů"
+"ZaloÅ¾eno na MPV: vyuÅ¾Ã­vÃ¡ robustnÃ­ho vÃ½konu MPV pro skvÄ›lÃ© pÅ™ehrÃ¡vÃ¡nÃ­ a "
+"podporu formÃ¡tÅ¯"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:29
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:29
 msgid ""
 "Audio and Subtitles: Control track selection and synchronization for both"
-msgstr "Zvuk a titulky: ovládejte volby stop a synchronizaci obojího"
+msgstr "Zvuk a titulky: ovlÃ¡dejte volby stop a synchronizaci obojÃ­ho"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:30
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:30
 msgid ""
 "Video Controls: Easily adjust brightness, contrast, zoom, aspect ratio, etc."
 msgstr ""
-"Ovládání videa: jednoduše upravte jas, kontrast, přiblížení, poměr stran atd."
+"OvlÃ¡dÃ¡nÃ­ videa: jednoduÅ¡e upravte jas, kontrast, pÅ™iblÃ­Å¾enÃ­, pomÄ›r stran atd."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:42
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:42
 msgid "Video Playing"
-msgstr "Přehrávání videa"
+msgstr "PÅ™ehrÃ¡vÃ¡nÃ­ videa"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:46
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:46
 msgid "Video Options"
-msgstr "Možnosti videa"
+msgstr "MoÅ¾nosti videa"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:50 src/preferences.blp:5
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:50 src/preferences.blp:5
 #: src/preferences.blp:77 src/window.blp:141
 msgid "Preferences"
-msgstr "Předvolby"
+msgstr "PÅ™edvolby"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:54
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:54
 msgid "Main Window"
-msgstr "Hlavní okno"
+msgstr "HlavnÃ­ okno"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/main.py:239
@@ -95,11 +95,11 @@ msgstr "seja-arctic-fox <seja.czstudio@gmail.com>"
 
 #: src/mpris.py:154 src/mpris.py:222 src/mpris.py:357
 msgid "Unknown title"
-msgstr "Neznámý název"
+msgstr "NeznÃ¡mÃ½ nÃ¡zev"
 
 #: src/options.py:193 src/options.blp:79 src/options.blp:137
 msgid "Original"
-msgstr "Původní"
+msgstr "PÅ¯vodnÃ­"
 
 #: src/playlist.py:113 src/playlist.blp:49
 msgid "Search"
@@ -109,12 +109,12 @@ msgstr ""
 #: src/preferences.py:370 src/playlist.blp:56
 #, fuzzy
 msgid "Save Playlist"
-msgstr "Uložit frontu"
+msgstr "UloÅ¾it frontu"
 
 #: src/playlist.py:182 src/preferences.blp:115 src/preferences.blp:150
 msgid ""
 "Requires flatpak permission to read the folder where the video is stored"
-msgstr "Vyžaduje oprávnění flatpak ke čtení složky, ve které je video uloženo"
+msgstr "VyÅ¾aduje oprÃ¡vnÄ›nÃ­ flatpak ke ÄtenÃ­ sloÅ¾ky, ve kterÃ© je video uloÅ¾eno"
 
 #: src/playlist.py:319 src/window.py:1284 src/window.py:1814
 msgid "File Error"
@@ -122,7 +122,7 @@ msgstr "Chyba souboru"
 
 #: src/playlist.py:423
 msgid "Open Item Location"
-msgstr "Otevřít umístění položky"
+msgstr "OtevÅ™Ã­t umÃ­stÄ›nÃ­ poloÅ¾ky"
 
 #: src/playlist.py:424
 msgid "Remove from Playlist"
@@ -142,11 +142,11 @@ msgstr[2] ""
 
 #: src/preferences.py:112 src/preferences.blp:170
 msgid "Subtitle Color"
-msgstr "Barva titulků"
+msgstr "Barva titulkÅ¯"
 
 #: src/preferences.py:126 src/preferences.blp:250
 msgid "Subtitle Background"
-msgstr "Pozadí titulků"
+msgstr "PozadÃ­ titulkÅ¯"
 
 #: src/preferences.py:367
 msgid "Some features require extra permission to work:"
@@ -193,20 +193,20 @@ msgstr "Hlasitost"
 
 #: src/shortcuts.py:31
 msgid "Volume Increase"
-msgstr "Zvýšení hlasitosti"
+msgstr "ZvÃ½Å¡enÃ­ hlasitosti"
 
 #: src/shortcuts.py:32
 msgid "Volume Decrease"
-msgstr "Snížení hlasitosti"
+msgstr "SnÃ­Å¾enÃ­ hlasitosti"
 
 #: src/shortcuts.py:35 src/shortcuts.py:36 src/shortcuts.py:37
 #: src/preferences.blp:273 src/preferences.blp:285 src/window.blp:209
 msgid "Play/Pause"
-msgstr "Přehrát/Pozastavit"
+msgstr "PÅ™ehrÃ¡t/Pozastavit"
 
 #: src/shortcuts.py:38
 msgid "Show/Hide Subtitles"
-msgstr "Ukázat/Skrýt titulky"
+msgstr "UkÃ¡zat/SkrÃ½t titulky"
 
 #: src/shortcuts.py:39 src/shortcuts.py:40 src/shortcuts.py:169
 #: src/window.blp:270
@@ -217,29 +217,29 @@ msgstr "Titulky"
 #, fuzzy
 #| msgid "Switch to Next Subtitle Track"
 msgid "Next Subtitle Track"
-msgstr "Přepnout na další stopu titulků"
+msgstr "PÅ™epnout na dalÅ¡Ã­ stopu titulkÅ¯"
 
 #: src/shortcuts.py:40
 #, fuzzy
 #| msgid "Switch to Previous Subtitle Track"
 msgid "Previous Subtitle Track"
-msgstr "Přepnout na předchozí stopu titulků"
+msgstr "PÅ™epnout na pÅ™edchozÃ­ stopu titulkÅ¯"
 
 #: src/shortcuts.py:41 src/shortcuts.py:42
 msgid "Secondary Subtitles"
-msgstr "Sekundární titulky"
+msgstr "SekundÃ¡rnÃ­ titulky"
 
 #: src/shortcuts.py:41
 #, fuzzy
 #| msgid "Switch Secondary Subtitle Track"
 msgid "Next Secondary Subtitle Track"
-msgstr "Přepnout na sekundární stopu titulků"
+msgstr "PÅ™epnout na sekundÃ¡rnÃ­ stopu titulkÅ¯"
 
 #: src/shortcuts.py:42
 #, fuzzy
 #| msgid "Switch Secondary Subtitle Track"
 msgid "Previous Secondary Subtitle Track"
-msgstr "Přepnout na sekundární stopu titulků"
+msgstr "PÅ™epnout na sekundÃ¡rnÃ­ stopu titulkÅ¯"
 
 #: src/shortcuts.py:43 src/shortcuts.py:44 src/window.py:736 src/window.blp:285
 msgid "Audio"
@@ -249,34 +249,34 @@ msgstr "Zvuk"
 #, fuzzy
 #| msgid "Switch to Next Audio Track"
 msgid "Next Audio Track"
-msgstr "Přepnout na další zvukovou stopu"
+msgstr "PÅ™epnout na dalÅ¡Ã­ zvukovou stopu"
 
 #: src/shortcuts.py:44
 #, fuzzy
 #| msgid "Switch to Previous Audio Track"
 msgid "Previous Audio Track"
-msgstr "Přepnout na předchozí zvukovou stopu"
+msgstr "PÅ™epnout na pÅ™edchozÃ­ zvukovou stopu"
 
 #: src/shortcuts.py:45
 msgid "Seek 10s Backward"
-msgstr "Posunout o 10 s zpět"
+msgstr "Posunout o 10 s zpÄ›t"
 
 #: src/shortcuts.py:46
 msgid "Seek 10s Forward"
-msgstr "Posunout o 10 s vpřed"
+msgstr "Posunout o 10 s vpÅ™ed"
 
 #: src/shortcuts.py:47
 msgid "Seek 5s Backward"
-msgstr "Posunout o 5 s zpět"
+msgstr "Posunout o 5 s zpÄ›t"
 
 #: src/shortcuts.py:48
 msgid "Seek 5s Forward"
-msgstr "Posunout o 5 s vpřed"
+msgstr "Posunout o 5 s vpÅ™ed"
 
 #: src/shortcuts.py:49 src/shortcuts.py:50 src/window.py:1859
 #: src/window.blp:382
 msgid "Fullscreen"
-msgstr "Zvětšit na celou obrazovku"
+msgstr "ZvÄ›tÅ¡it na celou obrazovku"
 
 #: src/shortcuts.py:51 src/window.py:1859
 msgid "Exit Fullscreen"
@@ -513,7 +513,7 @@ msgstr ""
 
 #: src/window.py:708 src/playlist.blp:30 src/window.blp:100
 msgid "Add Files"
-msgstr "Přidat soubory"
+msgstr "PÅ™idat soubory"
 
 #: src/window.py:712
 msgid "Add Subtitle"
@@ -721,7 +721,7 @@ msgstr ""
 #, fuzzy
 #| msgid "Play/Pause"
 msgid "Focus/Play/Pause"
-msgstr "Přehrát/Pozastavit"
+msgstr "PÅ™ehrÃ¡t/Pozastavit"
 
 #: src/preferences.blp:275 src/preferences.blp:287
 msgid "Disabled"
@@ -749,7 +749,7 @@ msgstr ""
 
 #: src/shortcuts-dialog.blp:8
 msgid "General"
-msgstr "Obecné"
+msgstr "ObecnÃ©"
 
 #: src/shortcuts-dialog.blp:31
 msgid "Add Files to Playlist"
@@ -836,5 +836,6 @@ msgid "Drag and drop files here"
 msgstr ""
 
 #: src/window.blp:475
-msgid "Open…"
+msgid "Openâ€¦"
 msgstr ""
+

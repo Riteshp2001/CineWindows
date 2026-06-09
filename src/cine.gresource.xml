@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/io/github/diegopvlk/Cine">
+  <gresource prefix="/io/github/gyrolet/CineWindows">
     <file alias="style.css">style.css</file>
     <file preprocess="xml-stripblanks">playlist.ui</file>
     <file preprocess="xml-stripblanks">preferences.ui</file>
@@ -8,7 +8,7 @@
     <file preprocess="xml-stripblanks">window.ui</file>
     <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
   </gresource>
-  <gresource prefix="/io/github/diegopvlk/Cine/icons/scalable/actions">
+  <gresource prefix="/io/github/gyrolet/CineWindows/icons/scalable/actions">
     <file alias="cine-audio-off-symbolic.svg">../data/icons/scalable/actions/cine-audio-off-symbolic.svg</file>
     <file alias="cine-audio-symbolic.svg">../data/icons/scalable/actions/cine-audio-symbolic.svg</file>
     <file alias="cine-list-add-symbolic.svg">../data/icons/scalable/actions/cine-list-add-symbolic.svg</file>
@@ -51,8 +51,7 @@
     <file alias="object-rotate-left-symbolic.svg">../data/icons/scalable/actions/object-rotate-left-symbolic.svg</file>
     <file alias="object-rotate-right-symbolic.svg">../data/icons/scalable/actions/object-rotate-right-symbolic.svg</file>
   </gresource>
-  <gresource prefix="/io/github/diegopvlk/Cine/icons/scalable/apps">
-    <file alias="io.github.diegopvlk.Dosage.svg">../data/icons/scalable/apps/io.github.diegopvlk.Dosage.svg</file>
-    <file alias="io.github.diegopvlk.Tomatillo.svg">../data/icons/scalable/apps/io.github.diegopvlk.Tomatillo.svg</file>
+  <gresource prefix="/io/github/gyrolet/CineWindows/icons/scalable/apps">
+    <file alias="io.github.gyrolet.CineWindows.svg">../data/icons/hicolor/scalable/apps/io.github.gyrolet.CineWindows.svg</file>
   </gresource>
 </gresources>

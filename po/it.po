@@ -1,11 +1,11 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the io.github.diegopvlk.Cine package.
+# This file is distributed under the same license as the io.github.gyrolet.CineWindows package.
 # Neko the gamer <https://github.com/Nekothegamer>, 2026.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: io.github.diegopvlk.Cine\n"
+"Project-Id-Version: io.github.gyrolet.CineWindows\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-02 20:07-0300\n"
 "PO-Revision-Date: 2026-04-30 07:09+0000\n"
@@ -18,40 +18,40 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 5.17.1-dev\n"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:2 src/main.py:229 src/mpris.py:147
+#: data/io.github.gyrolet.CineWindows.desktop.in:2 src/main.py:229 src/mpris.py:147
 #: src/mpris.py:365 src/window.py:193 src/window.py:314 src/window.blp:6
 #: src/window.blp:461
 msgid "Cine"
 msgstr "Cine"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:3
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:23
+#: data/io.github.gyrolet.CineWindows.desktop.in:3
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:23
 msgid "Play your videos"
 msgstr "Riproduci i tuoi video"
 
 #. TRANSLATORS: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
-#: data/io.github.diegopvlk.Cine.desktop.in:10
+#: data/io.github.gyrolet.CineWindows.desktop.in:10
 msgid "Audio;Video;Movie;TV;Film;Clip;Player;Cine;mpv;"
 msgstr "Audio;Video;TV;Film;Clip;Riproduttore;Cine;mpv;"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:18 src/shortcuts-dialog.blp:11
+#: data/io.github.gyrolet.CineWindows.desktop.in:18 src/shortcuts-dialog.blp:11
 #: src/window.blp:136
 msgid "New Window"
 msgstr "Nuova Finestra"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:25
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:25
 msgid ""
 "Cine combines a clean interface with a high-performance engine to deliver a "
 "seamless viewing experience."
 msgstr ""
 "Cine combina un'interfaccia pulita con un motore ad alte prestazioni per "
-"dare un'esperienza visiva più fluida."
+"dare un'esperienza visiva piÃ¹ fluida."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:27
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:27
 msgid "Simple Design: A refined, distraction-free interface"
 msgstr "Design semplice: Un'interfaccia raffinata, senza distrazioni"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:28
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:28
 msgid ""
 "MPV-Based: Leverages the robust power of MPV for great playback and format "
 "support"
@@ -59,34 +59,34 @@ msgstr ""
 "Basato su MPV: Sfrutta la robusta potenza di MPV per un'ottima riproduzione "
 "e un ottimo supporto di formati"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:29
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:29
 msgid ""
 "Audio and Subtitles: Control track selection and synchronization for both"
 msgstr ""
 "Audio e sottotitoli: controlla la selezione delle tracce e la "
 "sincronizzazione per entrambi"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:30
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:30
 msgid ""
 "Video Controls: Easily adjust brightness, contrast, zoom, aspect ratio, etc."
 msgstr ""
-"Controlli video: Aggiusta facilemte la luminosità, il contrasto, lo zoom, il "
+"Controlli video: Aggiusta facilemte la luminositÃ , il contrasto, lo zoom, il "
 "rapporto, ecc."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:42
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:42
 msgid "Video Playing"
 msgstr "Riproduzione video"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:46
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:46
 msgid "Video Options"
 msgstr "Opzioni video"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:50 src/preferences.blp:5
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:50 src/preferences.blp:5
 #: src/preferences.blp:77 src/window.blp:141
 msgid "Preferences"
 msgstr "Preferenze"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:54
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:54
 msgid "Main Window"
 msgstr "Finestra Principale"
 
@@ -116,7 +116,7 @@ msgstr "Salva la playlist"
 msgid ""
 "Requires flatpak permission to read the folder where the video is stored"
 msgstr ""
-"È richiesto di impostare i permessi al flatpak per leggere la cartella dov'è "
+"Ãˆ richiesto di impostare i permessi al flatpak per leggere la cartella dov'Ã¨ "
 "memorizzato il video"
 
 #: src/playlist.py:319 src/window.py:1284 src/window.py:1814
@@ -164,7 +164,7 @@ msgstr "Aggiungi automaticamente alla playlist i file della stessa cartella"
 
 #: src/preferences.py:371 src/preferences.blp:98
 msgid "Restore Saved Session"
-msgstr "Restaurer la session enregistrée"
+msgstr "Restaurer la session enregistrÃ©e"
 
 #: src/preferences.py:372 src/preferences.blp:133
 msgid "Save Video Position on Close"
@@ -175,7 +175,7 @@ msgid ""
 "If you wish to use those features, install Flatseal for granular folder "
 "control, or run this command to grant access to all folders in the system:"
 msgstr ""
-"Se desideri utilizzare queste funzionalità, installa Flatseal per un "
+"Se desideri utilizzare queste funzionalitÃ , installa Flatseal per un "
 "controllo granulare delle cartelle, oppure esegui questo comando per "
 "concedere l'accesso a tutte le cartelle del sistema:"
 
@@ -308,11 +308,11 @@ msgstr "Posizione sottotitoli"
 
 #: src/shortcuts.py:68
 msgid "Move Subtitles Up"
-msgstr "Muovi i sottotitoli in sù"
+msgstr "Muovi i sottotitoli in sÃ¹"
 
 #: src/shortcuts.py:69
 msgid "Move Subtitles Down"
-msgstr "Muovi i sottotitoli in giù"
+msgstr "Muovi i sottotitoli in giÃ¹"
 
 #: src/shortcuts.py:70 src/shortcuts.py:71 src/preferences.blp:239
 msgid "Subtitle Scale"
@@ -403,15 +403,15 @@ msgstr "Aumenta il contrasto"
 #: src/shortcuts.py:88 src/shortcuts.py:89 src/options.blp:394
 #: src/options.blp:417
 msgid "Brightness"
-msgstr "Luminosità"
+msgstr "LuminositÃ "
 
 #: src/shortcuts.py:88
 msgid "Decrease Brightness"
-msgstr "Diminuisci la luminostà"
+msgstr "Diminuisci la luminostÃ "
 
 #: src/shortcuts.py:89
 msgid "Increase Brightness"
-msgstr "Aumenta la luminosità"
+msgstr "Aumenta la luminositÃ "
 
 #: src/shortcuts.py:90 src/shortcuts.py:91 src/options.blp:448
 #: src/options.blp:471
@@ -441,19 +441,19 @@ msgstr "Aumenta la saturazione"
 
 #: src/shortcuts.py:94 src/shortcuts.py:95 src/shortcuts.py:96
 msgid "Speed"
-msgstr "Velocità"
+msgstr "VelocitÃ "
 
 #: src/shortcuts.py:94
 msgid "Decrease Playback Speed"
-msgstr "Diminuisci la velocità"
+msgstr "Diminuisci la velocitÃ "
 
 #: src/shortcuts.py:95
 msgid "Increase Playback Speed"
-msgstr "Aumenta la velocità"
+msgstr "Aumenta la velocitÃ "
 
 #: src/shortcuts.py:96 src/options.blp:711
 msgid "Reset Playback Speed"
-msgstr "Reimposta la velocità di riproduzione"
+msgstr "Reimposta la velocitÃ  di riproduzione"
 
 #: src/shortcuts.py:153
 msgid "Display & Video"
@@ -623,7 +623,7 @@ msgstr "Reimposta il contrasto"
 
 #: src/options.blp:384
 msgid "Reset Brightness"
-msgstr "Reimposta la luminosità"
+msgstr "Reimposta la luminositÃ "
 
 #: src/options.blp:438
 msgid "Reset Gamma"
@@ -635,12 +635,12 @@ msgstr "Reimposta la saturazione"
 
 #: src/options.blp:546
 msgid "Reset Hue"
-msgstr "Reimposta la tonalità"
+msgstr "Reimposta la tonalitÃ "
 
 #. TRANSLATORS: Do not use "Color" or "Temperature", those are different things
 #: src/options.blp:557 src/options.blp:580
 msgid "Hue"
-msgstr "Tonalità"
+msgstr "TonalitÃ "
 
 #: src/options.blp:601
 msgid "Reset Subtitle Delay"
@@ -652,7 +652,7 @@ msgstr "Reimposta il ritardo dell'audio"
 
 #: src/options.blp:721 src/options.blp:745
 msgid "Playback Speed"
-msgstr "Velocità di riproduzione"
+msgstr "VelocitÃ  di riproduzione"
 
 #: src/playlist.blp:97
 msgid "No Results Found"
@@ -680,21 +680,21 @@ msgstr "Normalizza volume"
 
 #: src/preferences.blp:93
 msgid "Hardware Acceleration"
-msgstr "Accélération matérielle"
+msgstr "AccÃ©lÃ©ration matÃ©rielle"
 
 #: src/preferences.blp:94
 msgid "Use GPU for video decoding when available"
-msgstr "Utiliser le GPU pour le décodage vidéo si disponible"
+msgstr "Utiliser le GPU pour le dÃ©codage vidÃ©o si disponible"
 
 #: src/preferences.blp:99
 msgid "Pick up where you left off after saving from the menu"
 msgstr ""
-"Reprenez là où vous vous étiez arrêté après avoir enregistré via le menu"
+"Reprenez lÃ  oÃ¹ vous vous Ã©tiez arrÃªtÃ© aprÃ¨s avoir enregistrÃ© via le menu"
 
 #: src/preferences.blp:134
 msgid "Also save options like brightness, subtitle delay, etc."
 msgstr ""
-"Salva anche le opzioni come la luminosità, il ritardo dei sottotitoli, ecc."
+"Salva anche le opzioni come la luminositÃ , il ritardo dei sottotitoli, ecc."
 
 #: src/preferences.blp:183 src/preferences.blp:229
 msgid "Reset"
@@ -758,15 +758,15 @@ msgstr "Aggiungi URL alla playlist"
 
 #: src/shortcuts-dialog.blp:46
 msgid "Open Subtitles Menu"
-msgstr "Apri il menù dei sottotitoli"
+msgstr "Apri il menÃ¹ dei sottotitoli"
 
 #: src/shortcuts-dialog.blp:51
 msgid "Open Audio Menu"
-msgstr "Apri il menù dell'audio"
+msgstr "Apri il menÃ¹ dell'audio"
 
 #: src/shortcuts-dialog.blp:56
 msgid "Open Chapters Menu"
-msgstr "Apri il menù dei capitoli"
+msgstr "Apri il menÃ¹ dei capitoli"
 
 #: src/shortcuts-dialog.blp:61
 msgid "Show Shortcuts"
@@ -786,7 +786,7 @@ msgstr "Esci"
 
 #: src/window.blp:131
 msgid "Main Menu"
-msgstr "Menù principale"
+msgstr "MenÃ¹ principale"
 
 #: src/window.blp:146
 msgid "Keyboard Shortcuts"
@@ -829,8 +829,8 @@ msgid "Drag and drop files here"
 msgstr "Trascina i file qui"
 
 #: src/window.blp:475
-msgid "Open…"
-msgstr "Apri…"
+msgid "Openâ€¦"
+msgstr "Apriâ€¦"
 
 #~ msgid "Shortcuts"
 #~ msgstr "Scorciatoie da tastiera"
@@ -852,3 +852,4 @@ msgstr "Apri…"
 
 #~ msgid "File Loop"
 #~ msgstr "Loop del file"
+

@@ -22,6 +22,7 @@ import gi
 from typing import cast
 from gettext import gettext as _
 
+from .constants import RESOURCE_PREFIX
 from .preferences import settings
 
 gi.require_version("Gtk", "4.0")
@@ -41,7 +42,7 @@ RATIOS = [
 ]
 
 
-@Gtk.Template(resource_path="/io/github/diegopvlk/Cine/options.ui")
+@Gtk.Template(resource_path=f"{RESOURCE_PREFIX}/options.ui")
 class OptionsMenuButton(Gtk.MenuButton):
     __gtype_name__ = "OptionsMenuButton"
 

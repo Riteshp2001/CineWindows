@@ -20,13 +20,13 @@
 import gi
 from gettext import gettext as _
 
+from .constants import APP_ID
+
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk
 
-
-APP_ID = "io.github.diegopvlk.Cine"
 
 # This is a mess, but it (kinda) works :D
 # Keep PlaybackStatus, Metadata and CanSeek commented, it causes stutters

@@ -1,28 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.diegopvlk.Cine</id>
+  <id>io.github.gyrolet.CineWindows</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <translation type="gettext">cine</translation>
-  <launchable type="desktop-id">io.github.diegopvlk.Cine.desktop</launchable>
+  <translation type="gettext">cinewindows</translation>
+  <launchable type="desktop-id">io.github.gyrolet.CineWindows.desktop</launchable>
   <content_rating type="oars-1.1" />
 
-  <url type="homepage">https://github.com/diegopvlk/Cine</url>
-  <url type="bugtracker">https://github.com/diegopvlk/Cine/issues</url>
-  <url type="vcs-browser">https://github.com/diegopvlk/Cine</url>
-  <url type="donation">https://www.paypal.com/donate?hosted_button_id=DVL7H35GA66X6</url>
-  <url type="translate">https://hosted.weblate.org/projects/cine/app/</url>
-  <update_contact>diego.pvlk@gmail.com</update_contact>
+  <url type="homepage">https://github.com/Riteshp2001/CineWindows</url>
+  <url type="bugtracker">https://github.com/Riteshp2001/CineWindows/issues</url>
+  <url type="vcs-browser">https://github.com/Riteshp2001/CineWindows</url>
+  <update_contact>gyrolet@example.com</update_contact>
 
-  <developer id="io.github.diegopvlk">
-    <name translate="no">Diego Povliuk</name>
+  <developer id="io.github.gyrolet">
+    <name translate="no">gyrolet</name>
   </developer>
 
-  <name translate="no">Cine</name>
+  <name translate="no">CineWindows</name>
   <summary>Play your videos</summary>
   <description>
-    <p>Cine combines a clean interface with a high-performance engine to deliver a seamless viewing experience.</p>
+    <p>CineWindows combines a clean interface with a high-performance mpv engine for Windows playback.</p>
 		<ul>
 			<li>Simple Design: A refined, distraction-free interface</li>
       <li>MPV-Based: Leverages the robust power of MPV for great playback and format support</li>
@@ -38,19 +36,19 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/diegopvlk/Cine/eedf30ef798707f391df7904af124def524da8c4/screenshots/video.png</image>
+      <image>https://raw.githubusercontent.com/Riteshp2001/CineWindows/main/screenshots/video.png</image>
       <caption>Video Playing</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/diegopvlk/Cine/eedf30ef798707f391df7904af124def524da8c4/screenshots/options.png</image>
+      <image>https://raw.githubusercontent.com/Riteshp2001/CineWindows/main/screenshots/options.png</image>
       <caption>Video Options</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/diegopvlk/Cine/4cd6b0e086dccdedbe1dcfb11dc87f2434ffac70/screenshots/preferences.png</image>
+      <image>https://raw.githubusercontent.com/Riteshp2001/CineWindows/main/screenshots/preferences.png</image>
       <caption>Preferences</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/diegopvlk/Cine/eedf30ef798707f391df7904af124def524da8c4/screenshots/window.png</image>
+      <image>https://raw.githubusercontent.com/Riteshp2001/CineWindows/main/screenshots/window.png</image>
       <caption>Main Window</caption>
     </screenshot>
   </screenshots>

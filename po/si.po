@@ -1,11 +1,11 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the io.github.diegopvlk.Cine package.
+# This file is distributed under the same license as the io.github.gyrolet.CineWindows package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: io.github.diegopvlk.Cine\n"
+"Project-Id-Version: io.github.gyrolet.CineWindows\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-05-26 10:07-0300\n"
 "PO-Revision-Date: 2026-05-27 12:05+0000\n"
@@ -18,71 +18,71 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 "X-Generator: Weblate 2026.6.dev0\n"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:2 src/main.py:227 src/mpris.py:147
+#: data/io.github.gyrolet.CineWindows.desktop.in:2 src/main.py:227 src/mpris.py:147
 #: src/mpris.py:365 src/window.py:190 src/window.py:310 src/window.blp:6
 #: src/window.blp:461
 msgid "Cine"
 msgstr ""
 
-#: data/io.github.diegopvlk.Cine.desktop.in:3
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:23
+#: data/io.github.gyrolet.CineWindows.desktop.in:3
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:23
 msgid "Play your videos"
-msgstr "ඔබේ වීඩියෝ බලන්න"
+msgstr "à¶”à¶¶à·š à·€à·“à¶©à·’à¶ºà· à¶¶à¶½à¶±à·Šà¶±"
 
 #. TRANSLATORS: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
-#: data/io.github.diegopvlk.Cine.desktop.in:10
+#: data/io.github.gyrolet.CineWindows.desktop.in:10
 msgid "Audio;Video;Movie;TV;Film;Clip;Player;Cine;mpv;"
 msgstr "Audio;Video;Movie;TV;Film;Clip;Player;Cine;mpv;"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:18 src/shortcuts-dialog.blp:11
+#: data/io.github.gyrolet.CineWindows.desktop.in:18 src/shortcuts-dialog.blp:11
 #: src/window.blp:136
 msgid "New Window"
-msgstr "අලුත් වින්ඩෝවක්"
+msgstr "à¶…à¶½à·”à¶­à·Š à·€à·’à¶±à·Šà¶©à·à·€à¶šà·Š"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:25
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:25
 msgid ""
 "Cine combines a clean interface with a high-performance engine to deliver a "
 "seamless viewing experience."
 msgstr ""
-"Cine එකේ තියෙන්නෙ හරිම සරල, ලස්සන interface එකක්. සුපිරි speed engine එකක් තියෙන නිසා "
-"කිසිම හිරවීමක් නැතුව ආසාවෙන් ෆිල්ම් එකක් බලන්න පුළුවන්."
+"Cine à¶‘à¶šà·š à¶­à·’à¶ºà·™à¶±à·Šà¶±à·™ à·„à¶»à·’à¶¸ à·ƒà¶»à¶½, à¶½à·ƒà·Šà·ƒà¶± interface à¶‘à¶šà¶šà·Š. à·ƒà·”à¶´à·’à¶»à·’ speed engine à¶‘à¶šà¶šà·Š à¶­à·’à¶ºà·™à¶± à¶±à·’à·ƒà· "
+"à¶šà·’à·ƒà·’à¶¸ à·„à·’à¶»à·€à·“à¶¸à¶šà·Š à¶±à·à¶­à·”à·€ à¶†à·ƒà·à·€à·™à¶±à·Š à·†à·’à¶½à·Šà¶¸à·Š à¶‘à¶šà¶šà·Š à¶¶à¶½à¶±à·Šà¶± à¶´à·”à·…à·”à·€à¶±à·Š."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:27
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:27
 msgid "Simple Design: A refined, distraction-free interface"
-msgstr "සරල නිමාව: කිසිම බාධාවක් නැතුව ලස්සනට බලන්න පුළුවන් interface එකක්"
+msgstr "à·ƒà¶»à¶½ à¶±à·’à¶¸à·à·€: à¶šà·’à·ƒà·’à¶¸ à¶¶à·à¶°à·à·€à¶šà·Š à¶±à·à¶­à·”à·€ à¶½à·ƒà·Šà·ƒà¶±à¶§ à¶¶à¶½à¶±à·Šà¶± à¶´à·”à·…à·”à·€à¶±à·Š interface à¶‘à¶šà¶šà·Š"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:28
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:28
 msgid ""
 "MPV-Based: Leverages the robust power of MPV for great playback and format "
 "support"
 msgstr ""
-"MPV-Based: ෆිල්ම්ස් සුපිරියටම ප්ලේ වෙන්න සහ ඕනෑම format එකකට සපෝට් කරන්න MPV වල තියෙන "
-"බලවත් ශක්තිය පාවිච්චි කරලා තියෙනවා"
+"MPV-Based: à·†à·’à¶½à·Šà¶¸à·Šà·ƒà·Š à·ƒà·”à¶´à·’à¶»à·’à¶ºà¶§à¶¸ à¶´à·Šà¶½à·š à·€à·™à¶±à·Šà¶± à·ƒà·„ à¶•à¶±à·‘à¶¸ format à¶‘à¶šà¶šà¶§ à·ƒà¶´à·à¶§à·Š à¶šà¶»à¶±à·Šà¶± MPV à·€à¶½ à¶­à·’à¶ºà·™à¶± "
+"à¶¶à¶½à·€à¶­à·Š à·à¶šà·Šà¶­à·’à¶º à¶´à·à·€à·’à¶ à·Šà¶ à·’ à¶šà¶»à¶½à· à¶­à·’à¶ºà·™à¶±à·€à·"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:29
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:29
 msgid ""
 "Audio and Subtitles: Control track selection and synchronization for both"
 msgstr ""
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:30
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:30
 msgid ""
 "Video Controls: Easily adjust brightness, contrast, zoom, aspect ratio, etc."
 msgstr ""
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:42
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:42
 msgid "Video Playing"
 msgstr ""
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:46
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:46
 msgid "Video Options"
 msgstr ""
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:50 src/preferences.blp:5
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:50 src/preferences.blp:5
 #: src/preferences.blp:77 src/window.blp:141
 msgid "Preferences"
 msgstr ""
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:54
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:54
 msgid "Main Window"
 msgstr ""
 
@@ -819,5 +819,6 @@ msgid "Drag and drop files here"
 msgstr ""
 
 #: src/window.blp:475
-msgid "Open…"
+msgid "Openâ€¦"
 msgstr ""
+

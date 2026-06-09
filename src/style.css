@@ -37,9 +37,9 @@
     );
 }
 
-#io-github-diegopvlk-Cine:backdrop .controls button,
-#io-github-diegopvlk-Cine:backdrop .controls .heading,
-#io-github-diegopvlk-Cine:backdrop scale {
+#io-github-gyrolet-CineWindows:backdrop .controls button,
+#io-github-gyrolet-CineWindows:backdrop .controls .heading,
+#io-github-gyrolet-CineWindows:backdrop scale {
   opacity: 0.66;
 }
 

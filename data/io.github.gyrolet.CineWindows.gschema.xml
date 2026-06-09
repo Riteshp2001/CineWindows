@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="cine">
-	<schema id="io.github.diegopvlk.Cine" path="/io/github/diegopvlk/Cine/">
+<schemalist gettext-domain="cinewindows">
+	<schema id="io.github.gyrolet.CineWindows" path="/io/github/gyrolet/CineWindows/">
 		<key name="open-new-windows" type="b">
 			<default>true</default>
 		</key>

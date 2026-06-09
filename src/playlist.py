@@ -32,6 +32,7 @@ from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject, Pango
 
 from gettext import gettext as _
 from gettext import ngettext
+from .constants import RESOURCE_PREFIX
 from .utils import is_local_path
 
 
@@ -47,7 +48,7 @@ class PlaylistItemObj(GObject.Object):
         self.position = position
 
 
-@Gtk.Template(resource_path="/io/github/diegopvlk/Cine/playlist.ui")
+@Gtk.Template(resource_path=f"{RESOURCE_PREFIX}/playlist.ui")
 class Playlist(Adw.Dialog):
     __gtype_name__ = "Playlist"
 

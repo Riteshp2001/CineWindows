@@ -1,11 +1,11 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the io.github.diegopvlk.Cine package.
+# This file is distributed under the same license as the io.github.gyrolet.CineWindows package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: io.github.diegopvlk.Cine\n"
+"Project-Id-Version: io.github.gyrolet.CineWindows\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-02 20:07-0300\n"
 "PO-Revision-Date: 2026-04-08 23:12+0000\n"
@@ -18,40 +18,40 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 "X-Generator: Weblate 5.17-dev\n"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:2 src/main.py:229 src/mpris.py:147
+#: data/io.github.gyrolet.CineWindows.desktop.in:2 src/main.py:229 src/mpris.py:147
 #: src/mpris.py:365 src/window.py:193 src/window.py:314 src/window.blp:6
 #: src/window.blp:461
 msgid "Cine"
 msgstr "Cine"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:3
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:23
+#: data/io.github.gyrolet.CineWindows.desktop.in:3
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:23
 msgid "Play your videos"
-msgstr "Agachatz vòstras vidèos"
+msgstr "Agachatz vÃ²stras vidÃ¨os"
 
 #. TRANSLATORS: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
-#: data/io.github.diegopvlk.Cine.desktop.in:10
+#: data/io.github.gyrolet.CineWindows.desktop.in:10
 msgid "Audio;Video;Movie;TV;Film;Clip;Player;Cine;mpv;"
-msgstr "àudio;vidèo;film;tv;clip;lector;legidor;cine;mpv;"
+msgstr "Ã udio;vidÃ¨o;film;tv;clip;lector;legidor;cine;mpv;"
 
-#: data/io.github.diegopvlk.Cine.desktop.in:18 src/shortcuts-dialog.blp:11
+#: data/io.github.gyrolet.CineWindows.desktop.in:18 src/shortcuts-dialog.blp:11
 #: src/window.blp:136
 msgid "New Window"
-msgstr "Fenèstra novèla"
+msgstr "FenÃ¨stra novÃ¨la"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:25
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:25
 msgid ""
 "Cine combines a clean interface with a high-performance engine to deliver a "
 "seamless viewing experience."
 msgstr ""
-"Cine combina una interfàcia clara amb un motor de nautas performanças per "
-"ofrir una experiéncia de visionatge fluida."
+"Cine combina una interfÃ cia clara amb un motor de nautas performanÃ§as per "
+"ofrir una experiÃ©ncia de visionatge fluida."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:27
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:27
 msgid "Simple Design: A refined, distraction-free interface"
-msgstr "Design simple : una interfàcia refinada sens distraccion"
+msgstr "Design simple : una interfÃ cia refinada sens distraccion"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:28
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:28
 msgid ""
 "MPV-Based: Leverages the robust power of MPV for great playback and format "
 "support"
@@ -59,47 +59,47 @@ msgstr ""
 "Basat sus MPV : espleita lo poder de MPV per una lectura e una presa en "
 "carga dels formats excepcionala"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:29
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:29
 msgid ""
 "Audio and Subtitles: Control track selection and synchronization for both"
 msgstr ""
-"Àudio e sostítols : contrarotlar la seleccion e la sincronizacion de las "
+"Ã€udio e sostÃ­tols : contrarotlar la seleccion e la sincronizacion de las "
 "pistas"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:30
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:30
 msgid ""
 "Video Controls: Easily adjust brightness, contrast, zoom, aspect ratio, etc."
 msgstr ""
-"Contraròtles vidèo : ajustatz aisidament la luminositat, lo contraste, lo "
+"ContrarÃ²tles vidÃ¨o : ajustatz aisidament la luminositat, lo contraste, lo "
 "zoom, lo format d'imatge, etc."
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:42
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:42
 msgid "Video Playing"
-msgstr "Lectura vidèo"
+msgstr "Lectura vidÃ¨o"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:46
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:46
 msgid "Video Options"
-msgstr "Opcions vidèo"
+msgstr "Opcions vidÃ¨o"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:50 src/preferences.blp:5
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:50 src/preferences.blp:5
 #: src/preferences.blp:77 src/window.blp:141
 msgid "Preferences"
-msgstr "Preferéncias"
+msgstr "PreferÃ©ncias"
 
-#: data/io.github.diegopvlk.Cine.metainfo.xml.in:54
+#: data/io.github.gyrolet.CineWindows.metainfo.xml.in:54
 msgid "Main Window"
-msgstr "Fenèstra principala"
+msgstr "FenÃ¨stra principala"
 
 #. Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
 #: src/main.py:239
 msgid "translator-credits"
 msgstr ""
 "Diego Povliuk <diegopvlk@gmail.com>\n"
-"Quentin PAGÈS <quentinantonin@free.fr>"
+"Quentin PAGÃˆS <quentinantonin@free.fr>"
 
 #: src/mpris.py:154 src/mpris.py:222 src/mpris.py:357
 msgid "Unknown title"
-msgstr "Títol desconegut"
+msgstr "TÃ­tol desconegut"
 
 #: src/options.py:193 src/options.blp:79 src/options.blp:137
 msgid "Original"
@@ -118,16 +118,16 @@ msgstr "Enregistrar la lista de lectura"
 msgid ""
 "Requires flatpak permission to read the folder where the video is stored"
 msgstr ""
-"Necessita la permission flatpak per legir lo dorsièr onte la vidèo es "
+"Necessita la permission flatpak per legir lo dorsiÃ¨r onte la vidÃ¨o es "
 "emmagazinada"
 
 #: src/playlist.py:319 src/window.py:1284 src/window.py:1814
 msgid "File Error"
-msgstr "Error de fichièr"
+msgstr "Error de fichiÃ¨r"
 
 #: src/playlist.py:423
 msgid "Open Item Location"
-msgstr "Dobrir l'emplaçament de l'element"
+msgstr "Dobrir l'emplaÃ§ament de l'element"
 
 #: src/playlist.py:424
 msgid "Remove from Playlist"
@@ -146,11 +146,11 @@ msgstr[1] "{n} elements"
 
 #: src/preferences.py:112 src/preferences.blp:170
 msgid "Subtitle Color"
-msgstr "Color dels sostítols"
+msgstr "Color dels sostÃ­tols"
 
 #: src/preferences.py:126 src/preferences.blp:250
 msgid "Subtitle Background"
-msgstr "Rèirefons dels sostítols"
+msgstr "RÃ¨irefons dels sostÃ­tols"
 
 #: src/preferences.py:367
 msgid "Some features require extra permission to work:"
@@ -158,12 +158,12 @@ msgstr "D'unas foncionalitats necessitan una permission de mai per foncionar :"
 
 #: src/preferences.py:368
 msgid "Auto load subtitle file"
-msgstr "Cargar automaticament lo fichièr de sostítols"
+msgstr "Cargar automaticament lo fichiÃ¨r de sostÃ­tols"
 
 #: src/preferences.py:369
 msgid "Auto add files from the same folder to playlist"
 msgstr ""
-"Apondre automaticament los fichièrs del meteis dorsièr a la lista de lectura"
+"Apondre automaticament los fichiÃ¨rs del meteis dorsiÃ¨r a la lista de lectura"
 
 #: src/preferences.py:371 src/preferences.blp:98
 msgid "Restore Saved Session"
@@ -171,20 +171,20 @@ msgstr "Restaurar la session enregistrada"
 
 #: src/preferences.py:372 src/preferences.blp:133
 msgid "Save Video Position on Close"
-msgstr "Enregistrar la posicion de la vidèo a la tancadura"
+msgstr "Enregistrar la posicion de la vidÃ¨o a la tancadura"
 
 #: src/preferences.py:376
 msgid ""
 "If you wish to use those features, install Flatseal for granular folder "
 "control, or run this command to grant access to all folders in the system:"
 msgstr ""
-"Se volètz utilizar aquestas foncionalitats, installatz Flatseal per un "
-"contraròtle granulari dels dorsièrs, o aviatz aquesta comanda per acordar "
-"l'accès a totes los dorsièrs del sistèma :"
+"Se volÃ¨tz utilizar aquestas foncionalitats, installatz Flatseal per un "
+"contrarÃ²tle granulari dels dorsiÃ¨rs, o aviatz aquesta comanda per acordar "
+"l'accÃ¨s a totes los dorsiÃ¨rs del sistÃ¨ma :"
 
 #: src/preferences.py:382
 msgid "Extra permission enabled."
-msgstr "Autorizacion suplementària activada."
+msgstr "Autorizacion suplementÃ ria activada."
 
 #: src/preferences.py:397
 msgid "Copied"
@@ -214,44 +214,44 @@ msgstr "Lectura/Pausa"
 
 #: src/shortcuts.py:38
 msgid "Show/Hide Subtitles"
-msgstr "Afichar/Amagar los sostítols"
+msgstr "Afichar/Amagar los sostÃ­tols"
 
 #: src/shortcuts.py:39 src/shortcuts.py:40 src/shortcuts.py:169
 #: src/window.blp:270
 msgid "Subtitles"
-msgstr "Sostítols"
+msgstr "SostÃ­tols"
 
 #: src/shortcuts.py:39
 msgid "Next Subtitle Track"
-msgstr "Pista de sostítols seguenta"
+msgstr "Pista de sostÃ­tols seguenta"
 
 #: src/shortcuts.py:40
 msgid "Previous Subtitle Track"
-msgstr "Pista de sostítols precedenta"
+msgstr "Pista de sostÃ­tols precedenta"
 
 #: src/shortcuts.py:41 src/shortcuts.py:42
 msgid "Secondary Subtitles"
-msgstr "Sostítols segondaris"
+msgstr "SostÃ­tols segondaris"
 
 #: src/shortcuts.py:41
 msgid "Next Secondary Subtitle Track"
-msgstr "Pista de sostítols segondària seguenta"
+msgstr "Pista de sostÃ­tols segondÃ ria seguenta"
 
 #: src/shortcuts.py:42
 msgid "Previous Secondary Subtitle Track"
-msgstr "Pista de sostítols segondària precedenta"
+msgstr "Pista de sostÃ­tols segondÃ ria precedenta"
 
 #: src/shortcuts.py:43 src/shortcuts.py:44 src/window.py:736 src/window.blp:285
 msgid "Audio"
-msgstr "Àudio"
+msgstr "Ã€udio"
 
 #: src/shortcuts.py:43
 msgid "Next Audio Track"
-msgstr "Pista àudio seguenta"
+msgstr "Pista Ã udio seguenta"
 
 #: src/shortcuts.py:44
 msgid "Previous Audio Track"
-msgstr "Pista àudio precedenta"
+msgstr "Pista Ã udio precedenta"
 
 #: src/shortcuts.py:45
 msgid "Seek 10s Backward"
@@ -259,7 +259,7 @@ msgstr "Recular de 10 segondas"
 
 #: src/shortcuts.py:46
 msgid "Seek 10s Forward"
-msgstr "Avançar de 10 segondas"
+msgstr "AvanÃ§ar de 10 segondas"
 
 #: src/shortcuts.py:47
 msgid "Seek 5s Backward"
@@ -267,16 +267,16 @@ msgstr "Recular de 5 segondas"
 
 #: src/shortcuts.py:48
 msgid "Seek 5s Forward"
-msgstr "Avançar de 5 segondas"
+msgstr "AvanÃ§ar de 5 segondas"
 
 #: src/shortcuts.py:49 src/shortcuts.py:50 src/window.py:1859
 #: src/window.blp:382
 msgid "Fullscreen"
-msgstr "Ecran complèt"
+msgstr "Ecran complÃ¨t"
 
 #: src/shortcuts.py:51 src/window.py:1859
 msgid "Exit Fullscreen"
-msgstr "Sortir de l'ecran complèt"
+msgstr "Sortir de l'ecran complÃ¨t"
 
 #: src/shortcuts.py:61 src/shortcuts.py:62 src/shortcuts.py:63
 #: src/shortcuts.py:64 src/shortcuts.py:65 src/options.blp:285
@@ -290,44 +290,44 @@ msgstr "Zoom avant"
 
 #: src/shortcuts.py:63
 msgid "Zoom Out"
-msgstr "Zoom arrièr"
+msgstr "Zoom arriÃ¨r"
 
 #: src/shortcuts.py:66 src/shortcuts.py:67 src/options.blp:611
 #: src/options.blp:635
 msgid "Subtitle Delay"
-msgstr "Relambi dels sostítols"
+msgstr "Relambi dels sostÃ­tols"
 
 #: src/shortcuts.py:66
 msgid "Decrease Subtitle Delay"
-msgstr "Demenir lo relambi dels sostítols"
+msgstr "Demenir lo relambi dels sostÃ­tols"
 
 #: src/shortcuts.py:67
 msgid "Increase Subtitle Delay"
-msgstr "Aumentar lo relambi dels sostítols"
+msgstr "Aumentar lo relambi dels sostÃ­tols"
 
 #: src/shortcuts.py:68 src/shortcuts.py:69
 msgid "Subtitle Position"
-msgstr "Posicion dels sostítols"
+msgstr "Posicion dels sostÃ­tols"
 
 #: src/shortcuts.py:68
 msgid "Move Subtitles Up"
-msgstr "Montar los sostítols"
+msgstr "Montar los sostÃ­tols"
 
 #: src/shortcuts.py:69
 msgid "Move Subtitles Down"
-msgstr "Davalar los sostítols"
+msgstr "Davalar los sostÃ­tols"
 
 #: src/shortcuts.py:70 src/shortcuts.py:71 src/preferences.blp:239
 msgid "Subtitle Scale"
-msgstr "Escala dels sostítols"
+msgstr "Escala dels sostÃ­tols"
 
 #: src/shortcuts.py:70
 msgid "Increase Subtitle Scale"
-msgstr "Aumentar la talha dels sostítols"
+msgstr "Aumentar la talha dels sostÃ­tols"
 
 #: src/shortcuts.py:71
 msgid "Decrease Subtitle Scale"
-msgstr "Demenir la talha dels sostítols"
+msgstr "Demenir la talha dels sostÃ­tols"
 
 #: src/shortcuts.py:72 src/window.blp:239
 msgid "Mute/Unmute"
@@ -336,15 +336,15 @@ msgstr "Copar/Activar lo son"
 #: src/shortcuts.py:73 src/shortcuts.py:74 src/shortcuts.py:75
 #: src/options.blp:666 src/options.blp:690
 msgid "Audio Delay"
-msgstr "Relambi de l'àudio"
+msgstr "Relambi de l'Ã udio"
 
 #: src/shortcuts.py:73
 msgid "Decrease Audio Delay"
-msgstr "Demenir lo relambi de l'àudio"
+msgstr "Demenir lo relambi de l'Ã udio"
 
 #: src/shortcuts.py:74 src/shortcuts.py:75
 msgid "Increase Audio Delay"
-msgstr "Aumentar lo relambi de l'àudio"
+msgstr "Aumentar lo relambi de l'Ã udio"
 
 #: src/shortcuts.py:76
 msgid "Go Back One Frame"
@@ -352,23 +352,23 @@ msgstr "Recular d'un imatge"
 
 #: src/shortcuts.py:77
 msgid "Advance One Frame"
-msgstr "Avançar d'un imatge"
+msgstr "AvanÃ§ar d'un imatge"
 
 #: src/shortcuts.py:78
 msgid "Seek to the Previous Chapter"
-msgstr "Anar al capítol precedent"
+msgstr "Anar al capÃ­tol precedent"
 
 #: src/shortcuts.py:79
 msgid "Seek to the Next Chapter"
-msgstr "Anar al capítol seguent"
+msgstr "Anar al capÃ­tol seguent"
 
 #: src/shortcuts.py:80
 msgid "Take Screenshot With Subtitles"
-msgstr "Prendre una captura d'ecran amb sostítols"
+msgstr "Prendre una captura d'ecran amb sostÃ­tols"
 
 #: src/shortcuts.py:81
 msgid "Take Screenshot Without Subtitles"
-msgstr "Prendre una captura d'ecran sens sostítols"
+msgstr "Prendre una captura d'ecran sens sostÃ­tols"
 
 #: src/shortcuts.py:82
 msgid "Statistics"
@@ -380,7 +380,7 @@ msgstr "Superposicion de las estadisticas"
 
 #: src/shortcuts.py:84
 msgid "Set/Clear A-B Loop Points"
-msgstr "Definir/escafar los punts de vòuta A-B"
+msgstr "Definir/escafar los punts de vÃ²uta A-B"
 
 #: src/shortcuts.py:85
 msgid "Loop"
@@ -388,7 +388,7 @@ msgstr "Bocla"
 
 #: src/shortcuts.py:85 src/window.blp:355
 msgid "Loop File"
-msgstr "Repetir lo fichièr"
+msgstr "Repetir lo fichiÃ¨r"
 
 #: src/shortcuts.py:86 src/shortcuts.py:87 src/options.blp:340
 #: src/options.blp:363
@@ -456,15 +456,15 @@ msgstr "Aumentar la velocitat de lectura"
 
 #: src/shortcuts.py:96 src/options.blp:711
 msgid "Reset Playback Speed"
-msgstr "Reïnicializar la velocitat de lectura"
+msgstr "ReÃ¯nicializar la velocitat de lectura"
 
 #: src/shortcuts.py:153
 msgid "Display & Video"
-msgstr "Afichage e Vidèo"
+msgstr "Afichage e VidÃ¨o"
 
 #: src/shortcuts.py:170
 msgid "Audio & Volume"
-msgstr "Àudio e Volum"
+msgstr "Ã€udio e Volum"
 
 #: src/shortcuts.py:171
 msgid "Navigation"
@@ -476,11 +476,11 @@ msgstr "Lectura"
 
 #: src/shortcuts.py:176 src/shortcuts.py:182
 msgid "Miscellaneous"
-msgstr "Divèrs"
+msgstr "DivÃ¨rs"
 
 #: src/window.py:588 src/window.py:1276 src/window.blp:115
 msgid "Add Subtitle Track"
-msgstr "Apondre una pista de sostítol"
+msgstr "Apondre una pista de sostÃ­tol"
 
 #: src/window.py:590 src/window.py:599
 msgid "None"
@@ -488,7 +488,7 @@ msgstr "Cap"
 
 #: src/window.py:597 src/window.blp:120
 msgid "Add Audio Track"
-msgstr "Apondre una pista àudio"
+msgstr "Apondre una pista Ã udio"
 
 #: src/window.py:636
 msgid "Track"
@@ -496,36 +496,36 @@ msgstr "Pista"
 
 #: src/window.py:679 src/playlist.blp:35 src/window.blp:105
 msgid "Add Folder"
-msgstr "Apondre un dorsièr"
+msgstr "Apondre un dorsiÃ¨r"
 
 #: src/window.py:679 src/shortcuts-dialog.blp:21 src/window.blp:90
 #: src/window.blp:485
 msgid "Open Folder"
-msgstr "Dobrir un dorsièr"
+msgstr "Dobrir un dorsiÃ¨r"
 
 #: src/window.py:705 src/shortcuts-dialog.blp:16 src/window.blp:85
 msgid "Open Files"
-msgstr "Dobrir de fichièrs"
+msgstr "Dobrir de fichiÃ¨rs"
 
 #: src/window.py:708 src/playlist.blp:30 src/window.blp:100
 msgid "Add Files"
-msgstr "Apondre de fichièrs"
+msgstr "Apondre de fichiÃ¨rs"
 
 #: src/window.py:712
 msgid "Add Subtitle"
-msgstr "Apondre un sostítol"
+msgstr "Apondre un sostÃ­tol"
 
 #: src/window.py:715
 msgid "Add Audio"
-msgstr "Apondre un àudio"
+msgstr "Apondre un Ã udio"
 
 #: src/window.py:731
 msgid "Subtitle"
-msgstr "Sostítol"
+msgstr "SostÃ­tol"
 
 #: src/window.py:740
 msgid "Media"
-msgstr "Mèdia"
+msgstr "MÃ¨dia"
 
 #: src/window.py:802 src/playlist.blp:40 src/window.blp:110
 msgid "Add URL"
@@ -550,7 +550,7 @@ msgstr "Dobrir"
 
 #: src/window.py:1010 src/window.py:1118
 msgid "Chapter"
-msgstr "Capítol"
+msgstr "CapÃ­tol"
 
 #: src/window.py:1174 src/window.py:1280
 msgid "Play"
@@ -566,11 +566,11 @@ msgstr "Opcions"
 
 #: src/options.blp:32
 msgid "Reset All"
-msgstr "Tot reïnicializar"
+msgstr "Tot reÃ¯nicializar"
 
 #: src/options.blp:44
 msgid "Reset Aspect Ratio"
-msgstr "Reïnicializar lo format d'imatge"
+msgstr "ReÃ¯nicializar lo format d'imatge"
 
 #: src/options.blp:54
 msgid "Aspect Ratio"
@@ -578,7 +578,7 @@ msgstr "Format d'imatge"
 
 #: src/options.blp:102
 msgid "Reset Crop"
-msgstr "Reïnicializar lo talle"
+msgstr "ReÃ¯nicializar lo talle"
 
 #: src/options.blp:112
 msgid "Crop"
@@ -586,7 +586,7 @@ msgstr "Talhar"
 
 #: src/options.blp:161
 msgid "Reset Rotation"
-msgstr "Reïnicializar la rotacion"
+msgstr "ReÃ¯nicializar la rotacion"
 
 #: src/options.blp:171
 msgid "Rotate"
@@ -594,7 +594,7 @@ msgstr "Virejar"
 
 #: src/options.blp:197
 msgid "Rotate Left"
-msgstr "Virejar a esquèrra"
+msgstr "Virejar a esquÃ¨rra"
 
 #: src/options.blp:205
 msgid "Rotate Right"
@@ -602,7 +602,7 @@ msgstr "Virejar a dreita"
 
 #: src/options.blp:218
 msgid "Reset Flip"
-msgstr "Reïnicializar lo capvirament"
+msgstr "ReÃ¯nicializar lo capvirament"
 
 #: src/options.blp:228
 msgid "Flip"
@@ -618,27 +618,27 @@ msgstr "Capvirar verticalament"
 
 #: src/options.blp:275
 msgid "Reset Zoom"
-msgstr "Reïnicializar lo zoom"
+msgstr "ReÃ¯nicializar lo zoom"
 
 #: src/options.blp:330
 msgid "Reset Contrast"
-msgstr "Reïnicializar lo contraste"
+msgstr "ReÃ¯nicializar lo contraste"
 
 #: src/options.blp:384
 msgid "Reset Brightness"
-msgstr "Reïnicializar la luminositat"
+msgstr "ReÃ¯nicializar la luminositat"
 
 #: src/options.blp:438
 msgid "Reset Gamma"
-msgstr "Reïnicializar lo gamma"
+msgstr "ReÃ¯nicializar lo gamma"
 
 #: src/options.blp:492
 msgid "Reset Saturation"
-msgstr "Reïnicializar la saturacion"
+msgstr "ReÃ¯nicializar la saturacion"
 
 #: src/options.blp:546
 msgid "Reset Hue"
-msgstr "Reïnicializar la tinta"
+msgstr "ReÃ¯nicializar la tinta"
 
 #. TRANSLATORS: Do not use "Color" or "Temperature", those are different things
 #: src/options.blp:557 src/options.blp:580
@@ -647,11 +647,11 @@ msgstr "Tinta"
 
 #: src/options.blp:601
 msgid "Reset Subtitle Delay"
-msgstr "Reïnicializar lo relambi dels sostítols"
+msgstr "ReÃ¯nicializar lo relambi dels sostÃ­tols"
 
 #: src/options.blp:656
 msgid "Reset Audio Delay"
-msgstr "Reïnicializar lo relambi de l'àudio"
+msgstr "ReÃ¯nicializar lo relambi de l'Ã udio"
 
 #: src/options.blp:721 src/options.blp:745
 msgid "Playback Speed"
@@ -671,7 +671,7 @@ msgstr "A prepaus de las permissions"
 
 #: src/preferences.blp:81
 msgid "Open New Window for New Files"
-msgstr "Dobrir una fenèstra novèla per los fichièrs novèls"
+msgstr "Dobrir una fenÃ¨stra novÃ¨la per los fichiÃ¨rs novÃ¨ls"
 
 #: src/preferences.blp:85
 msgid "Progress Bar Thumbnail"
@@ -687,33 +687,33 @@ msgstr "Acceleracion materiala"
 
 #: src/preferences.blp:94
 msgid "Use GPU for video decoding when available"
-msgstr "Utilizar lo GPU pel desencodatge vidèo se disponible"
+msgstr "Utilizar lo GPU pel desencodatge vidÃ¨o se disponible"
 
 #: src/preferences.blp:99
 msgid "Pick up where you left off after saving from the menu"
-msgstr "Reprenetz ont n'eratz demorat aprèp aver enregistrat dempuèi lo menú"
+msgstr "Reprenetz ont n'eratz demorat aprÃ¨p aver enregistrat dempuÃ¨i lo menÃº"
 
 #: src/preferences.blp:134
 msgid "Also save options like brightness, subtitle delay, etc."
 msgstr ""
 "Enregistrar tanben las opcions coma la luminositat, lo relambi dels "
-"sostítols, etc."
+"sostÃ­tols, etc."
 
 #: src/preferences.blp:183 src/preferences.blp:229
 msgid "Reset"
-msgstr "Reïnicializar"
+msgstr "ReÃ¯nicializar"
 
 #: src/preferences.blp:193
 msgid "Subtitle Font"
-msgstr "Polissa dels sostítols"
+msgstr "Polissa dels sostÃ­tols"
 
 #: src/preferences.blp:206
 msgid "Some fonts may not work"
-msgstr "Benlèu que las polissas foncionan pas totas"
+msgstr "BenlÃ¨u que las polissas foncionan pas totas"
 
 #: src/preferences.blp:269
 msgid "Left Click"
-msgstr "Clic d'esquèrra"
+msgstr "Clic d'esquÃ¨rra"
 
 #: src/preferences.blp:274
 msgid "Focus/Play/Pause"
@@ -729,11 +729,11 @@ msgstr "Clic de dreita"
 
 #: src/preferences.blp:286
 msgid "Window Menu"
-msgstr "Menú de la fenèstra"
+msgstr "MenÃº de la fenÃ¨stra"
 
 #: src/preferences.blp:295
 msgid "Preferred Subtitle Languages"
-msgstr "Lengas de sostítols preferidas"
+msgstr "Lengas de sostÃ­tols preferidas"
 
 #: src/preferences.blp:296 src/preferences.blp:301
 msgid "Example: en,es,pt"
@@ -741,7 +741,7 @@ msgstr "Exemple : oc,fr,en"
 
 #: src/preferences.blp:300
 msgid "Preferred Audio Languages"
-msgstr "Lengas àudio preferidas"
+msgstr "Lengas Ã udio preferidas"
 
 #: src/shortcuts-dialog.blp:8
 msgid "General"
@@ -749,11 +749,11 @@ msgstr "General"
 
 #: src/shortcuts-dialog.blp:31
 msgid "Add Files to Playlist"
-msgstr "Apondre de fichièrs a la lista de lectura"
+msgstr "Apondre de fichiÃ¨rs a la lista de lectura"
 
 #: src/shortcuts-dialog.blp:36
 msgid "Add Folder to Playlist"
-msgstr "Apondre un dorsièr a la lista de lectura"
+msgstr "Apondre un dorsiÃ¨r a la lista de lectura"
 
 #: src/shortcuts-dialog.blp:41
 msgid "Add URL to Playlist"
@@ -761,15 +761,15 @@ msgstr "Apondre una URL a la lista de lectura"
 
 #: src/shortcuts-dialog.blp:46
 msgid "Open Subtitles Menu"
-msgstr "Dobrir lo menú dels sostítols"
+msgstr "Dobrir lo menÃº dels sostÃ­tols"
 
 #: src/shortcuts-dialog.blp:51
 msgid "Open Audio Menu"
-msgstr "Dobrir lo menú àudio"
+msgstr "Dobrir lo menÃº Ã udio"
 
 #: src/shortcuts-dialog.blp:56
 msgid "Open Chapters Menu"
-msgstr "Dobrir lo menú dels capítols"
+msgstr "Dobrir lo menÃº dels capÃ­tols"
 
 #: src/shortcuts-dialog.blp:61
 msgid "Show Shortcuts"
@@ -777,7 +777,7 @@ msgstr "Afichar los acorchis"
 
 #: src/shortcuts-dialog.blp:66
 msgid "Close Window"
-msgstr "Tampar la fenèstra"
+msgstr "Tampar la fenÃ¨stra"
 
 #: src/shortcuts-dialog.blp:71 src/window.blp:158
 msgid "Save Session and Close"
@@ -789,11 +789,11 @@ msgstr "Quitar"
 
 #: src/window.blp:131
 msgid "Main Menu"
-msgstr "Menú principal"
+msgstr "MenÃº principal"
 
 #: src/window.blp:146
 msgid "Keyboard Shortcuts"
-msgstr "Acorchis de clavièr"
+msgstr "Acorchis de claviÃ¨r"
 
 #: src/window.blp:151
 msgid "About Cine"
@@ -809,11 +809,11 @@ msgstr "Seguent"
 
 #: src/window.blp:299
 msgid "Video"
-msgstr "Vidèo"
+msgstr "VidÃ¨o"
 
 #: src/window.blp:314
 msgid "Chapters"
-msgstr "Capítols"
+msgstr "CapÃ­tols"
 
 #: src/window.blp:331
 msgid "Shuffle Playlist"
@@ -829,20 +829,21 @@ msgstr "Bascular temps passat/restant"
 
 #: src/window.blp:462
 msgid "Drag and drop files here"
-msgstr "Lisatz e depausatz de fichièrs aicí"
+msgstr "Lisatz e depausatz de fichiÃ¨rs aicÃ­"
 
 #: src/window.blp:475
-msgid "Open…"
-msgstr "Dobrir…"
+msgid "Openâ€¦"
+msgstr "Dobrirâ€¦"
 
 #~ msgid "Shortcuts"
 #~ msgstr "Acorchis"
 
 #~ msgid "Switch to Next Subtitle Track"
-#~ msgstr "Passar a la pista de sostítols seguenta"
+#~ msgstr "Passar a la pista de sostÃ­tols seguenta"
 
 #~ msgid "Switch to Next Audio Track"
-#~ msgstr "Passar a la pista àudio seguenta"
+#~ msgstr "Passar a la pista Ã udio seguenta"
 
 #~ msgid "Restore files and auto-play on startup"
-#~ msgstr "Restaurar los fichièrs e lectura automatica a l'aviada"
+#~ msgstr "Restaurar los fichiÃ¨rs e lectura automatica a l'aviada"
+

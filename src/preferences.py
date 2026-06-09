@@ -20,15 +20,16 @@
 import gi
 from gettext import gettext as _
 
+from .constants import APP_ID, RESOURCE_PREFIX
+
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gio", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gdk, Gio, Gtk
-from .utils import has_host_permission, is_flatpak
 
-settings = Gio.Settings.new("io.github.diegopvlk.Cine")
+settings = Gio.Settings.new(APP_ID)
 
 
 def sync_mpv_with_settings(window):
@@ -62,14 +63,10 @@ def sync_mpv_with_settings(window):
         mpv.command("af", "add", "@cine_loudnorm:lavfi=[loudnorm=I=-20]")
 
 
-@Gtk.Template(resource_path="/io/github/diegopvlk/Cine/preferences.ui")
+@Gtk.Template(resource_path=f"{RESOURCE_PREFIX}/preferences.ui")
 class Preferences(Adw.Dialog):
     __gtype_name__ = "Preferences"
 
-    warning_header_btn: Gtk.Button = Gtk.Template.Child()
-    about_permissions_label: Gtk.Label = Gtk.Template.Child()
-    cmd_label: Gtk.Label = Gtk.Template.Child()
-    copy_cmd_button: Gtk.Button = Gtk.Template.Child()
     open_new_row: Adw.SwitchRow = Gtk.Template.Child()
     thumb_preview_row: Adw.SwitchRow = Gtk.Template.Child()
     hwdec_row: Adw.SwitchRow = Gtk.Template.Child()
@@ -357,47 +354,5 @@ class Preferences(Adw.Dialog):
         settings.set_string("subtitle-font", default_font)
         self.font_label.set_label(default_font)
 
-    @Gtk.Template.Callback()
-    def _on_btn_warning_map(self, button):
-        button.set_visible(not has_host_permission)
 
-    @Gtk.Template.Callback()
-    def _on_warning_header_btn_map(self, button):
-        if is_flatpak:
-            l1 = _("Some features require extra permission to work:") + "\n\n"
-            l2 = "• " + _("Auto load subtitle file") + "\n"
-            l3 = "• " + _("Auto add files from the same folder to playlist") + "\n"
-            l4 = "• " + _("Save Playlist").capitalize() + "\n"
-            l5 = "• " + _("Restore Saved Session").capitalize() + "\n"
-            l6 = "• " + _("Save Video Position on Close").capitalize() + "\n\n"
 
-            if not has_host_permission:
-                l7 = _(
-                    "If you wish to use those features, install Flatseal for granular folder control, or run this command to grant access to all folders in the system:"
-                ).replace(
-                    "Flatseal",
-                    '<a href="https://flathub.org/apps/com.github.tchx84.Flatseal">Flatseal</a>',
-                )
-            else:
-                l7 = _("Extra permission enabled.")
-                self.warning_header_btn.remove_css_class("warning-header-btn")
-                self.about_permissions_label.set_margin_bottom(10)
-                self.cmd_label.set_visible(False)
-                self.copy_cmd_button.set_visible(False)
-
-            self.about_permissions_label.set_markup(l1 + l2 + l3 + l4 + l5 + l6 + l7)
-
-        button.set_visible(is_flatpak)
-
-    @Gtk.Template.Callback()
-    def _on_copy_cmd_btn_clicked(self, button: Gtk.Button):
-        display = Gdk.Display.get_default()
-        if display and (clipboard := display.get_clipboard()):
-            button.remove_css_class("suggested-action")
-            button.set_label(_("Copied"))
-            clipboard.set(self.cmd_label.get_text())
-
-    @Gtk.Template.Callback()
-    def _on_warning_popover_closed(self, _popover):
-        self.copy_cmd_button.add_css_class("suggested-action")
-        self.copy_cmd_button.set_label(_("Copy"))

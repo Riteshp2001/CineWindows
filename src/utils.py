@@ -20,37 +20,40 @@
 import gi
 import os
 import ctypes
+import sys
 from urllib.parse import urlparse
 
 gi.require_version("GLib", "2.0")
 from gi.repository import GLib
 
-xdg_pictures = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES)
-SCREENSHOT_DIR = os.path.join(xdg_pictures, "Cine Screenshots") if xdg_pictures else ""
+from .compat import (
+    IS_WINDOWS,
+    MPV_CONFIG_DIR,
+    _get_platform_config_dir,
+    _get_platform_screenshots_dir,
+)
 
-base_config = GLib.get_user_config_dir()
-CONFIG_DIR = os.path.join(base_config, "cine")
-INPUT_CONF = os.path.join(CONFIG_DIR, "input.conf")
+SCREENSHOT_DIR = _get_platform_screenshots_dir()
+
+CONFIG_DIR = _get_platform_config_dir()
+INPUT_CONF = os.path.join(MPV_CONFIG_DIR, "input.conf")
+
+from .compat import PLAYLIST_DIR as playlist_dir
+from .compat import LAST_PLAYLIST_FILE
 
 old_last_pl_file = os.path.join(CONFIG_DIR, "last-playlist.m3u8")
-playlist_dir = os.path.join(CONFIG_DIR, "last-playlist")
-LAST_PLAYLIST_FILE = os.path.join(playlist_dir, "last-playlist.m3u8")
-
-os.makedirs(CONFIG_DIR, exist_ok=True)
-os.makedirs(playlist_dir, exist_ok=True)
-
 if os.path.exists(old_last_pl_file):
     from shutil import move
-
     move(old_last_pl_file, playlist_dir)
 
-is_flatpak = os.environ.get("container") == "flatpak"
+is_flatpak = False if IS_WINDOWS else os.environ.get("container") == "flatpak"
 
 
 def get_has_host_permission():
+    if IS_WINDOWS:
+        return True
     if not is_flatpak:
         return True
-
     try:
         with open("/.flatpak-info", "r") as f:
             for line in f:
@@ -59,7 +62,6 @@ def get_has_host_permission():
                     return "host" in perms
     except Exception:
         pass
-
     return False
 
 
@@ -104,20 +106,8 @@ def is_local_path(path):
 
 
 def get_gpu_vendor(display, libgl):
-    try:
-        context = display.get_default_seat().get_display().create_gl_context()
-        context.realize()
-        context.make_current()
-
-        glGetString = libgl.glGetString
-        glGetString.restype = ctypes.c_char_p
-        glGetString.argtypes = [ctypes.c_uint]
-
-        # GL_VENDOR is 0x1F00
-        return glGetString(0x1F00).decode("utf-8").lower()
-    except Exception as e:
-        print(f"get_gpu_vendor error: {e}")
-        return None
+    from .compat import get_gpu_vendor as _compat_gpu_vendor
+    return _compat_gpu_vendor(display)
 
 
 def format_time(seconds):

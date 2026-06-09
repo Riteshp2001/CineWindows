@@ -1,0 +1,6 @@
+APP_ID = "io.github.gyrolet.CineWindows"
+APP_NAME = "CineWindows"
+APP_DEVELOPER = "gyrolet"
+APP_REPOSITORY_URL = "https://github.com/Riteshp2001/CineWindows"
+RESOURCE_PREFIX = "/io/github/gyrolet/CineWindows"
+CSS_WINDOW_NAME = "io-github-gyrolet-CineWindows"

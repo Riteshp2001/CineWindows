@@ -24,6 +24,9 @@ import subprocess
 from typing import cast
 from gettext import gettext as _
 
+from .compat import IS_WINDOWS
+from .constants import APP_DEVELOPER, APP_ID, APP_NAME, APP_REPOSITORY_URL, RESOURCE_PREFIX
+
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
@@ -35,10 +38,11 @@ from .preferences import Preferences, settings
 from .mpris import MPRIS
 from .save_session import is_same_playlist
 
-os.environ["GSK_RENDERER"] = "gl"
-
-# Set the icon shown in gnome sound settings
-os.environ["PIPEWIRE_PROPS"] = '{application.icon-name="io.github.diegopvlk.Cine"}'
+if IS_WINDOWS:
+    os.environ["GSK_RENDERER"] = "cairo"
+else:
+    os.environ["GSK_RENDERER"] = "gl"
+    os.environ["PIPEWIRE_PROPS"] = f'{{application.icon-name="{APP_ID}"}}'
 
 
 class CineApplication(Adw.Application):
@@ -46,9 +50,9 @@ class CineApplication(Adw.Application):
 
     def __init__(self):
         super().__init__(
-            application_id="io.github.diegopvlk.Cine",
+            application_id=APP_ID,
             flags=Gio.ApplicationFlags.HANDLES_OPEN,
-            resource_base_path="/io/github/diegopvlk/Cine",
+            resource_base_path=RESOURCE_PREFIX,
         )
 
         self.add_main_option(
@@ -63,7 +67,11 @@ class CineApplication(Adw.Application):
         self.connect("shutdown", self._on_shutdown)
 
     def do_startup(self):
-        MPRIS(self)
+        if not IS_WINDOWS:
+            try:
+                MPRIS(self)
+            except Exception:
+                pass
 
         Adw.Application.do_startup(self)
         Adw.StyleManager.get_default().props.color_scheme = Adw.ColorScheme.FORCE_DARK
@@ -212,7 +220,7 @@ class CineApplication(Adw.Application):
             if options.contains("new-window"):
                 return -1
 
-            print("Cine is runnning, to open a new window, run with --new-window.")
+            print(f"{APP_NAME} is running; use --new-window to open another window.")
             return 0
 
         return -1
@@ -226,12 +234,12 @@ class CineApplication(Adw.Application):
         """Callback for the app.about action."""
         APP_VERSION = getattr(sys.modules["__main__"], "VERSION")
         about = Adw.AboutDialog(
-            application_name=_("Cine"),
-            application_icon="io.github.diegopvlk.Cine",
-            developer_name="Diego Povliuk",
+            application_name=_(APP_NAME),
+            application_icon=APP_ID,
+            developer_name=APP_DEVELOPER,
             version=APP_VERSION,
-            copyright="© 2026 Diego Povliuk",
-            issue_url="https://github.com/diegopvlk/Cine/issues",
+            copyright=f"(C) 2026 {APP_DEVELOPER}",
+            issue_url=f"{APP_REPOSITORY_URL}/issues",
             license_type=Gtk.License.GPL_3_0,
         )
         try:
@@ -249,24 +257,6 @@ class CineApplication(Adw.Application):
                 "Showtime https://apps.gnome.org/Showtime/",
                 "Workbench https://apps.gnome.org/Workbench/",
             ],
-        )
-
-        about.add_link(
-            "Donate (PayPal)",
-            "https://www.paypal.com/donate?hosted_button_id=DVL7H35GA66X6",
-        )
-
-        about.add_link(
-            "Doar (Pix): diego.pvlk@gmail.com",
-            "diego.pvlk@gmail.com",
-        )
-
-        about.add_other_app(
-            "io.github.diegopvlk.Dosage", "Dosage", "Keep track of your treatments"
-        )
-
-        about.add_other_app(
-            "io.github.diegopvlk.Tomatillo", "Tomatillo", "Focus better, work smarter"
         )
 
         about.present(self.props.active_window)

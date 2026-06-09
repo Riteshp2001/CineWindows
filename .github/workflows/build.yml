@@ -1,0 +1,107 @@
+name: Build And Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  python-check:
+    name: Python Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Syntax check
+        run: python -m py_compile start_cine.py src/*.py
+
+  windows:
+    name: Windows EXE + Installer
+    runs-on: windows-latest
+    needs: python-check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSYS2 (MINGW64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+
+      - name: Install MSYS2 packages
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm --needed \
+            mingw-w64-x86_64-gcc \
+            mingw-w64-x86_64-gtk4 \
+            mingw-w64-x86_64-libadwaita \
+            mingw-w64-x86_64-python \
+            mingw-w64-x86_64-python-gobject \
+            mingw-w64-x86_64-python-pip \
+            mingw-w64-x86_64-mpv \
+            mingw-w64-x86_64-blueprint-compiler \
+            mingw-w64-x86_64-adwaita-icon-theme \
+            mingw-w64-x86_64-yt-dlp \
+            mingw-w64-x86_64-ffmpeg
+
+      - name: Install Python dependencies
+        shell: msys2 {0}
+        run: pip install -r requirements.txt
+
+      - name: Build package (blueprint, gresource, schemas, launcher)
+        shell: msys2 {0}
+        run: powershell.exe -NoProfile -File build_windows.ps1
+
+      - name: Smoke import
+        shell: msys2 {0}
+        run: |
+          export GSETTINGS_SCHEMA_DIR="$PWD/data"
+          python -m py_compile start_cine.py src/*.py
+
+      - name: Create ZIP archive
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\CineWindows\* `
+            -DestinationPath "CineWindows-${{ github.ref_name }}-windows-x64.zip" -Force
+
+      - name: Install NSIS (chocolatey)
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          $version = Select-String -Path pyproject.toml -Pattern 'version\s*=\s*"([^"]+)"' `
+            | ForEach-Object { $_.Matches.Groups[1].Value }
+          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" installer.nsi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CineWindows-windows-x64
+          path: |
+            dist/CineWindows/
+            CineWindows-${{ github.ref_name }}-windows-x64.zip
+            CineWindows-*.exe
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CineWindows-*.zip
+            CineWindows-*.exe
+          generate_release_notes: true

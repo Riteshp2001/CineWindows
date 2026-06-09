@@ -9,68 +9,6 @@ template $Preferences: Adw.Dialog {
 	Adw.ToolbarView {
 		[top]
 		Adw.HeaderBar {
-			[start]
-			MenuButton warning_header_btn {
-				map => $_on_warning_header_btn_map();
-				tooltip-text: _("About Permissions");
-				icon-name: "info-outline-symbolic";
-
-				styles [
-					"warning-header-btn",
-					"flat",
-				]
-
-				popover: Popover {
-					closed => $_on_warning_popover_closed();
-
-					ScrolledWindow {
-						propagate-natural-width: true;
-						propagate-natural-height: true;
-						margin-top: 10;
-						margin-start: 10;
-						margin-end: 10;
-
-						Box {
-							orientation: vertical;
-							halign: center;
-							valign: center;
-							spacing: 8;
-
-							Label about_permissions_label {
-								halign: start;
-								justify: fill;
-								max-width-chars: 40;
-								wrap: true;
-								natural-wrap-mode: none;
-								wrap-mode: word_char;
-							}
-
-							Label cmd_label {
-								label: "flatpak override --filesystem=host io.github.diegopvlk.Cine --user";
-								max-width-chars: 66;
-
-								styles [
-									"warning-command",
-								]
-							}
-
-							Button copy_cmd_button {
-								label: _("Copy");
-								halign: center;
-								valign: center;
-								margin-top: 4;
-								margin-bottom: 10;
-
-								styles [
-									"suggested-action",
-								]
-
-								clicked => $_on_copy_cmd_btn_clicked();
-							}
-						}
-					}
-				};
-			}
 		}
 
 		content: Adw.PreferencesPage prefs_page {
@@ -100,30 +38,6 @@ template $Preferences: Adw.Dialog {
 					activatable-widget: save_session_switch;
 
 					[suffix]
-					MenuButton {
-						map => $_on_btn_warning_map();
-						icon-name: "info-outline-symbolic";
-						valign: center;
-
-						styles [
-							"flat",
-						]
-
-						popover: Popover {
-							Label {
-								max-width-chars: 35;
-								label: _("Requires flatpak permission to read the folder where the video is stored");
-								wrap: true;
-								justify: center;
-
-								styles [
-									"warning",
-								]
-							}
-						};
-					}
-
-					[suffix]
 					Switch save_session_switch {
 						valign: center;
 					}
@@ -133,30 +47,6 @@ template $Preferences: Adw.Dialog {
 					title: _("Save Video Position on Close");
 					subtitle: _("Also save options like brightness, subtitle delay, etc.");
 					activatable-widget: save_position_switch;
-
-					[suffix]
-					MenuButton {
-						map => $_on_btn_warning_map();
-						icon-name: "info-outline-symbolic";
-						valign: center;
-
-						styles [
-							"flat",
-						]
-
-						popover: Popover {
-							Label {
-								max-width-chars: 35;
-								label: _("Requires flatpak permission to read the folder where the video is stored");
-								wrap: true;
-								justify: center;
-
-								styles [
-									"warning",
-								]
-							}
-						};
-					}
 
 					[suffix]
 					Switch save_position_switch {

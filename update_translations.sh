@@ -1,6 +1,6 @@
 #!/bin/bash
-OUTPUT="po/io.github.diegopvlk.Cine.pot"
-PACKAGE_NAME="io.github.diegopvlk.Cine"
+OUTPUT="po/io.github.gyrolet.CineWindows.pot"
+PACKAGE_NAME="io.github.gyrolet.CineWindows"
 ENCODING="UTF-8"
 LANGUAGE_BLP="--language=JavaScript"
 LINGUAS_FILE="po/LINGUAS"

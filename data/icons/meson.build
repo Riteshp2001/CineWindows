@@ -1,4 +1,4 @@
-application_id = 'io.github.diegopvlk.Cine'
+application_id = 'io.github.gyrolet.CineWindows'
 
 scalable_dir = 'hicolor' / 'scalable' / 'apps'
 install_data(

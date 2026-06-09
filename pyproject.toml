@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "CineWindows"
+version = "1.0.0"
+description = "A Windows-focused GTK4 video player powered by mpv"
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+authors = [{name = "gyrolet"}]
+requires-python = ">=3.13"
+dependencies = [
+    "python-mpv>=1.0.8",
+    "yt-dlp>=2026.3.17",
+]
+keywords = ["gtk4", "video-player", "mpv"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Video :: Display",
+]
+
+[project.urls]
+Homepage = "https://github.com/Riteshp2001/CineWindows"
+Repository = "https://github.com/Riteshp2001/CineWindows"
