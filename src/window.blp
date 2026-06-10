@@ -26,6 +26,14 @@ template $CineWindow: Adw.ApplicationWindow {
         ]
 
         [overlay]
+        Image audio_only_icon {
+          icon-name: "cine-audio-x-generic-symbolic";
+          visible: false;
+          pixel-size: 128;
+          opacity: 0.33;
+        }
+
+        [overlay]
         Revealer revealer_icon_indicator {
           transition-duration: 350;
           transition-type: crossfade;

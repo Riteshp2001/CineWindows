@@ -70,6 +70,14 @@
   </requires>
 
   <releases>
+    <release version="1.5.3" date="2026-06-10">
+      <description translate="no">
+        <ul>
+          <li>Improved speed while seeking from progress bar</li>
+          <li>Fixed scrolling not working for high resolution mouses</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.5.1" date="2026-06-04">
       <description translate="no">
         <ul>
