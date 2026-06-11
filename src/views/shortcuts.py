@@ -20,7 +20,7 @@
 import gi
 import re
 from gettext import gettext as _, gettext as gt
-from .utils import KEY_REMAP
+from ..utils.utils import KEY_REMAP
 
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")

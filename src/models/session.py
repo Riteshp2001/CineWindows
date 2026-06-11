@@ -19,8 +19,8 @@
 
 import os
 import gi
-from .utils import LAST_PLAYLIST_FILE, is_local_path
-from .preferences import settings
+from ..utils.utils import LAST_PLAYLIST_FILE, is_local_path
+from ..views.preferences import settings
 
 gi.require_version("GLib", "2.0")
 from gi.repository import GLib

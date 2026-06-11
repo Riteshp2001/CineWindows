@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=io.github.gyrolet.CineWindows
-Exec=@bindir@/CineWindows --gapplication-service

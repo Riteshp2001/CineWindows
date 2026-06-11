@@ -27,7 +27,6 @@ gi.require_version("GLib", "2.0")
 from gi.repository import GLib
 
 from .compat import (
-    IS_WINDOWS,
     MPV_CONFIG_DIR,
     _get_platform_config_dir,
     _get_platform_screenshots_dir,
@@ -46,26 +45,12 @@ if os.path.exists(old_last_pl_file):
     from shutil import move
     move(old_last_pl_file, playlist_dir)
 
-is_flatpak = False if IS_WINDOWS else os.environ.get("container") == "flatpak"
-
 
 def get_has_host_permission():
-    if IS_WINDOWS:
-        return True
-    if not is_flatpak:
-        return True
-    try:
-        with open("/.flatpak-info", "r") as f:
-            for line in f:
-                if line.startswith("filesystems="):
-                    perms = line.split("=")[-1].strip().split(";")
-                    return "host" in perms
-    except Exception:
-        pass
-    return False
+    return True
 
-
-has_host_permission = get_has_host_permission()
+def has_host_permission(path=None):
+    return True
 
 
 def get_mouse_bindings(bindings):

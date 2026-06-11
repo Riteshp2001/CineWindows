@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/io/github/gyrolet/CineWindows">
-    <file alias="style.css">style.css</file>
-    <file preprocess="xml-stripblanks">playlist.ui</file>
-    <file preprocess="xml-stripblanks">preferences.ui</file>
-    <file preprocess="xml-stripblanks">options.ui</file>
-    <file preprocess="xml-stripblanks">window.ui</file>
-    <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
+    <file alias="style.css">ui/style.css</file>
+    <file alias="playlist.ui" preprocess="xml-stripblanks">ui/playlist.ui</file>
+    <file alias="preferences.ui" preprocess="xml-stripblanks">ui/preferences.ui</file>
+    <file alias="options.ui" preprocess="xml-stripblanks">ui/options.ui</file>
+    <file alias="window.ui" preprocess="xml-stripblanks">ui/window.ui</file>
+    <file alias="shortcuts-dialog.ui" preprocess="xml-stripblanks">ui/shortcuts-dialog.ui</file>
   </gresource>
   <gresource prefix="/io/github/gyrolet/CineWindows/icons/scalable/actions">
     <file alias="cine-audio-off-symbolic.svg">../data/icons/scalable/actions/cine-audio-off-symbolic.svg</file>

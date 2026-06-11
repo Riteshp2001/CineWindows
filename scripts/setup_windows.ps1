@@ -2,7 +2,7 @@
 # Run this in PowerShell as Administrator
 
 $ErrorActionPreference = "Stop"
-$CINE_DIR = $PSScriptRoot
+$CINE_DIR = (Split-Path $PSScriptRoot -Parent)
 
 Write-Host "=== CineWindows Setup ===" -ForegroundColor Cyan
 Write-Host ""
@@ -50,12 +50,16 @@ $packages = @(
 & "$MSYS2_PATH\usr\bin\bash.exe" -l -c "pacman -S --noconfirm $packages 2>&1" | Out-Null
 Write-Host "[2/5] Packages installed." -ForegroundColor Green
 
+Write-Host "[2.5/5] Installing Python dependencies via pip..." -ForegroundColor Yellow
+& "$MINGW64_PATH\bin\python.exe" -m pip install --upgrade "python-mpv" "yt-dlp[default]"
+Write-Host "[2.5/5] Python dependencies installed." -ForegroundColor Green
+
 # 3. Compile Blueprint UI files -> .ui
 Write-Host "[3/5] Compiling Blueprint UI files..." -ForegroundColor Yellow
 $BLUEPRINT_COMPILER = "$MINGW64_PATH\bin\blueprint-compiler.exe"
 $SRC_DIR = "$CINE_DIR\src"
 if (Test-Path $BLUEPRINT_COMPILER) {
-    Get-ChildItem "$SRC_DIR\*.blp" | ForEach-Object {
+    Get-ChildItem "$SRC_DIR\ui\*.blp" | ForEach-Object {
         $blp = $_.FullName
         $ui = [System.IO.Path]::ChangeExtension($blp, ".ui")
         & $BLUEPRINT_COMPILER compile $blp --output $ui

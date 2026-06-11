@@ -27,23 +27,22 @@ from urllib.parse import urlparse
 from time import time
 import shlex
 
-from .compat import (
-    IS_WINDOWS,
+from ..utils.compat import (
     MPV_CONFIG_DIR,
     load_egl,
     load_gl,
     get_display_param,
     GL_FRAMEBUFFER_BINDING,
 )
-from .constants import APP_ID, APP_NAME, RESOURCE_PREFIX
+from ..utils.constants import APP_ID, APP_NAME, RESOURCE_PREFIX
 
-from .save_session import (
+from ..models.session import (
     save_last_playlist_file,
     restore_last_playlist,
     is_same_playlist,
 )
 
-from .utils import (
+from ..utils.utils import (
     get_mouse_bindings,
     parse_nonrepeat_bindings,
     is_local_path,
@@ -70,10 +69,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GObject", "2.0")
 from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject
 
-if not IS_WINDOWS:
-    gi.require_version("GdkWayland", "4.0")
-    gi.require_version("GdkX11", "4.0")
-    from gi.repository import GdkWayland, GdkX11  # pyright: ignore[reportAttributeAccessIssue]
+
 
 _egl, egl_get_proc_address = load_egl()
 _gl, _glGetIntegerv = load_gl()
@@ -97,7 +93,6 @@ class CineWindow(Adw.ApplicationWindow):
     controls_box: Gtk.Box = Gtk.Template.Child()
     controls_wrap_box: Adw.WrapBox = Gtk.Template.Child()
     controls_separator: Gtk.Separator = Gtk.Template.Child()
-    audio_only_icon: Gtk.Image = Gtk.Template.Child()
     revealer_ui: Gtk.Revealer = Gtk.Template.Child()
     revealer_drop_indicator: Gtk.Revealer = Gtk.Template.Child()
     drop_label: Gtk.Label = Gtk.Template.Child()
@@ -315,17 +310,16 @@ class CineWindow(Adw.ApplicationWindow):
         self.set_default_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
         self.set_title(_(APP_NAME))
 
-        if IS_WINDOWS:
-            _icon_path = os.path.normpath(
-                os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             "..", "data", "icons", "hicolor", "scalable", "apps",
-                             "io.github.gyrolet.CineWindows.png")
-            )
-            if os.path.exists(_icon_path):
-                try:
-                    self.start_page.set_icon(Gio.FileIcon.new(Gio.File.new_for_path(_icon_path)))
-                except Exception:
-                    pass
+        _icon_path = os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "..", "data", "icons", "hicolor", "scalable", "apps",
+                         "io.github.gyrolet.CineWindows.svg")
+        )
+        if os.path.exists(_icon_path):
+            try:
+                self.start_page.set_icon(Gio.FileIcon.new(Gio.File.new_for_path(_icon_path)))
+            except Exception:
+                pass
 
         for widget in [
             self.controls_wrap_box,

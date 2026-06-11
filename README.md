@@ -74,6 +74,24 @@ You can help translate Cine using [Weblate](https://hosted.weblate.org/projects/
 
 [![Translation status](https://hosted.weblate.org/widget/cine/app/multi-auto.svg)](https://hosted.weblate.org/engage/cine/)
 
+### Easy Method
+1. Run `scripts/setup_windows.ps1` as Administrator. This will install MSYS2, Python, and all dependencies automatically.
+2. The script will generate a bundled runtime folder (`runtime`).
+
+### Manual Method
+1. Download and install [MSYS2](https://www.msys2.org/).
+2. Open "MSYS2 MINGW64" terminal.
+3. Install dependencies: `pacman -S mingw-w64-x86_64-python mingw-w64-x86_64-gtk4 mingw-w64-x86_64-libadwaita mingw-w64-x86_64-mpv`
+4. Install python packages: `pip install python-mpv yt-dlp`
+5. Run `scripts/build_windows.ps1` to compile the resources.
+
+## Running the App
+- Double click `run_cine.bat` or run `.\cine.ps1` in PowerShell.
+
+## Building the Installer
+- Install NSIS.
+- Run `scripts/build_windows.ps1` and it will automatically generate the installer using NSIS.
+
 ### Code of Conduct
 
 This project follows a respectful and inclusive code of conduct for all contributors and users.

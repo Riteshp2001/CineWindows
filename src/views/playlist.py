@@ -32,8 +32,8 @@ from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject, Pango
 
 from gettext import gettext as _
 from gettext import ngettext
-from .constants import RESOURCE_PREFIX
-from .utils import is_local_path
+from ..utils.constants import RESOURCE_PREFIX
+from ..utils.utils import format_time, is_local_path
 
 
 class PlaylistItemObj(GObject.Object):
@@ -175,16 +175,9 @@ class Playlist(Adw.Dialog):
     def _set_save_btn_playlist(self):
         btn = self.save_playlist_btn
         if self.win.has_some_doc_path:
-            btn.set_tooltip_text(
-                _("Save Playlist")
-                + " - "
-                + _(
-                    "Requires flatpak permission to read the folder where the video is stored"
-                )
+            self.window.add_toast(
+                _("Cannot add media: Check file permissions.")
             )
-            btn.set_sensitive(False)
-        else:
-            btn.set_tooltip_text(_("Save Playlist"))
             btn.set_sensitive(True)
 
     def _on_factory_setup(self, _factory, list_item):

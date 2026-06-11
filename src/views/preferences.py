@@ -20,7 +20,7 @@
 import gi
 from gettext import gettext as _
 
-from .constants import APP_ID, RESOURCE_PREFIX
+from ..utils.constants import APP_ID, RESOURCE_PREFIX
 
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")

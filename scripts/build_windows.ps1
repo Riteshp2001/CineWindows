@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Root = $PSScriptRoot
+$Root = (Split-Path $PSScriptRoot -Parent)
 $DistDir = Join-Path $Root "dist\CineWindows"
 
 $MingwDir = ""
@@ -24,7 +24,7 @@ $env:PATH = "$BinDir;$env:PATH"
 
 # 1. Compile Blueprint UI files -> .ui
 if (Test-Path (Join-Path $BinDir "blueprint-compiler.exe")) {
-    Get-ChildItem (Join-Path $Root "src\*.blp") | ForEach-Object {
+    Get-ChildItem (Join-Path $Root "src\ui\*.blp") | ForEach-Object {
         $ui = [System.IO.Path]::ChangeExtension($_.FullName, ".ui")
         & (Join-Path $BinDir "blueprint-compiler.exe") compile $_.FullName --output $ui
     }
@@ -45,7 +45,7 @@ if (Test-Path (Join-Path $BinDir "blueprint-compiler.exe")) {
 Write-Host "[Icon] Generating CineWindows.ico from SVG..." -ForegroundColor Yellow
 Push-Location $Root
 try {
-    & (Join-Path $BinDir "python.exe") create_icon.py
+    & (Join-Path $BinDir "python.exe") (Join-Path $PSScriptRoot "create_icon.py")
 } catch {
     Write-Host "[Icon] Warning: Icon generation failed: $_" -ForegroundColor Yellow
     if (-not (Test-Path (Join-Path $Root "CineWindows.ico"))) {

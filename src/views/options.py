@@ -22,7 +22,7 @@ import gi
 from typing import cast
 from gettext import gettext as _
 
-from .constants import RESOURCE_PREFIX
+from ..utils.constants import RESOURCE_PREFIX
 from .preferences import settings
 
 gi.require_version("Gtk", "4.0")

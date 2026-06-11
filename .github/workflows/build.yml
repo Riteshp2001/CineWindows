@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Windows package
         shell: msys2 {0}
-        run: powershell.exe -NoProfile -File build_windows.ps1
+        run: powershell.exe -NoProfile -File scripts/build_windows.ps1
 
       - name: Create ZIP archive
         shell: pwsh
@@ -58,7 +58,7 @@ jobs:
         run: |
           $version = Select-String -Path pyproject.toml -Pattern 'version\s*=\s*"([^"]+)"' `
             | ForEach-Object { $_.Matches.Groups[1].Value }
-          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" installer.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" scripts/installer.nsi
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
