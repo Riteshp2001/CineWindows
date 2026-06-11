@@ -53,11 +53,20 @@ jobs:
         shell: pwsh
         run: choco install nsis -y --no-progress
 
+      - name: Generate Windows icon
+        shell: msys2 {0}
+        run: |
+          pip install --quiet pillow
+          python scripts/create_icon.py
+
       - name: Build NSIS installer
         shell: pwsh
         run: |
           $version = Select-String -Path pyproject.toml -Pattern 'version\s*=\s*"([^"]+)"' `
             | ForEach-Object { $_.Matches.Groups[1].Value }
+          if (-not (Test-Path "CineWindows.ico")) {
+            throw "CineWindows.ico is required for NSIS installer but could not be generated"
+          }
           & "C:\Program Files (x86)\NSIS\makensis.exe" "/DAPP_VERSION=$version" scripts/installer.nsi
 
       - name: Upload workflow artifacts

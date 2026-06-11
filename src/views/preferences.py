@@ -20,7 +20,7 @@
 import gi
 from gettext import gettext as _
 
-from ..utils.constants import APP_ID, RESOURCE_PREFIX
+from ..utils.constants import APP_ID, APP_NAME, APP_DEVELOPER, APP_REPOSITORY_URL, RESOURCE_PREFIX
 
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
@@ -87,6 +87,11 @@ class Preferences(Adw.Dialog):
     subtitle_lang_row: Adw.EntryRow = Gtk.Template.Child()
     audio_lang_row: Adw.EntryRow = Gtk.Template.Child()
 
+    auto_update_row: Adw.SwitchRow = Gtk.Template.Child()
+    about_version_label: Gtk.Label = Gtk.Template.Child()
+    check_updates_btn: Gtk.Button = Gtk.Template.Child()
+    about_app_name_label: Gtk.Label = Gtk.Template.Child()
+
     def __init__(self, window, **kwargs):
         super().__init__(**kwargs)
         self.win = window
@@ -94,6 +99,7 @@ class Preferences(Adw.Dialog):
 
         self._bind_ui()
         self._setup_mpv_updates()
+        self._setup_about_section()
 
         font = settings.get_string("subtitle-font")
         self.font_label.set_label(font)
@@ -199,6 +205,12 @@ class Preferences(Adw.Dialog):
             "text",
             Gio.SettingsBindFlags.DEFAULT,
         )
+        settings.bind(
+            "auto-update",
+            self.auto_update_row,
+            "active",
+            Gio.SettingsBindFlags.DEFAULT,
+        )
 
     def _setup_mpv_updates(self):
         handlers = {
@@ -222,6 +234,17 @@ class Preferences(Adw.Dialog):
     def _disconnect_settings(self, *a):
         for connection_id in self._setting_ids:
             settings.disconnect(connection_id)
+
+    def _setup_about_section(self):
+        version = getattr(self.win.get_application(), "app_version", "1.0.0")
+        self.about_app_name_label.set_label(_(APP_NAME))
+        self.about_version_label.set_label(version)
+        self.check_updates_btn.connect("clicked", self._on_check_updates_clicked)
+
+    def _on_check_updates_clicked(self, _btn):
+        app = self.win.get_application()
+        if app and hasattr(app, "_check_for_updates"):
+            app._check_for_updates(show_up_to_date=True)
 
     def _on_sub_color_changed(self, settings, key):
         self.mpv["sub-color"] = settings.get_string(key)

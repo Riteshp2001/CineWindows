@@ -191,6 +191,53 @@ template $Preferences: Adw.Dialog {
 					tooltip-text: _("Example: en,es,pt");
 				}
 			}
+
+			Adw.PreferencesGroup {
+				title: _("Updates");
+
+				Adw.SwitchRow auto_update_row {
+					title: _("Check for Updates Automatically");
+					subtitle: _("Check for new CineWindows versions on startup");
+				}
+			}
+
+			Adw.PreferencesGroup {
+				title: _("About");
+
+				Adw.ActionRow {
+					title: _("Application");
+
+					[suffix]
+					Label about_app_name_label {
+						label: _("CineWindows");
+						wrap: true;
+						styles [ "heading", ]
+					}
+				}
+
+				Adw.ActionRow {
+					title: _("Version");
+
+					[suffix]
+					Label about_version_label {
+						label: "1.0.1";
+						wrap: true;
+						styles [ "heading", ]
+					}
+				}
+
+				Adw.ActionRow {
+					title: _("Check for Updates");
+
+					[suffix]
+					Button check_updates_btn {
+						label: _("Check Now");
+						valign: center;
+
+						styles [ "pill", ]
+					}
+				}
+			}
 		};
 	}
 }

@@ -222,6 +222,64 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                 </child>
               </object>
             </child>
+            <child>
+              <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">Updates</property>
+                <child>
+                  <object class="AdwSwitchRow" id="auto_update_row">
+                    <property name="title" translatable="yes">Check for Updates Automatically</property>
+                    <property name="subtitle" translatable="yes">Check for new CineWindows versions on startup</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">About</property>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Application</property>
+                    <child type="suffix">
+                      <object class="GtkLabel" id="about_app_name_label">
+                        <property name="label">CineWindows</property>
+                        <property name="wrap">true</property>
+                        <style>
+                          <class name="heading"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Version</property>
+                    <child type="suffix">
+                      <object class="GtkLabel" id="about_version_label">
+                        <property name="label">1.0.1</property>
+                        <property name="wrap">true</property>
+                        <style>
+                          <class name="heading"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Check for Updates</property>
+                    <child type="suffix">
+                      <object class="GtkButton" id="check_updates_btn">
+                        <property name="label" translatable="yes">Check Now</property>
+                        <property name="valign">3</property>
+                        <style>
+                          <class name="pill"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </property>
       </object>

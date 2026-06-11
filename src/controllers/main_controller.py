@@ -20,8 +20,12 @@
 import os
 import gi
 import sys
+import json
+import threading
 from typing import cast
 from gettext import gettext as _
+from urllib.request import urlopen, Request
+from urllib.error import URLError
 
 from ..utils.constants import APP_DEVELOPER, APP_ID, APP_NAME, APP_REPOSITORY_URL, RESOURCE_PREFIX
 
@@ -41,12 +45,13 @@ os.environ["GSK_RENDERER"] = "cairo"
 class CineApplication(Adw.Application):
     """The main application singleton class."""
 
-    def __init__(self):
+    def __init__(self, version="1.0.0"):
         super().__init__(
             application_id=APP_ID,
             flags=Gio.ApplicationFlags.HANDLES_OPEN,
             resource_base_path=RESOURCE_PREFIX,
         )
+        self.app_version = version
 
         self.add_main_option(
             "new-window",
@@ -69,6 +74,10 @@ class CineApplication(Adw.Application):
         self._create_action(
             "preferences", self.on_preferences_action, ["<primary>comma"]
         )
+        self._create_action("check-updates", self._on_check_updates_action)
+
+        if settings.get_boolean("auto-update"):
+            GLib.idle_add(self._check_for_updates)
 
     def do_activate(self):
         win = CineWindow(application=self, is_activate=True)
@@ -223,21 +232,21 @@ class CineApplication(Adw.Application):
 
     def _on_about_action(self, *args):
         """Callback for the app.about action."""
-        APP_VERSION = getattr(sys.modules["__main__"], "VERSION", "1.0.0")
-
         _icon = self._load_windows_app_icon()
 
+        website = APP_REPOSITORY_URL.replace(".git", "")
         about = Adw.AboutDialog(
             application_name=_(APP_NAME),
             application_icon=_icon,
             developer_name=APP_DEVELOPER,
-            version=APP_VERSION,
+            version=self.app_version,
             copyright=f"(C) 2026 {APP_DEVELOPER}",
             issue_url=f"{APP_REPOSITORY_URL}/issues",
             license_type=Gtk.License.GPL_3_0,
+            website=website,
+            support_url=website,
         )
         try:
-            # Translators: Replace "translator-credits" with your name/username, and optionally an email or URL.
             about.set_translator_credits(_("translator-credits"))
         except NameError:
             pass
@@ -254,6 +263,63 @@ class CineApplication(Adw.Application):
         )
 
         about.present(self.props.active_window)
+
+    def _on_check_updates_action(self, *args):
+        self._check_for_updates(show_up_to_date=True)
+
+    def _check_for_updates(self, show_up_to_date=False):
+        version = self.app_version
+
+        def check():
+            try:
+                url = f"{APP_REPOSITORY_URL.replace('.git', '')}/releases/latest"
+                req = Request(
+                    url.replace("github.com", "api.github.com/repos") + "?per_page=1",
+                    headers={"Accept": "application/vnd.github.v3+json", "User-Agent": f"{APP_NAME}/{version}"},
+                )
+                with urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
+
+                latest_tag = data.get("tag_name", "").lstrip("v")
+                latest_name = data.get("name", latest_tag) or latest_tag
+                html_url = data.get("html_url", "")
+
+                def do_notify():
+                    win = self.props.active_window
+                    if not win:
+                        return
+
+                    def parse_version(v):
+                        try:
+                            return tuple(int(x) for x in v.split("."))
+                        except Exception:
+                            return (0, 0, 0)
+
+                    current = parse_version(version)
+                    latest = parse_version(latest_tag)
+
+                    if latest > current:
+                        toast = Adw.Toast.new(
+                            _("Update {} available — {}").format(latest_tag, latest_name)
+                        )
+                        toast.set_button_label(_("Download"))
+                        toast.connect("button-clicked", lambda *a: Gtk.UriLauncher.new(html_url).launch(win, None))
+                        win.toast_overlay.add_toast(toast)
+                    elif show_up_to_date:
+                        toast = Adw.Toast.new(_("CineWindows is up to date ({})").format(version))
+                        win.toast_overlay.add_toast(toast)
+
+                GLib.idle_add(do_notify)
+
+            except (URLError, json.JSONDecodeError, Exception) as e:
+                if show_up_to_date:
+                    win = self.props.active_window
+                    if win:
+                        toast = Adw.Toast.new(_("Could not check for updates: {}").format(str(e)))
+                        win.toast_overlay.add_toast(toast)
+
+        thread = threading.Thread(target=check, daemon=True)
+        thread.start()
 
     def _load_windows_app_icon(self):
         """Load application icon from file for Windows (icon theme unavailable)."""
@@ -285,5 +351,5 @@ class CineApplication(Adw.Application):
 
 def main(version):
     """The application's entry point."""
-    app = CineApplication()
+    app = CineApplication(version=version)
     return app.run(sys.argv)

@@ -1,3 +1,5 @@
+VERSION = "1.0.1"
+
 from .controllers.main_controller import main
 
 if __name__ == "__main__":

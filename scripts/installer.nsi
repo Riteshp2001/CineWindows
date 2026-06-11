@@ -4,7 +4,7 @@ RequestExecutionLevel admin
 !include "MUI2.nsh"
 
 !ifndef APP_VERSION
-  !define APP_VERSION "1.5.2"
+  !define APP_VERSION "1.0.1"
 !endif
 
 !define APP_NAME "CineWindows"
@@ -12,19 +12,20 @@ RequestExecutionLevel admin
 !define APP_URL "https://github.com/Riteshp2001/CineWindows"
 !define APP_EXE "CineWindows.exe"
 !define APP_ICO "CineWindows.ico"
+!define APP_ICO_PATH "..\CineWindows.ico"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "CineWindows-${APP_VERSION}-windows-x64.exe"
+OutFile "..\CineWindows-${APP_VERSION}-windows-x64.exe"
 InstallDir "$PROGRAMFILES64\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" ""
 
 !define MUI_ABORTWARNING
 !define MUI_WELCOMEFINISHPAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Wizard\win.bmp"
-!define MUI_ICON "${APP_ICO}"
-!define MUI_UNICON "${APP_ICO}"
+!define MUI_ICON "${APP_ICO_PATH}"
+!define MUI_UNICON "${APP_ICO_PATH}"
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "LICENSE"
+!insertmacro MUI_PAGE_LICENSE "..\LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -41,7 +42,7 @@ Section "CineWindows (required)" SecApp
   SectionIn RO
 
   SetOutPath "$INSTDIR"
-  File /r "dist\CineWindows\*.*"
+  File /r "..\dist\CineWindows\*.*"
 
   WriteRegStr HKLM "Software\${APP_NAME}" "" "$INSTDIR"
 

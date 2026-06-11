@@ -3,6 +3,7 @@ import subprocess
 import os
 import shutil
 import tempfile
+import sys
 
 SVG_PATH = "data/icons/hicolor/scalable/apps/io.github.gyrolet.CineWindows.svg"
 ICO_PATH = "CineWindows.ico"
@@ -34,6 +35,24 @@ def svg_to_png(svg_path, size, output_path):
     except (subprocess.SubprocessError, FileNotFoundError):
         pass
     return False
+
+SVG_FALLBACK_PNG = "data/icons/hicolor/scalable/apps/io.github.gyrolet.CineWindows.png"
+SVG_FALLBACK_SYMBOLIC = "data/icons/hicolor/scalable/apps/io.github.gyrolet.CineWindows-symbolic.png"
+
+def png_to_png(png_path, size, output_path):
+    try:
+        from PIL import Image
+        img = Image.open(png_path)
+        img.thumbnail((size, size), Image.LANCZOS)
+        bg = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        offset = ((size - img.width) // 2, (size - img.height) // 2)
+        bg.paste(img, offset, img if img.mode == "RGBA" else None)
+        bg.save(output_path, "PNG")
+        return True
+    except ImportError:
+        return False
+    except Exception:
+        return False
 
 def pack_ico(png_files, output_path):
     count = len(png_files)
@@ -70,10 +89,23 @@ def main():
                 print(f"  Warning: Could not render {size}x{size}")
 
         if not png_files:
-            fallback_png = "data/icons/hicolor/scalable/apps/io.github.gyrolet.CineWindows.png"
-            if os.path.exists(fallback_png):
+            if os.path.exists(SVG_FALLBACK_PNG):
+                print(f"  Warning: No SVG converter found; falling back to PIL resize of existing PNG...")
+                for size in SIZES:
+                    out = os.path.join(tmpdir, f"icon_{size}.png")
+                    if png_to_png(SVG_FALLBACK_PNG, size, out):
+                        png_files.append((out, size))
+                        print(f"  Rendered {size}x{size} (PIL fallback)")
+            elif os.path.exists(SVG_PATH):
+                print(f"  Warning: No converter found; using SVG as single PNG source")
+                out = os.path.join(tmpdir, f"icon_svg.png")
+                shutil.copy2(SVG_PATH, out)
+                png_files.append((out, 256))
+
+        if not png_files:
+            if os.path.exists(SVG_FALLBACK_PNG):
                 print(f"  Using fallback PNG for 32x32")
-                png_files.append((fallback_png, 32))
+                png_files.append((SVG_FALLBACK_PNG, 32))
             else:
                 print("  ERROR: No icon source available!")
                 return 1

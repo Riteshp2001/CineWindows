@@ -55,5 +55,10 @@
 		<key name="right-click" type="i">
 			<default>0</default>
 		</key>
+		<key name="auto-update" type="b">
+			<default>true</default>
+			<summary>Check for updates automatically</summary>
+			<description>Automatically check for new CineWindows versions on startup.</description>
+		</key>
 	</schema>
 </schemalist>
