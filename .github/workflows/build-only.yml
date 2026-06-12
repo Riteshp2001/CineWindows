@@ -25,7 +25,6 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-python
             mingw-w64-x86_64-python-pip
-            mingw-w64-x86_64-python-mpv
             mingw-w64-x86_64-gtk4
             mingw-w64-x86_64-libadwaita
             mingw-w64-x86_64-mpv
@@ -39,9 +38,13 @@ jobs:
             mingw-w64-x86_64-shared-mime-info
             mingw-w64-x86_64-desktop-file-utils
 
+      - name: Install Python dependencies
+        shell: msys2 {0}
+        run: pip install --quiet -r requirements.txt
+
       - name: Build release bundle
-        run: |
-          & "C:\msys64\mingw64\bin\python.exe" scripts\build_windows.ps1 -Configuration Release -StripPythonSources
+        shell: msys2 {0}
+        run: powershell.exe -NoProfile -File scripts/build_windows.ps1 -Configuration Release -StripPythonSources
 
       - name: Create zip archive
         run: |

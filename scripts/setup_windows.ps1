@@ -46,6 +46,10 @@ $packages = @(
     "mingw-w64-x86_64-adwaita-icon-theme"
     "mingw-w64-x86_64-yt-dlp"
     "mingw-w64-x86_64-ffmpeg"
+    "mingw-w64-x86_64-librsvg"
+    "mingw-w64-x86_64-ntldd"
+    "mingw-w64-x86_64-shared-mime-info"
+    "mingw-w64-x86_64-desktop-file-utils"
 )
 & "$MSYS2_PATH\usr\bin\bash.exe" -l -c "pacman -S --noconfirm $packages 2>&1" | Out-Null
 Write-Host "[2/5] Packages installed." -ForegroundColor Green
