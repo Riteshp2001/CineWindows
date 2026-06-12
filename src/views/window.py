@@ -1333,15 +1333,28 @@ class CineWindow(Adw.ApplicationWindow):
             try:
                 value = source.read_value_finish(result)
 
+                f_name = ""
                 if isinstance(value, Gdk.FileList):
                     f_name = value.get_files()[0].get_basename() or ""
-                    f_name = f_name.lower()
-                    is_playing = not self.mpv.idle_active
+                elif isinstance(value, str):
+                    for u in value.splitlines():
+                        u = u.strip()
+                        if u:
+                            if u.startswith("file://"):
+                                f_name = Gio.File.new_for_uri(u).get_basename() or ""
+                            elif is_local_path(u):
+                                f_name = Gio.File.new_for_path(u).get_basename() or ""
+                            else:
+                                f_name = u
+                            break
 
-                    if is_playing and any(f_name.endswith(ext) for ext in SUB_EXTS):
-                        self.drop_icon.props.icon_name = "cine-subtitles-symbolic"
-                        self.drop_label.props.label = _("Add Subtitle Track")
-                        return
+                f_name = f_name.lower()
+                is_playing = not self.mpv.idle_active
+
+                if is_playing and any(f_name.endswith(ext) for ext in SUB_EXTS):
+                    self.drop_icon.props.icon_name = "cine-subtitles-symbolic"
+                    self.drop_label.props.label = _("Add Subtitle Track")
+                    return
 
                 self.drop_icon.props.icon_name = "cine-playback-start-symbolic"
                 self.drop_label.props.label = _("Play")
@@ -1371,12 +1384,21 @@ class CineWindow(Adw.ApplicationWindow):
         if is_same_playlist(self.mpv.playlist):
             self.mpv.write_watch_later_config()
 
-        items: list[Gio.File] | list[str] = []
+        items: list[Gio.File | str] = []
 
         if isinstance(value, Gdk.FileList):
             items = value.get_files()
         elif isinstance(value, str):
-            items = [u.strip() for u in value.splitlines() if u.strip()]
+            for u in value.splitlines():
+                u = u.strip()
+                if not u:
+                    continue
+                if u.startswith("file://"):
+                    items.append(Gio.File.new_for_uri(u))
+                elif is_local_path(u):
+                    items.append(Gio.File.new_for_path(u))
+                else:
+                    items.append(u)
 
         for item in items:
             mode = "replace" if first_file else "append-play"

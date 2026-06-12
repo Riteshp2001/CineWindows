@@ -317,12 +317,21 @@ class Playlist(Adw.Dialog):
         GLib.idle_add(self.drop_indicator_revealer.set_reveal_child, False)
 
     def _on_drop(self, _target, value, _x, _y):
-        items: list[Gio.File] | list[str] = []
+        items: list[Gio.File | str] = []
 
         if isinstance(value, Gdk.FileList):
             items = value.get_files()
         elif isinstance(value, str):
-            items = [u.strip() for u in value.splitlines() if u.strip()]
+            for u in value.splitlines():
+                u = u.strip()
+                if not u:
+                    continue
+                if u.startswith("file://"):
+                    items.append(Gio.File.new_for_uri(u))
+                elif is_local_path(u):
+                    items.append(Gio.File.new_for_path(u))
+                else:
+                    items.append(u)
 
         for item in items:
             if isinstance(item, Gio.File):
