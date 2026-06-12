@@ -83,6 +83,21 @@ class CineApplication(Adw.Application):
         win = CineWindow(application=self, is_activate=True)
         win.present()
 
+    def do_command_line(self, command_line):
+        options = command_line.get_options_dict()
+        if options.contains("new-window"):
+            self.activate()
+            return 0
+
+        files = command_line.get_arguments()[1:]
+        if files:
+            gfiles = [Gio.File.new_for_commandline_arg(f) for f in files]
+            self.do_open(gfiles, len(gfiles), "")
+            return 0
+
+        self.activate()
+        return 0
+
     def do_open(self, files, n_files, hint):
         win: CineWindow = cast(CineWindow, self.props.active_window)
         open_new = settings.get_boolean("open-new-windows") or not win

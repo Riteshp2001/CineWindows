@@ -20,6 +20,7 @@
 import gi
 import os
 import unicodedata
+from typing import cast
 
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
@@ -33,7 +34,7 @@ from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject, Pango
 from gettext import gettext as _
 from gettext import ngettext
 from ..utils.constants import RESOURCE_PREFIX
-from ..utils.utils import format_time, is_local_path
+from ..utils.utils import format_time, is_local_path, SUB_EXTS, MEDIA_EXTS
 
 
 class PlaylistItemObj(GObject.Object):
@@ -324,27 +325,42 @@ class Playlist(Adw.Dialog):
             if isinstance(item, Gio.File):
                 path = item.get_path() or item.get_uri()
 
-                is_url = not is_local_path(path)  # URL Thumbnail
+                is_url = not is_local_path(path)
 
                 if is_url:
                     self.mpv.loadfile(path, "append-play")
                     continue
-                else:
+
+                try:
                     info = item.query_info(
                         "standard::content-type,standard::type",
                         Gio.FileQueryInfoFlags.NONE,
                         None,
                     )
+                except GLib.Error:
+                    info = None
 
-                file_type = info.get_file_type()
-                mime_type = info.get_content_type() or ""
+                if info is None:
+                    mime_type = ""
+                    file_type = None
+                else:
+                    file_type = info.get_file_type()
+                    mime_type = info.get_content_type() or ""
 
                 if file_type == Gio.FileType.DIRECTORY:
                     self.mpv.loadfile(path, "append-play")
                     continue
 
-                valid_types = ("video/", "audio/", "image/")
-                if mime_type.startswith(valid_types):
+                name = cast(str, item.get_basename()).lower()
+                if name.endswith(SUB_EXTS):
+                    if not self.mpv.idle_active:
+                        self.mpv.command("sub-add", path, "select")
+                    continue
+
+                is_media = mime_type.startswith(("video/", "audio/", "image/"))
+                is_media = is_media or name.endswith(MEDIA_EXTS)
+
+                if is_media:
                     self.mpv.loadfile(path, "append-play")
 
             elif isinstance(item, str):  # URL string

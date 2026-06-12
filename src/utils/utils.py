@@ -17,103 +17,145 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import gi
+from __future__ import annotations
+
+import math
 import os
-import ctypes
-import sys
+from collections.abc import Iterable
+from shutil import move
 from urllib.parse import urlparse
 
+import gi
+
 gi.require_version("GLib", "2.0")
-from gi.repository import GLib
+from gi.repository import GLib  # noqa: F401  # Kept for modules that import GLib from utils.
 
 from .compat import (
+    LAST_PLAYLIST_FILE,
     MPV_CONFIG_DIR,
+    PLAYLIST_DIR as playlist_dir,
     _get_platform_config_dir,
     _get_platform_screenshots_dir,
 )
 
-SCREENSHOT_DIR = _get_platform_screenshots_dir()
 
+SCREENSHOT_DIR = _get_platform_screenshots_dir()
 CONFIG_DIR = _get_platform_config_dir()
 INPUT_CONF = os.path.join(MPV_CONFIG_DIR, "input.conf")
 
-from .compat import PLAYLIST_DIR as playlist_dir
-from .compat import LAST_PLAYLIST_FILE
 
-old_last_pl_file = os.path.join(CONFIG_DIR, "last-playlist.m3u8")
-if os.path.exists(old_last_pl_file):
-    from shutil import move
-    move(old_last_pl_file, playlist_dir)
+def _migrate_legacy_playlist_file() -> None:
+    """Move the old playlist file to the new playlist directory once.
 
+    This is intentionally non-fatal because a failed migration should never
+    prevent the player from starting.
+    """
 
-def get_has_host_permission():
-    return True
+    old_last_pl_file = os.path.join(CONFIG_DIR, "last-playlist.m3u8")
 
-def has_host_permission(path=None):
-    return True
+    if not os.path.exists(old_last_pl_file):
+        return
 
-
-def get_mouse_bindings(bindings):
-    active_mouse_bindings = {}
     try:
-        for b in bindings:
-            if "MBTN" in b["key"]:
-                active_mouse_bindings[b["key"]] = b["cmd"]
-    except Exception as e:
-        print("get_mouse_bindings error:", e)
+        os.makedirs(playlist_dir, exist_ok=True)
+
+        # Prefer the canonical compat path when available. If the destination
+        # already exists, keep the newer/canonical file and remove nothing.
+        destination = LAST_PLAYLIST_FILE or os.path.join(playlist_dir, "last-playlist.m3u8")
+        if not os.path.exists(destination):
+            move(old_last_pl_file, destination)
+    except Exception as exc:
+        print("playlist migration warning:", exc)
+
+
+_migrate_legacy_playlist_file()
+
+
+def get_has_host_permission() -> bool:
+    return True
+
+
+def has_host_permission(path: str | os.PathLike[str] | None = None) -> bool:
+    return True
+
+
+def get_mouse_bindings(bindings: Iterable[dict]) -> dict[str, str]:
+    active_mouse_bindings: dict[str, str] = {}
+
+    try:
+        for binding in bindings:
+            key = str(binding.get("key", ""))
+            cmd = str(binding.get("cmd", ""))
+
+            if "MBTN" in key:
+                active_mouse_bindings[key] = cmd
+    except Exception as exc:
+        print("get_mouse_bindings error:", exc)
 
     return active_mouse_bindings
 
 
-def parse_nonrepeat_bindings(bindings):
-    non_repeatable = set()
+def parse_nonrepeat_bindings(bindings: Iterable[dict]) -> set[str]:
+    non_repeatable: set[str] = set()
+
     try:
-        for b in bindings:
-            key = b.get("key")
-            cmd = b.get("cmd", "")
+        for binding in bindings:
+            key = binding.get("key")
+            cmd = str(binding.get("cmd", ""))
 
-            if key and "nonrepeatable" in cmd:
-                if len(key) == 1 and key.isupper() and key.isalpha():
-                    key = f"Shift+{key}"
+            if not key or "nonrepeatable" not in cmd:
+                continue
 
-                non_repeatable.add(key)
-    except Exception as e:
-        print("parse_nonrepeat_bindings error:", e)
+            key = str(key)
+
+            # GTK reports capital letters as plain "A", "B", etc. mpv input
+            # syntax expects Shift+A for those keys.
+            if len(key) == 1 and key.isupper() and key.isalpha():
+                key = f"Shift+{key}"
+
+            non_repeatable.add(key)
+    except Exception as exc:
+        print("parse_nonrepeat_bindings error:", exc)
 
     return non_repeatable
 
 
-def is_local_path(path):
+def is_local_path(path: str | os.PathLike[str]) -> bool:
+    """Return True for normal local paths, file:// URLs, and Windows drive paths."""
+
     parsed = urlparse(str(path))
-    if not parsed.scheme or parsed.scheme == "file" or len(parsed.scheme) == 1:
-        return True
-    return False
+    return not parsed.scheme or parsed.scheme == "file" or len(parsed.scheme) == 1
 
 
-def get_gpu_vendor(display, libgl):
+def get_gpu_vendor(display, libgl=None):
     from .compat import get_gpu_vendor as _compat_gpu_vendor
+
     return _compat_gpu_vendor(display)
 
 
-def format_time(seconds):
-    if not seconds:
+def format_time(seconds) -> str:
+    try:
+        seconds = float(seconds)
+    except (TypeError, ValueError):
         return "0:00"
 
-    seconds = int(seconds)
-    d = seconds // 86400
-    h = (seconds % 86400) // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
+    if not math.isfinite(seconds) or seconds <= 0:
+        return "0:00"
+
+    total_seconds = int(seconds)
+    d = total_seconds // 86400
+    h = (total_seconds % 86400) // 3600
+    m = (total_seconds % 3600) // 60
+    s = total_seconds % 60
 
     if d > 0:
         return f"{d}:{h:02d}:{m:02d}:{s:02d}"
-    elif h > 0:
+    if h > 0:
         return f"{h}:{m:02d}:{s:02d}"
-    else:
-        return f"{m}:{s:02d}"
+    return f"{m}:{s:02d}"
 
 
-MBTN_MAP: dict = {
+MBTN_MAP: dict[int, str] = {
     1: "MBTN_LEFT",
     2: "MBTN_MID",
     3: "MBTN_RIGHT",
@@ -122,7 +164,7 @@ MBTN_MAP: dict = {
 }
 
 
-KEY_REMAP: dict = {
+KEY_REMAP: dict[str, str] = {
     "F1": "F1",
     "F2": "F2",
     "F3": "F3",
@@ -161,6 +203,7 @@ KEY_REMAP: dict = {
     "KP_Subtract": "KP_SUBTRACT",
     "KP_Divide": "KP_DIVIDE",
     "KP_Multiply": "KP_MULTIPLY",
+    "KP_0": "KP0",
     "KP_1": "KP1",
     "KP_2": "KP2",
     "KP_3": "KP3",
@@ -170,6 +213,8 @@ KEY_REMAP: dict = {
     "KP_7": "KP7",
     "KP_8": "KP8",
     "KP_9": "KP9",
+    "KP_Decimal": "KP_DEC",
+    "KP_Enter": "KP_ENTER",
     "KP_End": "KP_END",
     "KP_Down": "KP_DOWN",
     "KP_Page_Down": "KP_PGDWN",
@@ -192,25 +237,325 @@ KEY_REMAP: dict = {
     "ZoomOut": "ZOOMOUT",
 }
 
-SUB_EXTS: tuple = (
-    ".aqt",
-    ".ass",
-    ".dfxp",
-    ".idx",
-    ".jss",
-    ".lrc",
-    ".mks",
-    ".mpl",
-    ".pgs",
-    ".rt",
-    ".sbv",
-    ".scc",
-    ".smi",
-    ".srt",
-    ".ssa",
-    ".sub",
-    ".sup",
-    ".ttml",
-    ".txt",
-    ".vtt",
+
+def _normalize_extension(extension: str) -> str:
+    extension = extension.strip().lower()
+
+    if not extension:
+        return ""
+
+    if not extension.startswith("."):
+        extension = f".{extension}"
+
+    return extension
+
+
+def _dedupe_extensions(*groups: Iterable[str]) -> tuple[str, ...]:
+    seen: set[str] = set()
+    result: list[str] = []
+
+    for group in groups:
+        for extension in group:
+            normalized = _normalize_extension(extension)
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                result.append(normalized)
+
+    return tuple(result)
+
+
+# These extension lists are intentionally broad. mpv relies heavily on
+# FFmpeg/libavformat, so real playback support depends on how mpv/FFmpeg was
+# built and which demuxers/codecs/protocols are available on the target system.
+# Treat these as file-picker hints, not as a strict guarantee of playback.
+
+VIDEO_EXTS: tuple[str, ...] = _dedupe_extensions(
+    (
+        ".264",
+        ".265",
+        ".3g2",
+        ".3gp",
+        ".3gp2",
+        ".3gpp",
+        ".amv",
+        ".asf",
+        ".avi",
+        ".av1",
+        ".bdm",
+        ".bdmv",
+        ".bik",
+        ".cine",
+        ".divx",
+        ".dv",
+        ".dvr-ms",
+        ".evo",
+        ".f4v",
+        ".flc",
+        ".fli",
+        ".flv",
+        ".gxf",
+        ".h261",
+        ".h263",
+        ".h264",
+        ".h265",
+        ".hevc",
+        ".ivf",
+        ".m1v",
+        ".m2p",
+        ".m2t",
+        ".m2ts",
+        ".m2v",
+        ".m4v",
+        ".mj2",
+        ".mjp2",
+        ".mjpeg",
+        ".mjpg",
+        ".mkv",
+        ".mlv",
+        ".mod",
+        ".mov",
+        ".mp4",
+        ".mp4v",
+        ".mpe",
+        ".mpeg",
+        ".mpg",
+        ".mpl",
+        ".mpls",
+        ".mts",
+        ".mxf",
+        ".nsv",
+        ".nut",
+        ".ogm",
+        ".ogv",
+        ".ps",
+        ".rec",
+        ".rm",
+        ".rmvb",
+        ".roq",
+        ".rv",
+        ".smk",
+        ".swf",
+        ".tod",
+        ".trp",
+        ".ts",
+        ".tts",
+        ".vob",
+        ".vro",
+        ".webm",
+        ".wm",
+        ".wmv",
+        ".wtv",
+        ".y4m",
+        ".yuv",
+    )
 )
+
+AUDIO_EXTS: tuple[str, ...] = _dedupe_extensions(
+    (
+        ".3ga",
+        ".669",
+        ".8svx",
+        ".aac",
+        ".ac3",
+        ".adts",
+        ".aif",
+        ".aifc",
+        ".aiff",
+        ".alac",
+        ".amr",
+        ".ape",
+        ".au",
+        ".caf",
+        ".dff",
+        ".dsf",
+        ".dts",
+        ".dtshd",
+        ".eac3",
+        ".f32",
+        ".f64",
+        ".flac",
+        ".gsm",
+        ".it",
+        ".kar",
+        ".latm",
+        ".loas",
+        ".m4a",
+        ".m4b",
+        ".m4r",
+        ".mka",
+        ".mlp",
+        ".mod",
+        ".mp1",
+        ".mp2",
+        ".mp3",
+        ".mpa",
+        ".mpc",
+        ".mpp",
+        ".oga",
+        ".ogg",
+        ".oma",
+        ".opus",
+        ".ra",
+        ".rmi",
+        ".s3m",
+        ".shn",
+        ".spx",
+        ".tak",
+        ".tta",
+        ".voc",
+        ".vqf",
+        ".w64",
+        ".wav",
+        ".weba",
+        ".wma",
+        ".wv",
+        ".xm",
+        ".mid",
+        ".midi",
+    )
+)
+
+SUB_EXTS: tuple[str, ...] = _dedupe_extensions(
+    (
+        ".aqt",
+        ".ass",
+        ".dfxp",
+        ".dks",
+        ".idx",
+        ".jss",
+        ".lrc",
+        ".mks",
+        ".mpl",
+        ".mpl2",
+        ".pjs",
+        ".psb",
+        ".rt",
+        ".sami",
+        ".sbv",
+        ".scc",
+        ".smi",
+        ".srt",
+        ".ssa",
+        ".stl",
+        ".sub",
+        ".sup",
+        ".ttml",
+        ".txt",
+        ".usf",
+        ".vtt",
+        ".webvtt",
+    )
+)
+
+IMAGE_EXTS: tuple[str, ...] = _dedupe_extensions(
+    (
+        ".apng",
+        ".avif",
+        ".bmp",
+        ".cur",
+        ".dds",
+        ".dib",
+        ".exr",
+        ".gif",
+        ".hdr",
+        ".heic",
+        ".heif",
+        ".ico",
+        ".jfif",
+        ".jpe",
+        ".jpeg",
+        ".jpg",
+        ".jxl",
+        ".pam",
+        ".pbm",
+        ".pcx",
+        ".pfm",
+        ".pgm",
+        ".png",
+        ".pnm",
+        ".ppm",
+        ".psd",
+        ".qoi",
+        ".ras",
+        ".sgi",
+        ".svg",
+        ".tga",
+        ".tif",
+        ".tiff",
+        ".wbmp",
+        ".webp",
+        ".xbm",
+        ".xpm",
+    )
+)
+
+PLAYLIST_EXTS: tuple[str, ...] = _dedupe_extensions(
+    (
+        ".asx",
+        ".cue",
+        ".m3u",
+        ".m3u8",
+        ".mpcpl",
+        ".pls",
+        ".ram",
+        ".strm",
+        ".url",
+        ".wax",
+        ".wpl",
+        ".wvx",
+        ".xspf",
+    )
+)
+
+DISC_IMAGE_EXTS: tuple[str, ...] = _dedupe_extensions(
+    (
+        ".bin",
+        ".cue",
+        ".ifo",
+        ".img",
+        ".iso",
+    )
+)
+
+MEDIA_EXTS: tuple[str, ...] = _dedupe_extensions(
+    VIDEO_EXTS,
+    AUDIO_EXTS,
+    IMAGE_EXTS,
+    PLAYLIST_EXTS,
+    DISC_IMAGE_EXTS,
+)
+
+# Useful when the UI wants to accept both media files and external subtitle files.
+OPENABLE_EXTS: tuple[str, ...] = _dedupe_extensions(MEDIA_EXTS, SUB_EXTS)
+
+
+def has_extension(path: str | os.PathLike[str], extensions: Iterable[str]) -> bool:
+    return os.path.splitext(str(path))[1].lower() in set(extensions)
+
+
+def is_video_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, VIDEO_EXTS)
+
+
+def is_audio_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, AUDIO_EXTS)
+
+
+def is_subtitle_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, SUB_EXTS)
+
+
+def is_image_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, IMAGE_EXTS)
+
+
+def is_playlist_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, PLAYLIST_EXTS)
+
+
+def is_media_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, MEDIA_EXTS)
+
+
+def is_openable_file(path: str | os.PathLike[str]) -> bool:
+    return has_extension(path, OPENABLE_EXTS)

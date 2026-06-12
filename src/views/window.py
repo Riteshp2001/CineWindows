@@ -52,6 +52,7 @@ from ..utils.utils import (
     MBTN_MAP,
     KEY_REMAP,
     SUB_EXTS,
+    MEDIA_EXTS,
     SCREENSHOT_DIR,
     INPUT_CONF,
 )
@@ -1327,15 +1328,22 @@ class CineWindow(Adw.ApplicationWindow):
                     self.mpv.loadfile(path, mode)
                     first_file = False
                     continue
-                else:
+
+                try:
                     info = item.query_info(
                         "standard::content-type,standard::type",
                         Gio.FileQueryInfoFlags.NONE,
                         None,
                     )
+                except GLib.Error:
+                    info = None
 
-                file_type = info.get_file_type()
-                mime_type = info.get_content_type() or ""
+                if info is None:
+                    mime_type = ""
+                    file_type = None
+                else:
+                    file_type = info.get_file_type()
+                    mime_type = info.get_content_type() or ""
 
                 if file_type == Gio.FileType.DIRECTORY:
                     self.mpv.loadfile(path, mode)
@@ -1348,13 +1356,18 @@ class CineWindow(Adw.ApplicationWindow):
                         self.mpv.command("sub-add", path, "select")
                     continue
 
-                if mime_type.startswith(("video/", "audio/", "image/")) or is_url:
+                is_media = mime_type.startswith(("video/", "audio/", "image/"))
+                is_media = is_media or name.endswith(MEDIA_EXTS)
+
+                if is_media or is_url:
                     self.mpv.loadfile(path, mode)
                     first_file = False
 
             elif isinstance(item, str):  # URL string
                 self.mpv.loadfile(item, mode)
                 first_file = False
+
+        return True
 
     def _sync_fullscreen(self, mpv_is_fs):
         self.is_fs = mpv_is_fs
