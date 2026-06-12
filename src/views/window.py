@@ -129,6 +129,7 @@ class CineWindow(Adw.ApplicationWindow):
     video_progress_scale: Gtk.Scale = Gtk.Template.Child()
     video_progress_adj: Gtk.Adjustment = Gtk.Template.Child()
     time_total_label: Gtk.Label = Gtk.Template.Child()
+    audio_only_icon: Gtk.Image = Gtk.Template.Child()
 
     def __init__(self, is_activate=False, **kwargs):
         super().__init__(**kwargs)
@@ -166,7 +167,9 @@ class CineWindow(Adw.ApplicationWindow):
         self.space_pressed: bool = False
         self.click_delay_id: int = 0
         ck_time: int = gtk_setts.props.gtk_double_click_time if gtk_setts else 400
-        self.click_time: int = max(ck_time, min(200, 425))
+        self.click_time: int = max(200, min(ck_time, 425))
+        lp_time: int = gtk_setts.props.gtk_long_press_time if gtk_setts else 500
+        self.long_press_time: int = lp_time
         self.click_hold_id: int = 0
         self.click_holding: bool = False
         self.prev_speed: float = 1.0
@@ -292,10 +295,6 @@ class CineWindow(Adw.ApplicationWindow):
         self._create_action("quit", lambda *a: self.close())
         self.app.set_accels_for_action("win.quit", ["q", "<primary>w"])
 
-        self._create_action("custom-shortcuts", self._present_shortcuts)
-        self.app.set_accels_for_action("win.custom-shortcuts", ["<primary>question"])
-        self.app.set_accels_for_action("app.shortcuts", [])
-
     def _present_shortcuts(self, *args):
         builder = Gtk.Builder.new_from_resource(
             f"{RESOURCE_PREFIX}/shortcuts-dialog.ui"
@@ -307,7 +306,61 @@ class CineWindow(Adw.ApplicationWindow):
         populate_shortcuts_dialog_mpv(self.shortcuts_dialog, self.bindings)
         self.shortcuts_dialog.present(self)
 
+    def _build_custom_context_menu(self):
+        self._create_action("cycle-pause", lambda *a: self.mpv.command_async("cycle", "pause"))
+        self._create_action("fullscreen", lambda *a: self.mpv.command_async("cycle", "fullscreen"))
+        self._create_action("minimize", lambda *a: self.minimize())
+        self._create_action("maximize", lambda *a: self.maximize() if not self.is_maximized() else self.unmaximize())
+        self._create_action("close", lambda *a: self.close())
+
+        menu = Gio.Menu()
+
+        section1 = Gio.Menu()
+        item = Gio.MenuItem.new("Play / Pause", "win.cycle-pause")
+        item.set_icon(Gio.ThemedIcon.new("media-playback-start-symbolic"))
+        section1.append_item(item)
+        item = Gio.MenuItem.new("Toggle Fullscreen", "win.fullscreen")
+        item.set_icon(Gio.ThemedIcon.new("view-fullscreen-symbolic"))
+        section1.append_item(item)
+        menu.append_section(None, section1)
+
+        section2 = Gio.Menu()
+        item = Gio.MenuItem.new("Minimize", "win.minimize")
+        item.set_icon(Gio.ThemedIcon.new("window-minimize-symbolic"))
+        section2.append_item(item)
+        item = Gio.MenuItem.new("Maximize", "win.maximize")
+        item.set_icon(Gio.ThemedIcon.new("window-maximize-symbolic"))
+        section2.append_item(item)
+        item = Gio.MenuItem.new("Close", "win.close")
+        item.set_icon(Gio.ThemedIcon.new("window-close-symbolic"))
+        section2.append_item(item)
+        menu.append_section(None, section2)
+
+        section3 = Gio.Menu()
+        item = Gio.MenuItem.new("Open File...", "win.clear-and-add")
+        item.set_icon(Gio.ThemedIcon.new("document-open-symbolic"))
+        section3.append_item(item)
+        item = Gio.MenuItem.new("Open Folder...", "win.open-folder")
+        item.set_icon(Gio.ThemedIcon.new("folder-open-symbolic"))
+        section3.append_item(item)
+        item = Gio.MenuItem.new("Playlist", "win.open-playlist-dialog")
+        item.set_icon(Gio.ThemedIcon.new("view-list-symbolic"))
+        section3.append_item(item)
+        menu.append_section(None, section3)
+
+        section4 = Gio.Menu()
+        item = Gio.MenuItem.new("Preferences", "app.preferences")
+        item.set_icon(Gio.ThemedIcon.new("emblem-system-symbolic"))
+        section4.append_item(item)
+        menu.append_section(None, section4)
+
+        self.context_menu = Gtk.PopoverMenu.new_from_model(menu)
+        self.context_menu.set_parent(self.video_overlay)
+        self.context_menu.set_has_arrow(False)
+        self.context_menu.set_position(Gtk.PositionType.BOTTOM)
+
     def _setup_elements(self):
+        self._build_custom_context_menu()
         self.set_default_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
         self.set_title(_(APP_NAME))
 
@@ -361,7 +414,7 @@ class CineWindow(Adw.ApplicationWindow):
         if max_vol > 100:
             self.volume_scale.add_mark(100.0, Gtk.PositionType.BOTTOM, None)
 
-        self.video_progress_adj.connect("value-changed", self._on_progress_adjusted)
+        self.video_progress_adj_handler_id = self.video_progress_adj.connect("value-changed", self._on_progress_adjusted)
 
         self.chapter_popover = Gtk.Popover()
         self.chapter_popover.set_position(Gtk.PositionType.TOP)
@@ -437,8 +490,8 @@ class CineWindow(Adw.ApplicationWindow):
 
         @self._connect("notify::is-active")
         def on_is_active_change(*args):
-            if self.props.is_active:
-                GLib.timeout_add(200, setattr, self, "is_inactive", False)
+            if not self.is_inactive:
+                GLib.timeout_add(self.click_time // 2, setattr, self, "is_inactive", False)
             else:
                 self._set_space_holding(False)
                 self.space_holding = False
@@ -524,7 +577,7 @@ class CineWindow(Adw.ApplicationWindow):
         is_fullscreen = self.props.fullscreened
 
         try:
-            if not is_fullscreen:
+            if self.mpv.fullscreen != is_fullscreen:
                 self.mpv.fullscreen = is_fullscreen
         except mpv.ShutdownError:
             pass
@@ -1091,9 +1144,9 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _update_progress(self, current_time, update_bar=True):
         if update_bar:
-            self.video_progress_adj.handler_block_by_func(self._on_progress_adjusted)
+            self.video_progress_adj.handler_block(self.video_progress_adj_handler_id)
             self.video_progress_adj.set_value(current_time)
-            self.video_progress_adj.handler_unblock_by_func(self._on_progress_adjusted)
+            self.video_progress_adj.handler_unblock(self.video_progress_adj_handler_id)
         try:
             if settings.get_boolean("show-remaining"):
                 duration = float(self.mpv.duration or 0)
@@ -1263,7 +1316,8 @@ class CineWindow(Adw.ApplicationWindow):
         self.loop_toggle_btn.props.visible = has_multiple
 
     def _on_drop_enter(self, target, _x, _y):
-        GLib.timeout_add(10, self.revealer_drop_indicator.set_reveal_child, True)
+        if not self.revealer_drop_indicator.get_reveal_child():
+            GLib.idle_add(self.revealer_drop_indicator.set_reveal_child, True)
         drop = target.get_current_drop()
         formats = drop.get_formats()
         target_type = (
@@ -1298,9 +1352,13 @@ class CineWindow(Adw.ApplicationWindow):
         return True
 
     def _on_drop_leave(self, _target):
-        GLib.timeout_add(10, self.revealer_drop_indicator.set_reveal_child, False)
-        GLib.timeout_add(100, self.drop_icon.set_from_icon_name, "")
-        GLib.timeout_add(100, self.drop_label.set_text, "")
+        if not self.revealer_drop_indicator.get_reveal_child():
+            return
+        GLib.idle_add(self.revealer_drop_indicator.set_reveal_child, False)
+        
+        anim_duration = self.revealer_drop_indicator.get_transition_duration()
+        GLib.timeout_add(anim_duration, self.drop_icon.set_from_icon_name, "")
+        GLib.timeout_add(anim_duration, self.drop_label.set_text, "")
 
     def _on_drop(self, _target, value, _x, _y):
         first_file = True
@@ -1313,7 +1371,7 @@ class CineWindow(Adw.ApplicationWindow):
         if isinstance(value, Gdk.FileList):
             items = value.get_files()
         elif isinstance(value, str):
-            items = [value]
+            items = [u.strip() for u in value.splitlines() if u.strip()]
 
         for item in items:
             mode = "replace" if first_file else "append-play"
@@ -1375,6 +1433,8 @@ class CineWindow(Adw.ApplicationWindow):
             self.fullscreen()
         else:
             self.unfullscreen()
+        GLib.timeout_add(50, self.gl_area.queue_render)
+        GLib.timeout_add(200, self.gl_area.queue_render)
 
     def _set_space_holding(self, hold):
         if hold:
@@ -1424,6 +1484,9 @@ class CineWindow(Adw.ApplicationWindow):
             self._hide_ui_timeout(s=3)
             self._set_space_holding(False)
             return
+
+        if state & Gdk.ModifierType.SUPER_MASK:
+            return False
 
         self.key_state = state
         clean_state = state & Gtk.accelerator_get_default_mod_mask()
@@ -1487,9 +1550,6 @@ class CineWindow(Adw.ApplicationWindow):
         self.left_clk = settings.get_int("left-click")
         self.right_clk = settings.get_int("right-click")
 
-        if button == "MBTN_RIGHT" and self.right_clk == 1:
-            return
-
         if button != "MBTN_LEFT":
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
 
@@ -1511,8 +1571,8 @@ class CineWindow(Adw.ApplicationWindow):
         if button == "MBTN_LEFT" and n_press == 1:
             if self.click_hold_id:
                 GLib.source_remove(self.click_hold_id)
-
-            self.click_hold_id = GLib.timeout_add(500, self._on_click_hold, gesture)
+            # Wait system's long press time to check if it's a long press
+            self.click_hold_id = GLib.timeout_add(self.long_press_time, self._on_click_hold, gesture)
 
         self._show_ui()
         self._hide_ui_timeout()
@@ -1537,6 +1597,9 @@ class CineWindow(Adw.ApplicationWindow):
 
         button = MBTN_MAP.get(gesture.get_button())
 
+        was_holding = self.click_holding
+        self._cancel_click_hold()
+
         controls_hover = self.motion_controls.props.contains_pointer
         header_hover = self.motion_header.props.contains_pointer
         separator_hover = self.motion_controls_separator.props.contains_pointer
@@ -1559,22 +1622,35 @@ class CineWindow(Adw.ApplicationWindow):
             except Exception:
                 pass
 
-        if n_press == 1 and not self.click_holding:
+        if n_press == 1 and not was_holding:
             cmd_str = str(self.mouse_bindings.get(button))
 
-            if button == "MBTN_LEFT" and self.left_clk <= 1:
+            if button == "MBTN_LEFT":
+                if self.left_clk <= 1:
+                    def click():
+                        self.mpv.command_async("cycle", "pause")
+                        self.click_delay_id = 0
+                    self.click_delay_id = GLib.timeout_add(self.click_time, click)
+                else:
+                    pass  # Disabled
 
-                def click():
+            elif button == "MBTN_RIGHT":
+                if self.right_clk == 0:
                     self.mpv.command_async("cycle", "pause")
-                    self.click_delay_id = 0
-
-                self.click_delay_id = GLib.timeout_add(self.click_time, click)
-
-            elif button == "MBTN_RIGHT" and self.right_clk == 0:
-                self.mpv.command_async("cycle", "pause")
+                elif self.right_clk == 1:
+                    rect = Gdk.Rectangle()
+                    rect.x = int(_x)
+                    rect.y = int(_y)
+                    rect.width = 1
+                    rect.height = 1
+                    self.context_menu.set_pointing_to(rect)
+                    self.context_menu.popup()
+                else:
+                    pass  # Disabled
 
             else:
-                run_command(cmd_str)
+                if cmd_str and cmd_str != "None":
+                    run_command(cmd_str)
 
         elif n_press == 2:
             button_dbl = f"{button}_DBL"
@@ -1587,9 +1663,12 @@ class CineWindow(Adw.ApplicationWindow):
             self.click_hold_id = 0
 
         if self.click_holding:
-            self.mpv["speed"] = self.prev_speed
-            self.mpv.show_text(f"{self.mpv['speed']:g}×")
-            GLib.timeout_add(self.click_time, setattr, self, "click_holding", False)
+            try:
+                self.mpv["speed"] = self.prev_speed
+                self.mpv.show_text(f"{self.mpv['speed']:g}×")
+            except mpv.ShutdownError:
+                pass
+            self.click_holding = False
 
     def _on_mouse_scroll(self, controller, dx, dy):
         event: Gdk.ScrollEvent = controller.get_current_event()
@@ -1884,9 +1963,15 @@ class CineWindow(Adw.ApplicationWindow):
 
             GLib.idle_add(update)
 
-        @self.mpv.property_observer("time-pos")
-        def on_time_change(_name, value):
-            GLib.idle_add(self._update_progress, float(value or 0))
+        def _smooth_progress(widget, frame_clock):
+            try:
+                time_pos = self.mpv.time_pos
+                if time_pos is not None and not self.mpv.core_idle:
+                    self._update_progress(float(time_pos), update_bar=True)
+            except Exception:
+                pass
+            return True
+        self.video_progress_scale.add_tick_callback(_smooth_progress)
 
         @self.mpv.property_observer("duration")
         def on_duration_change(_name, value):

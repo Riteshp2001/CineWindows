@@ -29,6 +29,9 @@ else:
     mingw_bin = r"C:\msys64\mingw64\bin"
     if os.path.exists(mingw_bin) and mingw_bin not in os.environ.get("PATH", ""):
         os.environ["PATH"] = mingw_bin + os.pathsep + os.environ.get("PATH", "")
+    mingw_share = r"C:\msys64\mingw64\share"
+    if os.path.exists(mingw_share):
+        os.environ["XDG_DATA_DIRS"] = mingw_share + os.pathsep + os.environ.get("XDG_DATA_DIRS", "")
 
 # Ensure the cine package can be imported
 src_dir = os.path.join(project_root, "src")
@@ -53,7 +56,9 @@ if os.path.exists(os.path.join(schema_dir, "gschemas.compiled")):
 
 try:
     from cine import main
+    from cine.utils.constants import APP_VERSION
 except ModuleNotFoundError:
-    from src import main
+    from src.controllers import main_controller as main
+    from src.utils.constants import APP_VERSION
 
-sys.exit(main.main("1.5.2"))
+sys.exit(main.main(APP_VERSION))

@@ -289,7 +289,7 @@ class Playlist(Adw.Dialog):
         obj.disconnect(list_item.handler_id)
 
     def _on_drop_enter(self, target, _x, _y):
-        GLib.timeout_add(10, self.drop_indicator_revealer.set_reveal_child, True)
+        GLib.idle_add(self.drop_indicator_revealer.set_reveal_child, True)
         drop = target.get_current_drop()
         formats = drop.get_formats()
         target_type = (
@@ -311,7 +311,7 @@ class Playlist(Adw.Dialog):
 
     def _on_drop_leave(self, _target):
         self.spinner.set_visible(False)
-        GLib.timeout_add(10, self.drop_indicator_revealer.set_reveal_child, False)
+        GLib.idle_add(self.drop_indicator_revealer.set_reveal_child, False)
 
     def _on_drop(self, _target, value, _x, _y):
         items: list[Gio.File] | list[str] = []
@@ -319,7 +319,7 @@ class Playlist(Adw.Dialog):
         if isinstance(value, Gdk.FileList):
             items = value.get_files()
         elif isinstance(value, str):
-            items = [value]
+            items = [u.strip() for u in value.splitlines() if u.strip()]
 
         for item in items:
             if isinstance(item, Gio.File):

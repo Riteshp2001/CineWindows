@@ -7,6 +7,7 @@ SetCompressorDictSize 64
 !include "MUI2.nsh"
 !include "x64.nsh"
 !include "LogicLib.nsh"
+!include "WordFunc.nsh"
 
 !ifndef APP_VERSION
   !define APP_VERSION "1.0.1"
@@ -109,9 +110,16 @@ Section "CineWindows (required)" SecApp
   ; Register "Open with CineWindows" in Windows Explorer context menu
   WriteRegStr HKLM "SOFTWARE\Classes\Applications\${APP_EXE}" "FriendlyAppName" "${APP_NAME}"
   WriteRegStr HKLM "SOFTWARE\Classes\Applications\${APP_EXE}\shell\open\command" "" '"$INSTDIR\${APP_EXE}" "%1"'
-  ${ForEach} ext ${MEDIA_EXTS}
-    WriteRegStr HKLM "SOFTWARE\Classes\Applications\${APP_EXE}\SupportedTypes" "${ext}" ""
-  ${Next}
+
+  StrCpy $0 1
+loop_exts:
+  ${WordFind} "${MEDIA_EXTS}" " " "E+$0" $1
+  IfErrors done_exts
+  WriteRegStr HKLM "SOFTWARE\Classes\Applications\${APP_EXE}\SupportedTypes" "$1" ""
+  WriteRegStr HKLM "SOFTWARE\Classes\$1\OpenWithProgids" "CineWindows.Media" ""
+  IntOp $0 $0 + 1
+  Goto loop_exts
+done_exts:
 
   ; Register ProgId so CineWindows can be set as default for media files
   WriteRegStr HKLM "SOFTWARE\Classes\CineWindows.Media\DefaultIcon" "" "$INSTDIR\${APP_ICO}"

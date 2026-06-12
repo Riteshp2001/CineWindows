@@ -73,7 +73,16 @@ function Invoke-RoboCopy {
     )
 
     New-Item -ItemType Directory -Path $Destination -Force | Out-Null
-    & robocopy $Source $Destination @Options | Out-Null
+
+    $savePref = $PSNativeCommandUseErrorActionPreference
+    $PSNativeCommandUseErrorActionPreference = $false
+    try {
+        & robocopy $Source $Destination @Options | Out-Null
+    } catch {
+        # NativeCommandExitException is expected for robocopy success codes 1-7
+    }
+    $PSNativeCommandUseErrorActionPreference = $savePref
+
     $exitCode = $LASTEXITCODE
 
     # Robocopy uses 0-7 as success / non-fatal differences; 8+ means failure.
@@ -107,36 +116,44 @@ function Get-ToolPath {
 }
 
 function Resolve-MingwDir {
+    if ($env:MINGW_ROOT) {
+        $dir = $env:MINGW_ROOT
+        if (Test-Path (Join-Path $dir "bin\python.exe")) {
+            return (Resolve-Path $dir).Path
+        }
+    }
+
     $candidates = New-Object System.Collections.Generic.List[string]
 
     if ($env:MINGW_PREFIX) {
         $prefix = $env:MINGW_PREFIX
         if ($prefix -match "^/[a-zA-Z0-9_/-]+") {
-            $cygPathCandidates = @(
-                "C:\msys64\usr\bin\cygpath.exe",
-                "C:\msys2\usr\bin\cygpath.exe"
-            )
-            foreach ($cyg in $cygPathCandidates) {
-                if (Test-Path -LiteralPath $cyg) {
-                    try {
-                        $converted = (& $cyg -w $prefix 2>$null).Trim()
-                        if ($converted) { $candidates.Add($converted) }
-                    } catch {}
-                    break
-                }
+            $cyg = @("C:\msys64\usr\bin\cygpath.exe", "C:\msys2\usr\bin\cygpath.exe") |
+                Where-Object { Test-Path $_ } | Select-Object -First 1
+            if ($cyg) {
+                $converted = try { (& $cyg -w $prefix 2>$null).Trim() } catch { $null }
+                if ($converted) { $candidates.Add($converted) }
             }
         } else {
             $candidates.Add($prefix)
         }
     }
 
-    @(
-        "C:\msys64\mingw64",
-        "C:\msys2\mingw64"
-    ) | ForEach-Object { $candidates.Add($_) }
+    try {
+        $allPython = @(& where.exe python.exe 2>$null | Select-Object -Unique)
+    } catch { $allPython = @() }
+    foreach ($py in $allPython) {
+        if ($py -match '\\mingw64\\bin\\python\.exe$') {
+            $candidates.Add(($py -replace '\\bin\\python\.exe$', ''))
+        }
+    }
+
+    foreach ($root in @("C:\msys64", "C:\msys2", "$env:SYSTEMDRIVE\msys64", "$env:SYSTEMDRIVE\msys2")) {
+        $candidates.Add((Join-Path $root "mingw64"))
+    }
 
     foreach ($candidate in $candidates | Select-Object -Unique) {
-        if (Test-Path -LiteralPath (Join-Path $candidate "bin\python.exe")) {
+        if (Test-Path (Join-Path $candidate "bin\python.exe")) {
             return (Resolve-Path $candidate).Path
         }
     }
@@ -230,7 +247,7 @@ $PythonExe = Get-ToolPath -Directory $BinDir -Name "python.exe" -Required
 $PythonwExe = Get-ToolPath -Directory $BinDir -Name "pythonw.exe" -Required
 $GlibCompileResources = Get-ToolPath -Directory $BinDir -Name "glib-compile-resources.exe" -Required
 $GlibCompileSchemas = Get-ToolPath -Directory $BinDir -Name "glib-compile-schemas.exe" -Required
-$BlueprintCompiler = Get-ToolPath -Directory $BinDir -Name "blueprint-compiler.exe"
+$BlueprintCompiler = Get-ToolPath -Directory $BinDir -Name "blueprint-compiler"
 $GccExe = Get-ToolPath -Directory $BinDir -Name "gcc.exe"
 $WindresExe = Get-ToolPath -Directory $BinDir -Name "windres.exe"
 $NtlddExe = Get-ToolPath -Directory $BinDir -Name "ntldd.exe"
@@ -246,10 +263,13 @@ if ($BlueprintCompiler) {
     $blpDir = Join-Path $SrcDir "ui"
     Get-ChildItem -LiteralPath $blpDir -Filter "*.blp" -File -ErrorAction SilentlyContinue | ForEach-Object {
         $ui = [System.IO.Path]::ChangeExtension($_.FullName, ".ui")
-        Invoke-Native -FilePath $BlueprintCompiler -Arguments @("compile", $_.FullName, "--output", $ui)
+        & $PythonExe $BlueprintCompiler @("compile", $_.FullName, "--output", $ui) 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            throw "blueprint-compiler failed on $($_.Name) with exit code $LASTEXITCODE"
+        }
     }
 } else {
-    Write-Warn "blueprint-compiler.exe not found; using checked-in .ui files."
+    Write-Warn "blueprint-compiler not found; using checked-in .ui files."
 }
 
 # 2. Compile GResource.
@@ -489,7 +509,8 @@ if (Test-Path -LiteralPath $gtk4Icons) {
     )
 }
 
-$bundleSizeBytes = (Get-ChildItem -LiteralPath $BundleStaging -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+$bundleStats = Get-ChildItem -LiteralPath $BundleStaging -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum
+$bundleSizeBytes = if ($bundleStats -and $bundleStats.Count -gt 0) { $bundleStats.Sum } else { 0 }
 $bundleSizeMb = [Math]::Round(($bundleSizeBytes / 1MB), 1)
 Write-Host "Runtime bundle size: $bundleSizeMb MB"
 
@@ -547,9 +568,9 @@ if (-not $SkipBytecode) {
     # This is safer than moving module.cpython-*.pyc out of __pycache__ manually.
     Invoke-Native -FilePath $PythonExe -Arguments @(
         "-m", "compileall", "-q", "-f", "-b",
-        (Join-Path $DistDir "src"),
-        (Join-Path $DistDir "runtime\lib"),
-        (Join-Path $DistDir "start_cine.py")
+        ((Join-Path $DistDir "src") -replace '\\', '/'),
+        ((Join-Path $DistDir "runtime\lib") -replace '\\', '/'),
+        ((Join-Path $DistDir "start_cine.py") -replace '\\', '/')
     )
 
     Get-ChildItem -LiteralPath $DistDir -Directory -Filter "__pycache__" -Recurse -Force -ErrorAction SilentlyContinue |
@@ -569,7 +590,8 @@ if ($StripPythonSources) {
 
 Remove-EmptyDirectories -Path $DistDir
 
-$distSizeBytes = (Get-ChildItem -LiteralPath $DistDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+$distStats = Get-ChildItem -LiteralPath $DistDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum
+$distSizeBytes = if ($distStats -and $distStats.Count -gt 0) { $distStats.Sum } else { 0 }
 $distSizeMb = [Math]::Round(($distSizeBytes / 1MB), 1)
 Write-Host "`nBuilt $Configuration package at: $DistDir" -ForegroundColor Green
 Write-Host "Final package size: $distSizeMb MB" -ForegroundColor Green

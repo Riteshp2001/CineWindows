@@ -40,9 +40,13 @@ jobs:
         shell: msys2 {0}
         run: pip install --quiet -r requirements.txt
 
-      - name: Build Windows package
+      - name: Export MSYS2 root
         shell: msys2 {0}
-        run: powershell.exe -NoProfile -File scripts/build_windows.ps1
+        run: echo "MINGW_ROOT=$(cygpath -w /mingw64)" >> $GITHUB_ENV
+
+      - name: Build Windows package
+        shell: pwsh
+        run: .\scripts\build_windows.ps1 -Configuration Release -StripPythonSources
 
       - name: Create ZIP archive
         shell: pwsh

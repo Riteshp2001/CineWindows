@@ -75,6 +75,7 @@ class CineApplication(Adw.Application):
             "preferences", self.on_preferences_action, ["<primary>comma"]
         )
         self._create_action("check-updates", self._on_check_updates_action)
+        self._create_action("shortcuts", self._on_shortcuts_action, ["<primary>question", "<primary><shift>slash", "<primary>slash"])
 
         if settings.get_boolean("auto-update"):
             GLib.idle_add(self._check_for_updates)
@@ -282,18 +283,28 @@ class CineApplication(Adw.Application):
     def _on_check_updates_action(self, *args):
         self._check_for_updates(show_up_to_date=True)
 
+    def _on_shortcuts_action(self, *args):
+        win = self.get_active_window()
+        if win and hasattr(win, "_present_shortcuts"):
+            win._present_shortcuts()
+
     def _check_for_updates(self, show_up_to_date=False):
         version = self.app_version
 
         def check():
             try:
-                url = f"{APP_REPOSITORY_URL.replace('.git', '')}/releases/latest"
+                url = f"{APP_REPOSITORY_URL.replace('.git', '')}/releases"
                 req = Request(
                     url.replace("github.com", "api.github.com/repos") + "?per_page=1",
                     headers={"Accept": "application/vnd.github.v3+json", "User-Agent": f"{APP_NAME}/{version}"},
                 )
                 with urlopen(req, timeout=10) as resp:
                     data = json.loads(resp.read().decode())
+                
+                if isinstance(data, list) and len(data) > 0:
+                    data = data[0]
+                else:
+                    return
 
                 latest_tag = data.get("tag_name", "").lstrip("v")
                 latest_name = data.get("name", latest_tag) or latest_tag
