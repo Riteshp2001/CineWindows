@@ -528,9 +528,16 @@ MEDIA_EXTS: tuple[str, ...] = _dedupe_extensions(
 # Useful when the UI wants to accept both media files and external subtitle files.
 OPENABLE_EXTS: tuple[str, ...] = _dedupe_extensions(MEDIA_EXTS, SUB_EXTS)
 
+_ext_set_cache: dict[int, frozenset[str]] = {}
+
 
 def has_extension(path: str | os.PathLike[str], extensions: Iterable[str]) -> bool:
-    return os.path.splitext(str(path))[1].lower() in set(extensions)
+    key = id(extensions)
+    ext_set = _ext_set_cache.get(key)
+    if ext_set is None:
+        ext_set = frozenset(extensions)
+        _ext_set_cache[key] = ext_set
+    return os.path.splitext(str(path))[1].lower() in ext_set
 
 
 def is_video_file(path: str | os.PathLike[str]) -> bool:

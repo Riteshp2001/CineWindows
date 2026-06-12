@@ -35,6 +35,8 @@ def save_last_playlist_file(win_mpv):
             f.write("#EXTM3U\n")
             for item in win_mpv.playlist:
                 path = item.get("filename")
+                if not path:
+                    continue
                 name_with_ext = os.path.basename(path)
                 file_title = os.path.splitext(name_with_ext)[0]
                 title = file_title
@@ -64,7 +66,7 @@ def is_same_playlist(mpv_playlist):
     """Compares current playlist with the saved file from last session."""
 
     if not settings.get_boolean("save-session"):
-        return
+        return False
 
     try:
         with open(LAST_PLAYLIST_FILE, "r", encoding="utf-8") as f:

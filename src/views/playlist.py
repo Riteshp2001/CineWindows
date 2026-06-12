@@ -103,8 +103,7 @@ class Playlist(Adw.Dialog):
             def filter_func(obj):
                 try:
                     item_name = remove_diacritics(obj.item["title"]).lower()
-                    normalized_query = remove_diacritics(query).lower()
-                    return normalized_query in item_name
+                    return query in item_name
                 except Exception:
                     return True
 
@@ -160,11 +159,13 @@ class Playlist(Adw.Dialog):
 
         self._set_save_btn_playlist()
 
-        GLib.idle_add(
-            self.playlist_list_view.scroll_to,
-            self.mpv.playlist_pos,
-            Gtk.ListScrollFlags.FOCUS,
-        )
+        def safe_scroll():
+            pos = self.mpv.playlist_pos
+            if pos is not None and 0 <= pos < self.win.playlist_ls.get_n_items():
+                self.playlist_list_view.scroll_to(pos, Gtk.ListScrollFlags.FOCUS)
+            return False
+
+        GLib.idle_add(safe_scroll)
 
     @Gtk.Template.Callback()
     def _on_list_item_activate(self, list_view, pos):
@@ -176,8 +177,8 @@ class Playlist(Adw.Dialog):
     def _set_save_btn_playlist(self):
         btn = self.save_playlist_btn
         if self.win.has_some_doc_path:
-            self.window.add_toast(
-                _("Cannot add media: Check file permissions.")
+            self.toast_overlay.add_toast(
+                Adw.Toast.new(_("Cannot add media: Check file permissions."))
             )
             btn.set_sensitive(True)
 
@@ -222,6 +223,8 @@ class Playlist(Adw.Dialog):
 
     def _on_factory_bind(self, _factory, list_item):
         obj = list_item.get_item()
+        list_item.icon.set_opacity(1.0)
+        list_item.title.set_opacity(1.0)
 
         def set_item(item):
             path = item.get("filename")
@@ -348,7 +351,15 @@ class Playlist(Adw.Dialog):
                     mime_type = info.get_content_type() or ""
 
                 if file_type == Gio.FileType.DIRECTORY:
-                    self.mpv.loadfile(path, "append-play")
+                    def add_dir():
+                        for root, dirs, files in os.walk(path):
+                            dirs.sort()
+                            files.sort()
+                            for f in files:
+                                fpath = os.path.join(root, f)
+                                if is_media_file(fpath):
+                                    self.mpv.loadfile(fpath, "append-play")
+                    threading.Thread(target=add_dir, daemon=True).start()
                     continue
 
                 name = cast(str, item.get_basename()).lower()
@@ -412,18 +423,23 @@ class Playlist(Adw.Dialog):
 
             self.mpv.command("playlist-remove", index)
 
-            GLib.timeout_add(
-                100,
-                self.playlist_list_view.scroll_to,
-                abs(index - 1),
-                Gtk.ListScrollFlags.FOCUS,
-            )
+            def safe_scroll_remove():
+                target = abs(index - 1)
+                if 0 <= target < self.win.playlist_ls.get_n_items():
+                    self.playlist_list_view.scroll_to(target, Gtk.ListScrollFlags.FOCUS)
+                return GLib.SOURCE_REMOVE
+
+            GLib.timeout_add(100, safe_scroll_remove)
 
         menu = Gio.Menu.new()
         menu.append(_("Open Item Location"), "row.open_location")
         menu.append(_("Remove from Playlist"), "row.remove_item")
 
+        if hasattr(list_item, "popover") and list_item.popover is not None:
+            list_item.popover.unparent()
+
         popover = Gtk.PopoverMenu.new_from_model(menu)
+        list_item.popover = popover
         popover.set_parent(row)
         popover.set_has_arrow(False)
         popover.set_autohide(True)
@@ -489,15 +505,15 @@ class Playlist(Adw.Dialog):
             f.write("#EXTM3U\n")
 
             for item in mpv.playlist:
-                path = item["filename"]
-                name_with_ext = os.path.basename(path)
+                filepath = item["filename"]
+                name_with_ext = os.path.basename(filepath)
                 file_title = os.path.splitext(name_with_ext)[0]
                 title = file_title
 
-                if not is_local_path(path):
+                if not is_local_path(filepath):
                     title = item.get("title") or file_title
 
                 duration = -1
 
                 f.write(f"#EXTINF:{duration},{title}\n")
-                f.write(f"{path}\n")
+                f.write(f"{filepath}\n")

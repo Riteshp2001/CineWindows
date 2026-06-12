@@ -479,6 +479,11 @@ class CineWindow(Adw.ApplicationWindow):
             click_gesture.connect("unpaired-release", self._cancel_click_hold)
             self.video_overlay.add_controller(click_gesture)
 
+        drag_gesture = Gtk.GestureDrag(button=1)
+        drag_gesture.connect("drag-begin", self._cancel_click_hold)
+        drag_gesture.connect("drag-update", self._cancel_click_hold)
+        self.video_overlay.add_controller(drag_gesture)
+
         @self._connect("notify::visible-dialog")
         def on_vis_dialog_change(*args):
             if self.get_visible_dialog():
@@ -584,14 +589,9 @@ class CineWindow(Adw.ApplicationWindow):
 
         if gtk_setts:
             layout = gtk_setts.get_property("gtk-decoration-layout")
+            self.headerbar.set_decoration_layout(layout)
 
-            if is_fullscreen:
-                left_side, _, _right_side = layout.partition(":")
-                close_only = "close:" if "close" in left_side else ":close"
-                self.headerbar.set_decoration_layout(close_only)
-            else:
-                self.headerbar.set_decoration_layout(layout)
-
+        self._show_ui()
         self._hide_ui_timeout()
 
     def _show_ui(self):
@@ -755,7 +755,12 @@ class CineWindow(Adw.ApplicationWindow):
                     self.shuffle_toggle_btn.set_active(False)
 
                 path = folder.get_path()
-                self.mpv.loadfile(path, "append-play")
+                for root, dirs, files in os.walk(path):
+                    dirs.sort()
+                    files.sort()
+                    for f in files:
+                        if f.lower().endswith(MEDIA_EXTS):
+                            self.mpv.loadfile(os.path.join(root, f), "append-play")
 
             except GLib.Error as e:
                 print(f"Dialog error: {e.message}")
@@ -1404,7 +1409,14 @@ class CineWindow(Adw.ApplicationWindow):
                     mime_type = info.get_content_type() or ""
 
                 if file_type == Gio.FileType.DIRECTORY:
-                    self.mpv.loadfile(path, mode)
+                    for root, dirs, files in os.walk(path):
+                        dirs.sort()
+                        files.sort()
+                        for f in files:
+                            if f.lower().endswith(MEDIA_EXTS):
+                                self.mpv.loadfile(os.path.join(root, f), mode)
+                                if mode == "replace":
+                                    mode = "append-play"
                     first_file = False
                     continue
 
@@ -1623,6 +1635,7 @@ class CineWindow(Adw.ApplicationWindow):
                 pass
 
         if n_press == 1 and not was_holding:
+            self._single_click_fired = False
             cmd_str = str(self.mouse_bindings.get(button))
 
             if button == "MBTN_LEFT":
@@ -1630,6 +1643,8 @@ class CineWindow(Adw.ApplicationWindow):
                     def click():
                         self.mpv.command_async("cycle", "pause")
                         self.click_delay_id = 0
+                        self._single_click_fired = True
+                        return GLib.SOURCE_REMOVE
                     self.click_delay_id = GLib.timeout_add(self.click_time, click)
                 else:
                     pass  # Disabled
@@ -1653,6 +1668,9 @@ class CineWindow(Adw.ApplicationWindow):
                     run_command(cmd_str)
 
         elif n_press == 2:
+            if getattr(self, "_single_click_fired", False):
+                self.mpv.command_async("cycle", "pause")
+                self._single_click_fired = False
             button_dbl = f"{button}_DBL"
             cmd_str = self.mouse_bindings.get(button_dbl)
             run_command(cmd_str)

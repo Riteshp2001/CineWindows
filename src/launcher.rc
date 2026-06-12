@@ -17,12 +17,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "gyrolet"
       VALUE "FileDescription", "CineWindows Media Player"
-      VALUE "FileVersion", "1.0.1"
+      VALUE "FileVersion", "1.0.2"
       VALUE "InternalName", "CineWindows"
       VALUE "LegalCopyright", "(C) 2026 gyrolet. GPL-3.0"
       VALUE "OriginalFilename", "CineWindows.exe"
       VALUE "ProductName", "CineWindows"
-      VALUE "ProductVersion", "1.0.1"
+      VALUE "ProductVersion", "1.0.2"
     END
   END
   BLOCK "VarFileInfo"

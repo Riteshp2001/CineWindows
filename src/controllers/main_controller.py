@@ -38,9 +38,9 @@ from gi.repository import Adw, Gio, GLib, Gtk
 from ..views.window import CineWindow
 from ..views.preferences import Preferences, settings
 from ..models.session import is_same_playlist
+from ..utils.utils import is_media_file
 
 os.environ["GSK_RENDERER"] = "cairo"
-
 
 class CineApplication(Adw.Application):
     """The main application singleton class."""
@@ -161,9 +161,9 @@ class CineApplication(Adw.Application):
             try:
                 if is_same_playlist(win.mpv.playlist):
                     win.mpv.write_watch_later_config()
+                win.mpv.stop()
             except AttributeError:
                 pass # mpv not fully loaded yet
-            win.mpv.stop()
 
         for gfile in files:
             path = gfile.get_path() or gfile.get_uri()
@@ -197,7 +197,9 @@ class CineApplication(Adw.Application):
             f_type = info.get_file_type()
 
             if f_type == Gio.FileType.REGULAR:
-                return path
+                if is_media_file(path):
+                    return path
+                return None
 
             if f_type == Gio.FileType.DIRECTORY:
                 enumerator = gfile.enumerate_children(
@@ -215,7 +217,9 @@ class CineApplication(Adw.Application):
                         continue
 
                     if child_type == Gio.FileType.REGULAR:
-                        return gfile.get_child(name).get_path()
+                        child_path = gfile.get_child(name).get_path()
+                        if is_media_file(child_path):
+                            return child_path
                     elif child_type == Gio.FileType.DIRECTORY:
                         subdirectories.append(gfile.get_child(name))
 
@@ -337,12 +341,14 @@ class CineApplication(Adw.Application):
 
                 GLib.idle_add(do_notify)
 
-            except (URLError, json.JSONDecodeError, Exception) as e:
+            except Exception as e:
                 if show_up_to_date:
-                    win = self.props.active_window
-                    if win:
-                        toast = Adw.Toast.new(_("Could not check for updates: {}").format(str(e)))
-                        win.toast_overlay.add_toast(toast)
+                    def show_error():
+                        win = self.props.active_window
+                        if win:
+                            toast = Adw.Toast.new(_("Could not check for updates: {}").format(str(e)))
+                            win.toast_overlay.add_toast(toast)
+                    GLib.idle_add(show_error)
 
         thread = threading.Thread(target=check, daemon=True)
         thread.start()

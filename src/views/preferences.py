@@ -234,6 +234,8 @@ class Preferences(Adw.Dialog):
     def _disconnect_settings(self, *a):
         for connection_id in self._setting_ids:
             settings.disconnect(connection_id)
+        self.win = None
+        self.mpv = None
 
     def _setup_about_section(self):
         version = getattr(self.win.get_application(), "app_version", "1.0.0")
