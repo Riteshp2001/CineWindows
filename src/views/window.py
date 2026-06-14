@@ -580,12 +580,18 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _set_fs_state(self, _window, _gparam):
         is_fullscreen = self.props.fullscreened
+        self.is_fs = is_fullscreen
 
-        try:
-            if self.mpv.fullscreen != is_fullscreen:
-                self.mpv.fullscreen = is_fullscreen
-        except mpv.ShutdownError:
-            pass
+        if getattr(self, "_applying_fs", False):
+            # This notify is the result of our own _sync_fullscreen() call;
+            # consume it without writing back to mpv to avoid the ping-pong.
+            self._applying_fs = False
+        else:
+            try:
+                if self.mpv.fullscreen != is_fullscreen:
+                    self.mpv.fullscreen = is_fullscreen
+            except mpv.ShutdownError:
+                pass
 
         if gtk_setts:
             layout = gtk_setts.get_property("gtk-decoration-layout")
@@ -1463,6 +1469,15 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _sync_fullscreen(self, mpv_is_fs):
         self.is_fs = mpv_is_fs
+        # Already in the requested state (e.g. GTK drove the change): nothing to
+        # do. Re-issuing fullscreen()/unfullscreen() here is what lets rapid
+        # toggles ping-pong between mpv and the window state.
+        if self.props.fullscreened == mpv_is_fs:
+            return
+        # Mark that the upcoming notify::fullscreened is our own doing, so
+        # _set_fs_state won't write the state back into mpv and re-trigger this
+        # observer (the feedback loop that makes the GUI flicker on fast toggles).
+        self._applying_fs = True
         if mpv_is_fs:
             self.fullscreen()
         else:
