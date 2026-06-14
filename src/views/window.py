@@ -1815,6 +1815,9 @@ class CineWindow(Adw.ApplicationWindow):
                     "fbo": self.fbo.value,
                 },
             )
+            # Tell mpv the buffer was presented so it can measure the real
+            # display timing and keep frames in phase (fixes stutter / drops).
+            self.mpv_ctx.report_swap()
         except Exception as e:
             print(f"Render error: {e}")
 
