@@ -2003,8 +2003,18 @@ class CineWindow(Adw.ApplicationWindow):
 
             GLib.idle_add(update)
 
+        # Throttle the seekbar update. Running it on every frame-clock tick
+        # (~60 Hz) forces GTK to recomposite the whole window each time, which —
+        # with graphics offload disabled — re-samples the video texture and makes
+        # playback judder while the controls are visible. ~15 Hz is visually
+        # smooth for a progress bar and cuts the recomposition rate ~4x.
+        self._last_prog_update = 0
         def _smooth_progress(widget, frame_clock):
             try:
+                now = frame_clock.get_frame_time()  # microseconds
+                if now - self._last_prog_update < 66_000:  # ~15 Hz
+                    return True
+                self._last_prog_update = now
                 time_pos = self.mpv.time_pos
                 if time_pos is not None and not self.mpv.core_idle:
                     self._update_progress(float(time_pos), update_bar=True)
