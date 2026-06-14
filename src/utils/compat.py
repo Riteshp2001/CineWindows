@@ -13,22 +13,12 @@ def _get_platform_config_dir():
     base = os.environ.get("APPDATA") or os.path.expanduser("~")
     return os.path.join(base, APP_DEVELOPER, APP_NAME)
 
-def _find_windows_mpv_portable_config():
-    for folder in os.environ.get("PATH", "").split(os.pathsep):
-        if not folder:
-            continue
-        mpv_exe = os.path.join(folder, "mpv.exe")
-        portable_dir = os.path.join(folder, "portable_config")
-        if os.path.exists(mpv_exe) and os.path.isdir(portable_dir):
-            return portable_dir
-    return None
-
 def _get_mpv_config_dir():
-    portable_dir = _find_windows_mpv_portable_config()
-    if portable_dir:
-        return portable_dir
+    # Use Cine's own isolated mpv config dir (%APPDATA%\cine) instead of the
+    # shared global mpv config (%APPDATA%\mpv), so Cine doesn't inherit the
+    # user's standalone mpv.conf and vice versa.
     base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    return os.path.join(base, "mpv")
+    return os.path.join(base, "cine")
 
 def _get_platform_pictures_dir():
     profile = os.environ.get("USERPROFILE") or os.path.expanduser("~")
