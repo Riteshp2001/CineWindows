@@ -29,6 +29,7 @@ jobs:
             mingw-w64-x86_64-python-gobject
             mingw-w64-x86_64-python-pip
             mingw-w64-x86_64-mpv
+            mingw-w64-x86_64-vapoursynth
             mingw-w64-x86_64-blueprint-compiler
             mingw-w64-x86_64-adwaita-icon-theme
             mingw-w64-x86_64-yt-dlp
