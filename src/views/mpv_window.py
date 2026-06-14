@@ -54,6 +54,7 @@ _WS_EX_TOOLWINDOW = 0x00000080
 _WS_EX_NOACTIVATE = 0x08000000
 # DWM: round the corners to match the GTK window (Windows 11).
 _DWMWA_WINDOW_CORNER_PREFERENCE = 33
+_DWMWCP_DONOTROUND = 1
 _DWMWCP_ROUND = 2
 _SWP_NOACTIVATE = 0x0010
 _SWP_NOSIZE = 0x0001
@@ -126,15 +127,23 @@ class MpvWindow:
         )
         if not self._hwnd:
             raise ctypes.WinError(ctypes.get_last_error())
-        if _dwmapi is not None:
-            try:
-                pref = ctypes.c_int(_DWMWCP_ROUND)
-                _dwmapi.DwmSetWindowAttribute(
-                    self._hwnd, _DWMWA_WINDOW_CORNER_PREFERENCE,
-                    ctypes.byref(pref), ctypes.sizeof(pref),
-                )
-            except Exception:
-                pass
+        self._rounded = True
+        self.set_rounded(True)
+
+    def set_rounded(self, rounded: bool):
+        """Round corners to match the GTK window, or square them for
+        fullscreen/maximized so the video fills every pixel (no desktop showing
+        through the rounded corner cut)."""
+        if self._hwnd is None or _dwmapi is None:
+            return
+        try:
+            pref = ctypes.c_int(_DWMWCP_ROUND if rounded else _DWMWCP_DONOTROUND)
+            _dwmapi.DwmSetWindowAttribute(
+                self._hwnd, _DWMWA_WINDOW_CORNER_PREFERENCE,
+                ctypes.byref(pref), ctypes.sizeof(pref),
+            )
+        except Exception:
+            pass
 
     @property
     def hwnd(self) -> int:

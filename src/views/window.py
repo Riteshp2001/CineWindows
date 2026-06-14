@@ -165,6 +165,7 @@ class CineWindow(Adw.ApplicationWindow):
         self._last_video_rect: tuple = ()
         self._mpv_should_show: bool = False
         self._mpv_visible: bool = False
+        self._mpv_rounded: bool = True
 
         self.gl_area: Gtk.GLArea = Gtk.GLArea()
         self.offload: Gtk.GraphicsOffload = Gtk.GraphicsOffload(child=self.gl_area)
@@ -183,7 +184,9 @@ class CineWindow(Adw.ApplicationWindow):
             self.video_area.set_vexpand(True)
             self.video_overlay.set_child(self.video_area)
             self._install_decouple_css()
-            self.add_css_class("cine-decoupled")
+            # The window is made transparent only while a video is showing (see
+            # _enforce_mpv_visibility); idle stays opaque so the start page and
+            # titlebar render normally instead of revealing the desktop.
             self.connect("realize", self._on_window_realize_decouple)
             self.connect("unrealize", lambda *_a: self._teardown_decouple())
         else:
@@ -1943,6 +1946,13 @@ class CineWindow(Adw.ApplicationWindow):
     def _enforce_mpv_visibility(self):
         if self.mpv_window is None or not self._gtk_hwnd:
             return
+        # Make the window transparent only while the video is showing; keep it
+        # opaque when idle so the start page / titlebar don't reveal the desktop.
+        if self._mpv_should_show:
+            self.add_css_class("cine-decoupled")
+        else:
+            self.remove_css_class("cine-decoupled")
+
         visible = self._mpv_should_show and not self._gtk_minimized()
         if visible != self._mpv_visible:
             self._mpv_visible = visible
@@ -1950,15 +1960,28 @@ class CineWindow(Adw.ApplicationWindow):
                 # Position correctly *before* showing so it never appears at a
                 # stale spot (the rect reset forces a reposition).
                 self._last_video_rect = ()
+                self._update_mpv_corners()
                 self._sync_video_geometry()
                 self.mpv_window.show()
                 self.mpv_window.stack_behind(self._gtk_hwnd)
             else:
                 self.mpv_window.hide()
 
+    def _update_mpv_corners(self):
+        # Square the native window's corners when fullscreen/maximized (GTK has no
+        # rounding then) so the video fills every pixel; round otherwise to match
+        # the GTK window.
+        if self.mpv_window is None:
+            return
+        rounded = not (self.props.fullscreened or self.is_maximized())
+        if rounded != self._mpv_rounded:
+            self._mpv_rounded = rounded
+            self.mpv_window.set_rounded(rounded)
+
     def _video_geo_tick(self):
         self._enforce_mpv_visibility()
         if self._mpv_visible:
+            self._update_mpv_corners()
             self._sync_video_geometry()
         return True
 
