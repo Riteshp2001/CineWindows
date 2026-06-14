@@ -21,6 +21,7 @@ import os
 import gi
 import mpv
 import ctypes
+from ctypes import wintypes
 from typing import cast
 from gettext import gettext as _
 from urllib.parse import urlparse
@@ -61,6 +62,7 @@ from .options import OptionsMenuButton
 from .playlist import Playlist, PlaylistItemObj
 from .preferences import settings, sync_mpv_with_settings
 from .shortcuts import INTERNAL_BINDINGS, populate_shortcuts_dialog_mpv
+from .mpv_window import MpvWindow
 
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
@@ -69,6 +71,25 @@ gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
 gi.require_version("GObject", "2.0")
 from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject
+
+import locale as _locale
+
+# When set (default on Windows), render mpv into its own native window pinned
+# behind a transparent region of the GTK window, so video presentation is fully
+# decoupled from GTK's UI presents (no judder from seekbar/hover/mouse motion).
+# Set CINE_DECOUPLE=0 to fall back to the in-process GtkGLArea render path.
+DECOUPLE = os.name == "nt" and os.environ.get("CINE_DECOUPLE", "1") != "0"
+
+_GTK_HWND_READY = False
+if DECOUPLE:
+    try:
+        gi.require_version("GdkWin32", "4.0")
+        from gi.repository import GdkWin32  # noqa: F401
+        from gi.repository import Graphene
+        _GTK_HWND_READY = True
+    except Exception as _e:
+        print(f"decouple: GdkWin32 unavailable, disabling decouple ({_e})")
+        DECOUPLE = False
 
 
 
@@ -137,6 +158,14 @@ class CineWindow(Adw.ApplicationWindow):
 
         Gtk.WindowGroup().add_window(self)
 
+        self.decouple: bool = DECOUPLE
+        self.mpv_window: MpvWindow | None = None
+        self._gtk_hwnd: int = 0
+        self._video_geo_timer: int = 0
+        self._last_video_rect: tuple = ()
+        self._mpv_should_show: bool = False
+        self._mpv_visible: bool = False
+
         self.gl_area: Gtk.GLArea = Gtk.GLArea()
         self.offload: Gtk.GraphicsOffload = Gtk.GraphicsOffload(child=self.gl_area)
         self.offload.set_black_background(True)
@@ -145,7 +174,20 @@ class CineWindow(Adw.ApplicationWindow):
         if vendor and "nvidia" in vendor:
             self.offload.set_enabled(Gtk.GraphicsOffloadEnabled.DISABLED)
 
-        self.video_overlay.set_child(self.offload)
+        if self.decouple:
+            # mpv renders into its own native window pinned behind a transparent
+            # hole in the GTK window (see mpv_window.py / the decouple design doc).
+            self.mpv_window = MpvWindow()
+            self.video_area: Gtk.Widget = Gtk.Box()
+            self.video_area.set_hexpand(True)
+            self.video_area.set_vexpand(True)
+            self.video_overlay.set_child(self.video_area)
+            self._install_decouple_css()
+            self.add_css_class("cine-decoupled")
+            self.connect("realize", self._on_window_realize_decouple)
+            self.connect("unrealize", lambda *_a: self._teardown_decouple())
+        else:
+            self.video_overlay.set_child(self.offload)
 
         self.playlist_ls: Gio.ListStore = Gio.ListStore.new(PlaylistItemObj)
         self.playlist_debounce_id: int = 0
@@ -187,7 +229,18 @@ class CineWindow(Adw.ApplicationWindow):
         self.hide_timeout_id: int = 0
         self.is_fs: bool = False
         self.is_inactive: bool = False
-        self.mpv_ctx: mpv.MpvRenderContext | None
+        self.mpv_ctx: mpv.MpvRenderContext | None = None
+
+        _decouple_mpv_kwargs = {}
+        if self.decouple and self.mpv_window is not None:
+            # GTK resets the locale during init; mpv needs LC_NUMERIC=C before its
+            # video output is created or it crashes. Re-assert it right here.
+            _locale.setlocale(_locale.LC_NUMERIC, "C")
+            _decouple_mpv_kwargs = dict(
+                wid=str(self.mpv_window.hwnd),
+                vo="gpu-next",
+                gpu_context="d3d11",
+            )
 
         self.mpv = mpv.MPV(
             # terminal=True,
@@ -229,6 +282,7 @@ class CineWindow(Adw.ApplicationWindow):
             cursor_autohide_fs_only=True,
             directory_filter_types="video,audio",
             autocreate_playlist="filter",
+            **_decouple_mpv_kwargs,
         )
 
         if self.mpv["window-maximized"] or settings.get_boolean("is-maximized"):
@@ -237,7 +291,12 @@ class CineWindow(Adw.ApplicationWindow):
         self.conf_hwdec = list(
             filter(lambda x: x != "no", cast(list, self.mpv["hwdec"]))
         )
-        self.mpv["vo"] = "libmpv"
+        if self.decouple:
+            # Native window path: real hardware decode (not the GL-interop copy
+            # path) and let mpv drive its own d3d11 swapchain.
+            self.mpv["hwdec"] = "d3d11va"
+        else:
+            self.mpv["vo"] = "libmpv"
         self.mpv["osc"] = "no"
         self.mpv["load-console"] = "no"
         self.mpv.command("change-list", "watch-later-options", "remove", "vid")
@@ -443,8 +502,9 @@ class CineWindow(Adw.ApplicationWindow):
         self.popover_content_box.append(self.chapter_popover_label)
         self.chapter_popover.set_child(self.popover_content_box)
 
-        self.gl_area.connect("realize", self._on_realize_area)
-        self.gl_area.connect("render", self._on_render_area)
+        if not self.decouple:
+            self.gl_area.connect("realize", self._on_realize_area)
+            self.gl_area.connect("render", self._on_render_area)
 
     def _setup_event_handlers(self):
         key_controller = Gtk.EventControllerKey()
@@ -580,12 +640,18 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _set_fs_state(self, _window, _gparam):
         is_fullscreen = self.props.fullscreened
+        self.is_fs = is_fullscreen
 
-        try:
-            if self.mpv.fullscreen != is_fullscreen:
-                self.mpv.fullscreen = is_fullscreen
-        except mpv.ShutdownError:
-            pass
+        if getattr(self, "_applying_fs", False):
+            # This notify is the result of our own _sync_fullscreen() call;
+            # consume it without writing back to mpv to avoid the ping-pong.
+            self._applying_fs = False
+        else:
+            try:
+                if self.mpv.fullscreen != is_fullscreen:
+                    self.mpv.fullscreen = is_fullscreen
+            except mpv.ShutdownError:
+                pass
 
         if gtk_setts:
             layout = gtk_setts.get_property("gtk-decoration-layout")
@@ -1463,6 +1529,15 @@ class CineWindow(Adw.ApplicationWindow):
 
     def _sync_fullscreen(self, mpv_is_fs):
         self.is_fs = mpv_is_fs
+        # Already in the requested state (e.g. GTK drove the change): nothing to
+        # do. Re-issuing fullscreen()/unfullscreen() here is what lets rapid
+        # toggles ping-pong between mpv and the window state.
+        if self.props.fullscreened == mpv_is_fs:
+            return
+        # Mark that the upcoming notify::fullscreened is our own doing, so
+        # _set_fs_state won't write the state back into mpv and re-trigger this
+        # observer (the feedback loop that makes the GUI flicker on fast toggles).
+        self._applying_fs = True
         if mpv_is_fs:
             self.fullscreen()
         else:
@@ -1818,6 +1893,121 @@ class CineWindow(Adw.ApplicationWindow):
         except Exception as e:
             print(f"Render error: {e}")
 
+    # ---- decoupled native-window path (Windows) ----
+
+    def _install_decouple_css(self):
+        # Make ONLY the window background transparent, so the video region (whose
+        # container ancestors paint no background) becomes a see-through hole to
+        # the mpv window behind. Everything else paints its own background. The
+        # start page normally fades from transparent into #0c0c0e relying on the
+        # opaque window backdrop; give it a solid background so the idle screen
+        # isn't see-through (it is hidden during playback, so it never covers the
+        # video).
+        css = Gtk.CssProvider()
+        css.load_from_data(
+            b"window.cine-decoupled { background: transparent; }"
+            b"window.cine-decoupled .start-page { background: #0c0c0e; }"
+        )
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def _on_window_realize_decouple(self, *_args):
+        try:
+            self._gtk_hwnd = self.get_surface().get_handle()
+        except Exception as e:
+            print(f"decouple: could not get GTK HWND: {e}")
+            return
+        if self.mpv_window is not None:
+            self.mpv_window.stack_behind(self._gtk_hwnd)
+            self._sync_video_geometry()
+        # Re-stack the mpv window directly behind the GTK window whenever the GTK
+        # window is (de)activated, so it stays glued behind it in z-order.
+        self.connect("notify::is-active", self._on_active_decouple)
+        # Light safety tick keeps the mpv window aligned during window drag/resize
+        # (GTK doesn't notify us of native window moves) and tracks minimize.
+        # SetWindowPos does not trigger any GTK present, so this is cheap.
+        if not self._video_geo_timer:
+            self._video_geo_timer = GLib.timeout_add(50, self._video_geo_tick)
+
+    def _on_active_decouple(self, *_args):
+        if self.mpv_window is not None and self._gtk_hwnd and self.props.is_active:
+            self.mpv_window.stack_behind(self._gtk_hwnd)
+
+    def _gtk_minimized(self) -> bool:
+        try:
+            return bool(ctypes.windll.user32.IsIconic(wintypes.HWND(self._gtk_hwnd)))
+        except Exception:
+            return False
+
+    def _enforce_mpv_visibility(self):
+        if self.mpv_window is None or not self._gtk_hwnd:
+            return
+        visible = self._mpv_should_show and not self._gtk_minimized()
+        if visible != self._mpv_visible:
+            self._mpv_visible = visible
+            if visible:
+                # Position correctly *before* showing so it never appears at a
+                # stale spot (the rect reset forces a reposition).
+                self._last_video_rect = ()
+                self._sync_video_geometry()
+                self.mpv_window.show()
+                self.mpv_window.stack_behind(self._gtk_hwnd)
+            else:
+                self.mpv_window.hide()
+
+    def _video_geo_tick(self):
+        self._enforce_mpv_visibility()
+        if self._mpv_visible:
+            self._sync_video_geometry()
+        return True
+
+    def _sync_video_geometry(self):
+        if not self.decouple or self.mpv_window is None or not self._gtk_hwnd:
+            return
+        try:
+            ok, bounds = self.video_area.compute_bounds(self)
+            if not ok:
+                return
+            # Window content size in logical px (excludes the CSD shadow).
+            cw, ch = self.get_width(), self.get_height()
+            if cw <= 0 or ch <= 0:
+                return
+            # Offset of widget (0,0) within the surface == the CSD shadow inset.
+            sx, sy = self.get_surface_transform()
+            # The native surface (HWND) covers content + shadow, in physical px.
+            r = wintypes.RECT()
+            ctypes.windll.user32.GetWindowRect(
+                wintypes.HWND(self._gtk_hwnd), ctypes.byref(r)
+            )
+            pw, ph = (r.right - r.left), (r.bottom - r.top)
+            # Derive the true device scale from the physical/logical size ratio so
+            # this is correct under fractional DPI (GTK's integer scale_factor is
+            # not). Logical surface size = content + shadow on both sides.
+            lsw, lsh = cw + 2 * sx, ch + 2 * sy
+            if lsw <= 0 or lsh <= 0:
+                return
+            dsx, dsy = pw / lsw, ph / lsh
+            x = r.left + int((sx + bounds.origin.x) * dsx)
+            y = r.top + int((sy + bounds.origin.y) * dsy)
+            w = int(bounds.size.width * dsx)
+            h = int(bounds.size.height * dsy)
+            rect = (x, y, w, h)
+            if rect == self._last_video_rect:
+                return
+            self._last_video_rect = rect
+            self.mpv_window.place(self._gtk_hwnd, x, y, w, h)
+        except Exception as e:
+            print(f"decouple: geometry sync error: {e}")
+
+    def _teardown_decouple(self):
+        if self._video_geo_timer:
+            GLib.source_remove(self._video_geo_timer)
+            self._video_geo_timer = 0
+        if self.mpv_window is not None:
+            self.mpv_window.destroy()
+            self.mpv_window = None
+
     def _set_window_size(self, width, height):
         if width <= 0 or height <= 0:
             return
@@ -2120,6 +2310,11 @@ class CineWindow(Adw.ApplicationWindow):
                 self.start_page.set_visible(is_idle)
                 self.controls_box.set_visible(not is_idle)
                 self.gl_area.set_visible(not is_idle)
+                if self.decouple and self.mpv_window is not None:
+                    # Actual show/hide is enforced by the geometry tick, which
+                    # also accounts for the GTK window being minimized.
+                    self._mpv_should_show = not is_idle
+                    self._enforce_mpv_visibility()
 
                 if is_idle:
                     self.error_count = 0
