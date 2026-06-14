@@ -320,8 +320,57 @@ class CineWindow(Adw.ApplicationWindow):
 
         sync_mpv_with_settings(self)
 
+        # --- SVP RIFE frame interpolation ---------------------------------
+        # vf=vapoursynth runs RIFE (ncnn-Vulkan or TensorRT) in-process. VS
+        # filters need decoded frames in system memory, so force copy-back hwdec
+        # (this is exactly why SVP requires hwdec=auto-copy). The engine + on/off
+        # state come from the Preferences dialog (interp_config / interpolation.json);
+        # rife.vpy reads the engine choice itself.
+        from ..utils import interp_config
+
+        _icfg = interp_config.load()
+        self._rife_on = bool(_icfg.get("enabled", True))
+        self._rife_vpy = os.environ.get("CINE_RIFE_VPY") or os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            ),
+            "scripts",
+            "rife.vpy",
+        )
+        if self._rife_on and os.path.exists(self._rife_vpy):
+            try:
+                self.mpv["hwdec"] = "auto-copy"
+                self._apply_rife(True)
+            except Exception as _rife_err:
+                print("[Cine] RIFE setup failed:", _rife_err)
+        # ------------------------------------------------------------------
+
         if settings.get_boolean("save-session") and is_activate:
             restore_last_playlist(self, self.app, self.mpv)
+
+    def _apply_rife(self, enable):
+        """Enable or disable the RIFE vapoursynth filter on the live mpv core."""
+        if enable:
+            # VapourSynth filters need frames in system memory.
+            self.mpv["hwdec"] = "auto-copy"
+            self.mpv["vf"] = "vapoursynth=[%s]" % self._rife_vpy.replace("\\", "/")
+        else:
+            self.mpv["vf"] = ""
+        self._rife_on = bool(enable)
+
+    def reload_rife(self):
+        """Re-apply the filter so rife.vpy picks up a changed engine choice."""
+        if self._rife_on:
+            self._apply_rife(False)
+            self._apply_rife(True)
+
+    def toggle_rife(self, *args):
+        """Flip RIFE interpolation on/off during playback."""
+        try:
+            self._apply_rife(not self._rife_on)
+            self.mpv.show_text("RIFE: on" if self._rife_on else "RIFE: off")
+        except Exception as _rife_err:
+            print("[Cine] RIFE toggle failed:", _rife_err)
 
     def _setup_actions(self):
         self._create_action("clear-and-add", self._on_clear_and_add)

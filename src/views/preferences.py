@@ -21,6 +21,7 @@ import gi
 from gettext import gettext as _
 
 from ..utils.constants import APP_ID, APP_NAME, APP_DEVELOPER, APP_REPOSITORY_URL, RESOURCE_PREFIX
+from ..utils import interp_config
 
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
@@ -67,6 +68,7 @@ def sync_mpv_with_settings(window):
 class Preferences(Adw.Dialog):
     __gtype_name__ = "Preferences"
 
+    prefs_page: Adw.PreferencesPage = Gtk.Template.Child()
     open_new_row: Adw.SwitchRow = Gtk.Template.Child()
     thumb_preview_row: Adw.SwitchRow = Gtk.Template.Child()
     hwdec_row: Adw.SwitchRow = Gtk.Template.Child()
@@ -100,6 +102,7 @@ class Preferences(Adw.Dialog):
         self._bind_ui()
         self._setup_mpv_updates()
         self._setup_about_section()
+        self._setup_interpolation_ui()
 
         font = settings.get_string("subtitle-font")
         self.font_label.set_label(font)
@@ -236,6 +239,66 @@ class Preferences(Adw.Dialog):
             settings.disconnect(connection_id)
         self.win = None
         self.mpv = None
+
+    def _setup_interpolation_ui(self):
+        """CineSVP: a Frame Interpolation group (RIFE). Built in code because the
+        bundled runtime has no resource compiler to edit preferences.ui."""
+        cfg = interp_config.load()
+
+        group = Adw.PreferencesGroup(
+            title=_("Frame Interpolation"),
+            description=_("Generate in-between frames for smoother motion (SVP RIFE)"),
+        )
+
+        self.interp_enable_row = Adw.SwitchRow(
+            title=_("Smooth Motion (RIFE)"),
+            subtitle=_("Interpolate to a higher frame rate while playing"),
+        )
+        self.interp_enable_row.set_active(bool(cfg.get("enabled", True)))
+        self.interp_enable_row.connect("notify::active", self._on_interp_enable)
+        group.add(self.interp_enable_row)
+
+        self.interp_engine_row = Adw.ComboRow(
+            title=_("Engine"),
+            subtitle=_("Automatic follows your SVP configuration"),
+        )
+        self.interp_engine_row.set_model(
+            Gtk.StringList.new(
+                [_("Automatic (SVP)"), _("ncnn — any GPU"), _("TensorRT — NVIDIA")]
+            )
+        )
+        engine = cfg.get("engine", "auto")
+        self.interp_engine_row.set_selected(
+            interp_config.ENGINES.index(engine) if engine in interp_config.ENGINES else 0
+        )
+        self.interp_engine_row.connect("notify::selected", self._on_interp_engine)
+        group.add(self.interp_engine_row)
+
+        self.prefs_page.add(group)
+
+    def _on_interp_enable(self, row, *_a):
+        enabled = bool(row.get_active())
+        cfg = interp_config.load()
+        cfg["enabled"] = enabled
+        interp_config.save(cfg)
+        if not self.win:
+            return
+        try:
+            self.win._apply_rife(enabled)
+        except Exception as exc:
+            print("[CineSVP] interpolation toggle failed:", exc)
+
+    def _on_interp_engine(self, row, *_a):
+        idx = row.get_selected()
+        engine = interp_config.ENGINES[idx] if 0 <= idx < len(interp_config.ENGINES) else "auto"
+        cfg = interp_config.load()
+        cfg["engine"] = engine
+        interp_config.save(cfg)
+        if self.win and getattr(self, "interp_enable_row", None) and self.interp_enable_row.get_active():
+            try:
+                self.win.reload_rife()
+            except Exception as exc:
+                print("[CineSVP] interpolation engine change failed:", exc)
 
     def _setup_about_section(self):
         version = getattr(self.win.get_application(), "app_version", "1.0.0")

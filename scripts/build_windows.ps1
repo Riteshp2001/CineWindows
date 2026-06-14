@@ -433,7 +433,12 @@ $runtimeDllPatterns = @(
     "libcurl-4.dll", "libnghttp2-14.dll", "libidn2-0.dll", "libpsl-5.dll", "libssh2-1.dll", "libcares-2.dll",
     "libbrotlidec.dll", "libbrotlicommon.dll", "libbrotlienc.dll",
     "libgcrypt-20.dll", "libgpg-error-0.dll", "libfftw3-3.dll", "libltdl-7.dll", "librsvg-2-2.dll",
-    "vulkan-1.dll", "libgst*-1.0-0.dll", "liborc-0.4-0.dll", "libgraphite2.dll"
+    "vulkan-1.dll", "libgst*-1.0-0.dll", "liborc-0.4-0.dll", "libgraphite2.dll",
+    # VapourSynth core + scripting. The Python binding ships via site-packages,
+    # but its native core is only reachable through ntldd from a loaded module,
+    # so it must be listed explicitly or in-process VapourSynth (frame
+    # interpolation / RIFE) fails with "DLL load failed importing vapoursynth".
+    "libvapoursynth.dll", "libvapoursynth-script-0.dll"
 )
 
 foreach ($pattern in $runtimeDllPatterns) {

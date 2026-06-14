@@ -81,7 +81,7 @@ You can help translate Cine using [Weblate](https://hosted.weblate.org/projects/
 ### Manual Method
 1. Download and install [MSYS2](https://www.msys2.org/).
 2. Open "MSYS2 MINGW64" terminal.
-3. Install dependencies: `pacman -S mingw-w64-x86_64-python mingw-w64-x86_64-gtk4 mingw-w64-x86_64-libadwaita mingw-w64-x86_64-mpv`
+3. Install dependencies: `pacman -S mingw-w64-x86_64-python mingw-w64-x86_64-gtk4 mingw-w64-x86_64-libadwaita mingw-w64-x86_64-mpv mingw-w64-x86_64-vapoursynth`
 4. Install python packages: `pip install python-mpv yt-dlp`
 5. Run `scripts/build_windows.ps1` to compile the resources.
 
