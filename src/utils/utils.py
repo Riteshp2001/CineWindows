@@ -566,3 +566,23 @@ def is_media_file(path: str | os.PathLike[str]) -> bool:
 
 def is_openable_file(path: str | os.PathLike[str]) -> bool:
     return has_extension(path, OPENABLE_EXTS)
+
+
+def list_media_files(folder: str | os.PathLike[str]) -> list[str]:
+    """Return playable files under ``folder`` in deterministic playlist order."""
+
+    root_folder = os.fspath(folder)
+    media_files: list[str] = []
+
+    def on_walk_error(exc: OSError) -> None:
+        print("folder scan warning:", exc)
+
+    for root, dirs, files in os.walk(root_folder, onerror=on_walk_error):
+        dirs.sort()
+        files.sort()
+        for filename in files:
+            path = os.path.join(root, filename)
+            if is_media_file(path):
+                media_files.append(path)
+
+    return media_files

@@ -33,6 +33,26 @@ from gi.repository import Adw, Gdk, Gio, Gtk
 settings = Gio.Settings.new(APP_ID)
 
 
+def apply_hwdec_setting(window):
+    """Apply the correct decode mode for current render/filter path."""
+    mpv = window.mpv
+
+    if getattr(window, "_rife_on", False):
+        mpv["hwdec"] = "auto-copy"
+        return
+
+    if getattr(window, "decouple", False):
+        mpv["hwdec"] = "d3d11va"
+        return
+
+    if settings.get_boolean("hwdec"):
+        mpv.command_async("vf", "remove", "@hflip")
+        mpv.command_async("vf", "remove", "@vflip")
+        mpv["hwdec"] = window.conf_hwdec + ["auto"]
+    else:
+        mpv["hwdec"] = "no"
+
+
 def sync_mpv_with_settings(window):
     """Apply settings values to the mpv instance"""
     mpv = window.mpv
@@ -42,7 +62,6 @@ def sync_mpv_with_settings(window):
     mpv["slang"] = settings.get_string("subtitle-languages")
     mpv["alang"] = settings.get_string("audio-languages")
     mpv["volume"] = settings.get_int("volume")
-    hwdec_enabled = settings.get_boolean("hwdec")
     norm_enabled = settings.get_boolean("normalize-volume")
 
     sub_bg = settings.get_boolean("subtitle-bg")
@@ -53,12 +72,7 @@ def sync_mpv_with_settings(window):
     )
     mpv["sub-border-color"] = mpv["sub-back-color"]
 
-    if hwdec_enabled:
-        mpv.command_async("vf", "remove", "@hflip")
-        mpv.command_async("vf", "remove", "@vflip")
-        mpv["hwdec"] = window.conf_hwdec + ["auto"]
-    else:
-        mpv["hwdec"] = "no"
+    apply_hwdec_setting(window)
 
     if norm_enabled:
         mpv.command("af", "add", "@cine_loudnorm:lavfi=[loudnorm=I=-20]")
@@ -279,12 +293,16 @@ class Preferences(Adw.Dialog):
     def _on_interp_enable(self, row, *_a):
         enabled = bool(row.get_active())
         cfg = interp_config.load()
-        cfg["enabled"] = enabled
-        interp_config.save(cfg)
         if not self.win:
+            cfg["enabled"] = enabled
+            interp_config.save(cfg)
             return
         try:
-            self.win._apply_rife(enabled)
+            active = self.win._apply_rife(enabled)
+            cfg["enabled"] = active if enabled else False
+            interp_config.save(cfg)
+            if enabled and not active:
+                row.set_active(False)
         except Exception as exc:
             print("[CineSVP] interpolation toggle failed:", exc)
 
@@ -296,7 +314,11 @@ class Preferences(Adw.Dialog):
         interp_config.save(cfg)
         if self.win and getattr(self, "interp_enable_row", None) and self.interp_enable_row.get_active():
             try:
-                self.win.reload_rife()
+                active = self.win.reload_rife()
+                if not active:
+                    cfg["enabled"] = False
+                    interp_config.save(cfg)
+                    self.interp_enable_row.set_active(False)
             except Exception as exc:
                 print("[CineSVP] interpolation engine change failed:", exc)
 
@@ -353,13 +375,7 @@ class Preferences(Adw.Dialog):
             self.win.setup_preview_player()
 
     def _on_hwdec_changed(self, settings, key):
-        hwdec_enabled = settings.get_boolean(key)
-        if hwdec_enabled:
-            self.mpv.command_async("vf", "remove", "@hflip")
-            self.mpv.command_async("vf", "remove", "@vflip")
-            self.mpv["hwdec"] = self.win.conf_hwdec + ["auto"]
-        else:
-            self.mpv["hwdec"] = "no"
+        apply_hwdec_setting(self.win)
 
     def _on_norm_volume_changed(self, settings, key):
         norm_enabled = settings.get_boolean(key)

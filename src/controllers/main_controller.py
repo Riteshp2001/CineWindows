@@ -29,6 +29,9 @@ from urllib.error import URLError
 
 from ..utils.constants import APP_DEVELOPER, APP_ID, APP_NAME, APP_REPOSITORY_URL, RESOURCE_PREFIX
 
+if renderer := os.environ.get("CINE_GSK_RENDERER"):
+    os.environ.setdefault("GSK_RENDERER", renderer)
+
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
@@ -39,8 +42,6 @@ from ..views.window import CineWindow
 from ..views.preferences import Preferences, settings
 from ..models.session import is_same_playlist
 from ..utils.utils import is_media_file
-
-os.environ["GSK_RENDERER"] = "cairo"
 
 class CineApplication(Adw.Application):
     """The main application singleton class."""

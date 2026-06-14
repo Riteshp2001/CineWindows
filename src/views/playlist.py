@@ -19,6 +19,7 @@
 
 import gi
 import os
+import threading
 import unicodedata
 from typing import cast
 
@@ -34,7 +35,7 @@ from gi.repository import Adw, Gio, Gdk, GLib, Gtk, GObject, Pango
 from gettext import gettext as _
 from gettext import ngettext
 from ..utils.constants import RESOURCE_PREFIX
-from ..utils.utils import format_time, is_local_path, SUB_EXTS, MEDIA_EXTS
+from ..utils.utils import format_time, is_local_path, list_media_files, SUB_EXTS, MEDIA_EXTS
 
 
 class PlaylistItemObj(GObject.Object):
@@ -318,6 +319,7 @@ class Playlist(Adw.Dialog):
 
     def _on_drop(self, _target, value, _x, _y):
         items: list[Gio.File | str] = []
+        loading_folder = False
 
         if isinstance(value, Gdk.FileList):
             items = value.get_files()
@@ -360,14 +362,21 @@ class Playlist(Adw.Dialog):
                     mime_type = info.get_content_type() or ""
 
                 if file_type == Gio.FileType.DIRECTORY:
-                    def add_dir():
-                        for root, dirs, files in os.walk(path):
-                            dirs.sort()
-                            files.sort()
-                            for f in files:
-                                fpath = os.path.join(root, f)
-                                if is_media_file(fpath):
+                    def add_dir(folder_path=path):
+                        paths = list_media_files(folder_path)
+
+                        def finish():
+                            try:
+                                for fpath in paths:
                                     self.mpv.loadfile(fpath, "append-play")
+                            finally:
+                                self.spinner.set_visible(False)
+                            return False
+
+                        GLib.idle_add(finish)
+
+                    self.spinner.set_visible(True)
+                    loading_folder = True
                     threading.Thread(target=add_dir, daemon=True).start()
                     continue
 
@@ -386,7 +395,8 @@ class Playlist(Adw.Dialog):
             elif isinstance(item, str):  # URL string
                 self.mpv.loadfile(item, "append-play")
 
-        self.spinner.set_visible(False)
+        if not loading_folder:
+            self.spinner.set_visible(False)
 
     def _on_row_drag_prepare(self, _source, _x, _y, list_item):
         index = list_item.get_item().position

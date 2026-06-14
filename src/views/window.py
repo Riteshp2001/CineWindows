@@ -21,6 +21,7 @@ import os
 import gi
 import mpv
 import ctypes
+import threading
 from ctypes import wintypes
 from typing import cast
 from gettext import gettext as _
@@ -35,6 +36,7 @@ from ..utils.compat import (
     get_display_param,
     GL_FRAMEBUFFER_BINDING,
 )
+from ..utils import interp_config
 from ..utils.constants import APP_ID, APP_NAME, RESOURCE_PREFIX
 
 from ..models.session import (
@@ -50,6 +52,7 @@ from ..utils.utils import (
     get_gpu_vendor,
     format_time,
     has_host_permission,
+    list_media_files,
     MBTN_MAP,
     KEY_REMAP,
     SUB_EXTS,
@@ -60,7 +63,7 @@ from ..utils.utils import (
 
 from .options import OptionsMenuButton
 from .playlist import Playlist, PlaylistItemObj
-from .preferences import settings, sync_mpv_with_settings
+from .preferences import apply_hwdec_setting, settings, sync_mpv_with_settings
 from .shortcuts import INTERNAL_BINDINGS, populate_shortcuts_dialog_mpv
 from .mpv_window import MpvWindow
 
@@ -233,6 +236,9 @@ class CineWindow(Adw.ApplicationWindow):
         self.is_fs: bool = False
         self.is_inactive: bool = False
         self.mpv_ctx: mpv.MpvRenderContext | None = None
+        self._show_remaining: bool = settings.get_boolean("show-remaining")
+        self._last_progress_label: str | None = None
+        self._last_progress_margin: int | None = None
 
         _decouple_mpv_kwargs = {}
         if self.decouple and self.mpv_window is not None:
@@ -291,9 +297,13 @@ class CineWindow(Adw.ApplicationWindow):
         if self.mpv["window-maximized"] or settings.get_boolean("is-maximized"):
             self.maximize()
 
-        self.conf_hwdec = list(
-            filter(lambda x: x != "no", cast(list, self.mpv["hwdec"]))
-        )
+        hwdec_config = self.mpv["hwdec"]
+        if isinstance(hwdec_config, list):
+            self.conf_hwdec = [value for value in hwdec_config if value != "no"]
+        elif isinstance(hwdec_config, str) and hwdec_config != "no":
+            self.conf_hwdec = [hwdec_config]
+        else:
+            self.conf_hwdec = []
         if self.decouple:
             # Native window path: real hardware decode (not the GL-interop copy
             # path) and let mpv drive its own d3d11 swapchain.
@@ -326,10 +336,8 @@ class CineWindow(Adw.ApplicationWindow):
         # (this is exactly why SVP requires hwdec=auto-copy). The engine + on/off
         # state come from the Preferences dialog (interp_config / interpolation.json);
         # rife.vpy reads the engine choice itself.
-        from ..utils import interp_config
-
         _icfg = interp_config.load()
-        self._rife_on = bool(_icfg.get("enabled", True))
+        self._rife_on = False
         self._rife_vpy = os.environ.get("CINE_RIFE_VPY") or os.path.join(
             os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -337,9 +345,8 @@ class CineWindow(Adw.ApplicationWindow):
             "scripts",
             "rife.vpy",
         )
-        if self._rife_on and os.path.exists(self._rife_vpy):
+        if bool(_icfg.get("enabled", True)):
             try:
-                self.mpv["hwdec"] = "auto-copy"
                 self._apply_rife(True)
             except Exception as _rife_err:
                 print("[Cine] RIFE setup failed:", _rife_err)
@@ -351,24 +358,46 @@ class CineWindow(Adw.ApplicationWindow):
     def _apply_rife(self, enable):
         """Enable or disable the RIFE vapoursynth filter on the live mpv core."""
         if enable:
-            # VapourSynth filters need frames in system memory.
-            self.mpv["hwdec"] = "auto-copy"
+            cfg = interp_config.load()
+            engine = str(cfg.get("engine", "auto"))
+            if not os.path.exists(self._rife_vpy):
+                print("[CineSVP] RIFE script not found:", self._rife_vpy)
+                self._rife_on = False
+                self.mpv["vf"] = ""
+                apply_hwdec_setting(self)
+                return False
+            if not interp_config.backend_available(engine):
+                print("[CineSVP] No RIFE backend found; interpolation disabled.")
+                self._rife_on = False
+                self.mpv["vf"] = ""
+                apply_hwdec_setting(self)
+                return False
+
+            self._rife_on = True
+            apply_hwdec_setting(self)
             self.mpv["vf"] = "vapoursynth=[%s]" % self._rife_vpy.replace("\\", "/")
         else:
             self.mpv["vf"] = ""
-        self._rife_on = bool(enable)
+            self._rife_on = False
+            apply_hwdec_setting(self)
+        return self._rife_on
 
     def reload_rife(self):
         """Re-apply the filter so rife.vpy picks up a changed engine choice."""
         if self._rife_on:
             self._apply_rife(False)
-            self._apply_rife(True)
+            return self._apply_rife(True)
+        return False
 
     def toggle_rife(self, *args):
         """Flip RIFE interpolation on/off during playback."""
         try:
-            self._apply_rife(not self._rife_on)
-            self.mpv.show_text("RIFE: on" if self._rife_on else "RIFE: off")
+            requested = not self._rife_on
+            enabled = self._apply_rife(requested)
+            if requested and not enabled:
+                self.mpv.show_text("RIFE: unavailable")
+            else:
+                self.mpv.show_text("RIFE: on" if self._rife_on else "RIFE: off")
         except Exception as _rife_err:
             print("[Cine] RIFE toggle failed:", _rife_err)
 
@@ -477,7 +506,7 @@ class CineWindow(Adw.ApplicationWindow):
 
         _icon_path = os.path.normpath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "..", "data", "icons", "hicolor", "scalable", "apps",
+                         "..", "..", "data", "icons", "hicolor", "scalable", "apps",
                          "io.github.gyrolet.CineWindows.svg")
         )
         if os.path.exists(_icon_path):
@@ -854,6 +883,41 @@ class CineWindow(Adw.ApplicationWindow):
         playlist = Playlist(self)
         playlist.present(self)
 
+    def _set_playlist_loading(self, loading: bool):
+        if isinstance(dialog := self.get_visible_dialog(), Playlist):
+            dialog.spinner.set_visible(loading)
+
+    def _load_media_paths(self, paths, first_mode="append-play", start_playback=False):
+        mode = first_mode
+        loaded = False
+        for path in paths:
+            self.mpv.loadfile(path, mode)
+            loaded = True
+            if mode == "replace":
+                mode = "append-play"
+        if loaded and start_playback:
+            self.mpv.pause = False
+        return loaded
+
+    def _load_media_folder_async(self, path, first_mode="append-play", start_playback=False):
+        self.spinner.set_visible(True)
+        self._set_playlist_loading(True)
+
+        def scan():
+            paths = list_media_files(path)
+
+            def finish():
+                try:
+                    self._load_media_paths(paths, first_mode, start_playback)
+                finally:
+                    self.spinner.set_visible(False)
+                    self._set_playlist_loading(False)
+                return False
+
+            GLib.idle_add(finish)
+
+        threading.Thread(target=scan, daemon=True).start()
+
     def _on_open_folder_dialog(self, action, *args):
         add_mode = False if action.props.name == "open-folder" else True
         title = _("Add Folder") if add_mode else _("Open Folder")
@@ -873,12 +937,8 @@ class CineWindow(Adw.ApplicationWindow):
                     self.shuffle_toggle_btn.set_active(False)
 
                 path = folder.get_path()
-                for root, dirs, files in os.walk(path):
-                    dirs.sort()
-                    files.sort()
-                    for f in files:
-                        if f.lower().endswith(MEDIA_EXTS):
-                            self.mpv.loadfile(os.path.join(root, f), "append-play")
+                mode = "append-play" if add_mode else "replace"
+                self._load_media_folder_async(path, mode, start_playback=not add_mode)
 
             except GLib.Error as e:
                 print(f"Dialog error: {e.message}")
@@ -1259,9 +1319,10 @@ class CineWindow(Adw.ApplicationWindow):
 
     @Gtk.Template.Callback()
     def _toggle_elapsed_remaining(self, _btn):
-        settings.set_boolean(
-            "show-remaining", not settings.get_boolean("show-remaining")
-        )
+        self._show_remaining = not self._show_remaining
+        settings.set_boolean("show-remaining", self._show_remaining)
+        self._last_progress_label = None
+        self._last_progress_margin = None
         pos = float(self.mpv.time_pos or 0)
         self._update_progress(pos, update_bar=False)
 
@@ -1271,14 +1332,21 @@ class CineWindow(Adw.ApplicationWindow):
             self.video_progress_adj.set_value(current_time)
             self.video_progress_adj.handler_unblock(self.video_progress_adj_handler_id)
         try:
-            if settings.get_boolean("show-remaining"):
+            if self._show_remaining:
                 duration = float(self.mpv.duration or 0)
                 remaining = (duration - current_time) if duration > current_time else 0
-                self.time_elapsed_label.set_text(f"-{format_time(remaining)}")
-                self.time_elapsed_label.props.margin_end = 3
+                label = f"-{format_time(remaining)}"
+                margin_end = 3
             else:
-                self.time_elapsed_label.set_text(format_time(current_time))
-                self.time_elapsed_label.props.margin_end = 0
+                label = format_time(current_time)
+                margin_end = 0
+
+            if label != self._last_progress_label:
+                self.time_elapsed_label.set_text(label)
+                self._last_progress_label = label
+            if margin_end != self._last_progress_margin:
+                self.time_elapsed_label.props.margin_end = margin_end
+                self._last_progress_margin = margin_end
         except mpv.ShutdownError:
             pass
 
@@ -1497,8 +1565,6 @@ class CineWindow(Adw.ApplicationWindow):
         GLib.timeout_add(anim_duration, self.drop_label.set_text, "")
 
     def _on_drop(self, _target, value, _x, _y):
-        first_file = True
-
         if is_same_playlist(self.mpv.playlist):
             self.mpv.write_watch_later_config()
 
@@ -1518,9 +1584,10 @@ class CineWindow(Adw.ApplicationWindow):
                 else:
                     items.append(u)
 
-        for item in items:
-            mode = "replace" if first_file else "append-play"
+        operations = []
+        has_folder = False
 
+        for item in items:
             if isinstance(item, Gio.File):
                 path = item.get_path() or item.get_uri()
 
@@ -1528,8 +1595,7 @@ class CineWindow(Adw.ApplicationWindow):
                 is_url = not is_local_path(path)
 
                 if is_url:
-                    self.mpv.loadfile(path, mode)
-                    first_file = False
+                    operations.append(("load", path))
                     continue
 
                 try:
@@ -1549,33 +1615,60 @@ class CineWindow(Adw.ApplicationWindow):
                     mime_type = info.get_content_type() or ""
 
                 if file_type == Gio.FileType.DIRECTORY:
-                    for root, dirs, files in os.walk(path):
-                        dirs.sort()
-                        files.sort()
-                        for f in files:
-                            if f.lower().endswith(MEDIA_EXTS):
-                                self.mpv.loadfile(os.path.join(root, f), mode)
-                                if mode == "replace":
-                                    mode = "append-play"
-                    first_file = False
+                    operations.append(("folder", path))
+                    has_folder = True
                     continue
 
                 name = cast(str, item.get_basename()).lower()
                 if name.endswith(SUB_EXTS):
-                    if not self.mpv.idle_active:
-                        self.mpv.command("sub-add", path, "select")
+                    operations.append(("sub", path))
                     continue
 
                 is_media = mime_type.startswith(("video/", "audio/", "image/"))
                 is_media = is_media or name.endswith(MEDIA_EXTS)
 
                 if is_media or is_url:
-                    self.mpv.loadfile(path, mode)
-                    first_file = False
+                    operations.append(("load", path))
 
             elif isinstance(item, str):  # URL string
-                self.mpv.loadfile(item, mode)
+                operations.append(("load", item))
+
+        def apply_operations(resolved):
+            first_file = True
+            for kind, path in resolved:
+                if kind == "sub":
+                    if not self.mpv.idle_active:
+                        self.mpv.command("sub-add", path, "select")
+                    continue
+
+                mode = "replace" if first_file else "append-play"
+                self.mpv.loadfile(path, mode)
                 first_file = False
+            return False
+
+        if has_folder:
+            self.spinner.set_visible(True)
+
+            def resolve_folders():
+                resolved = []
+                for kind, path in operations:
+                    if kind == "folder":
+                        resolved.extend(("load", p) for p in list_media_files(path))
+                    else:
+                        resolved.append((kind, path))
+
+                def finish():
+                    try:
+                        apply_operations(resolved)
+                    finally:
+                        self.spinner.set_visible(False)
+                    return False
+
+                GLib.idle_add(finish)
+
+            threading.Thread(target=resolve_folders, daemon=True).start()
+        else:
+            apply_operations(operations)
 
         return True
 
@@ -2145,7 +2238,7 @@ class CineWindow(Adw.ApplicationWindow):
             if (
                 self.has_some_doc_path
                 or has_doc_path
-                or has_host_permission
+                or has_host_permission(item.get("filename"))
             ):
                 continue
             self.has_some_doc_path = True

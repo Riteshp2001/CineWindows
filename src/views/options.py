@@ -23,7 +23,6 @@ from typing import cast
 from gettext import gettext as _
 
 from ..utils.constants import RESOURCE_PREFIX
-from .preferences import settings
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
@@ -106,9 +105,9 @@ class OptionsMenuButton(Gtk.MenuButton):
         if not self.get_active():
             return
 
-        hwdec_on = settings.get_boolean("hwdec")
         hwdec = str(self.win.mpv.hwdec_current)
-        self.flip_box.props.visible = not (hwdec_on and "-copy" not in hwdec)
+        using_native_hwdec = hwdec not in ("", "None", "no") and "-copy" not in hwdec
+        self.flip_box.props.visible = not using_native_hwdec
 
         aspect_overr = self.win.mpv["video-aspect-override"]
         target_val = (

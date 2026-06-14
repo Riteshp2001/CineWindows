@@ -146,12 +146,15 @@ elif use_trt and svp_dir:
     # of `align` so it can reuse one engine (and the engines it pre-built). Match
     # that padding (and crop back) so we hit SVP's cached engines instead of
     # triggering a multi-minute rebuild for every odd resolution.
-    _p = model.replace(".", "_").split("_")
-    _m1, _m2 = int(_p[0]), int(_p[1])
-    if (_m1 >= 4 and _m2 >= 26) or "heavy" in model:
-        align = 64
-    elif _m1 == 4 and _m2 == 25 and "lite" in model:
+    try:
+        _p = model.replace(".", "_").split("_")
+        _m1, _m2 = int(_p[0]), int(_p[1])
+    except Exception:
+        _m1, _m2 = 4, 25
+    if _m1 == 4 and _m2 == 25 and "lite" in model:
         align = 128
+    elif (_m1 >= 4 and _m2 >= 26) or "heavy" in model:
+        align = 64
     else:
         align = 32
     pw = (-clip.width) % align
@@ -168,22 +171,25 @@ elif use_trt and svp_dir:
 else:
     # ncnn-Vulkan path (bundled, fully self-contained).
     rife_dir = _rife_dir(svp_dir)
-    os.environ["PATH"] = rife_dir + os.pathsep + os.environ.get("PATH", "")
-    if "rife" not in [p.namespace for p in core.plugins()]:
-        core.std.LoadPlugin(path=os.path.join(rife_dir, "rife_vs.dll"))
-    ncnn_gpu = int(prof.get("rife_gpu", 0))
-    rgb = clip.resize.Bicubic(format=vs.PresetVideoFormat.RGBS, matrix_in_s="709")
-    common = dict(
-        model_path=os.path.join(rife_dir, "rife-v4"),
-        gpu_id=ncnn_gpu,
-        gpu_thread=2,
-        tta=False,
-        sc=False,
-    )
-    # ncnn RIFE can hit the absolute target fps exactly for any source.
-    from fractions import Fraction
-    fr = Fraction(target_fps).limit_denominator(1000)
-    out = core.rife.RIFE(rgb, fps_num=fr.numerator, fps_den=fr.denominator, **common)
-    smooth = out.resize.Bicubic(format=src_fmt, matrix_s="709")
+    if not rife_dir or not os.path.exists(os.path.join(rife_dir, "rife_vs.dll")):
+        smooth = clip
+    else:
+        os.environ["PATH"] = rife_dir + os.pathsep + os.environ.get("PATH", "")
+        if "rife" not in [p.namespace for p in core.plugins()]:
+            core.std.LoadPlugin(path=os.path.join(rife_dir, "rife_vs.dll"))
+        ncnn_gpu = int(prof.get("rife_gpu", 0))
+        rgb = clip.resize.Bicubic(format=vs.PresetVideoFormat.RGBS, matrix_in_s="709")
+        common = dict(
+            model_path=os.path.join(rife_dir, "rife-v4"),
+            gpu_id=ncnn_gpu,
+            gpu_thread=2,
+            tta=False,
+            sc=False,
+        )
+        # ncnn RIFE can hit the absolute target fps exactly for any source.
+        from fractions import Fraction
+        fr = Fraction(target_fps).limit_denominator(1000)
+        out = core.rife.RIFE(rgb, fps_num=fr.numerator, fps_den=fr.denominator, **common)
+        smooth = out.resize.Bicubic(format=src_fmt, matrix_s="709")
 
 smooth.set_output()
