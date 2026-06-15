@@ -4,6 +4,12 @@ import json
 import vapoursynth as vs
 
 core = vs.core
+PORTABLE_RIFE_MODEL_DIR = "rife-v4"
+RIFE_REQUIRED_FILES = (
+    "rife_vs.dll",
+    os.path.join(PORTABLE_RIFE_MODEL_DIR, "flownet.bin"),
+    os.path.join(PORTABLE_RIFE_MODEL_DIR, "flownet.param"),
+)
 
 # ---------------------------------------------------------------------------
 # Compatibility shim: Cine's R65 MINGW VapourSynth binding does not export the
@@ -57,17 +63,37 @@ def _read_active_profile():
 
 
 def _rife_dir(svp_dir):
-    # Bundled copy inside CineSVP wins; else SVP's install.
+    # AppData install wins; then bundled copy inside CineSVP; else SVP's.
+    appdata = os.path.join(os.environ.get("APPDATA", ""), "cine", "rife")
+    if _portable_backend_complete(appdata):
+        return appdata
     try:
         here = os.path.dirname(os.path.abspath(__file__))
         bundled = os.path.join(os.path.dirname(here), "rife")
-        if os.path.exists(os.path.join(bundled, "rife_vs.dll")):
+        if _portable_backend_complete(bundled):
             return bundled
     except NameError:
         pass
     if svp_dir:
-        return os.path.join(svp_dir, "rife")
+        rife_dir = os.path.join(svp_dir, "rife")
+        if os.path.exists(os.path.join(rife_dir, "rife_vs.dll")):
+            return rife_dir
     return None
+
+
+def _portable_backend_complete(rife_dir):
+    return all(os.path.exists(os.path.join(rife_dir, name)) for name in RIFE_REQUIRED_FILES)
+
+
+def _trt_backend_complete(svp_dir):
+    if not svp_dir:
+        return False
+    rife_dir = os.path.join(svp_dir, "rife")
+    return (
+        os.path.exists(os.path.join(rife_dir, "vstrt.dll"))
+        and os.path.exists(os.path.join(rife_dir, "akarin.dll"))
+        and os.path.isdir(os.path.join(rife_dir, "vsmlrt-cuda"))
+    )
 
 
 clip = video_in
@@ -111,20 +137,24 @@ mult = max(1, int(target_fps / src_fps + 0.5)) if src_fps > 0 else 2
 # Skip interpolation when the source already meets/exceeds the target.
 do_interp = src_fps > 0 and target_fps > src_fps * 1.02
 
-# Engine selection. The CineSVP preference wins; "auto" defers to SVP's
-# rife_engine (1 = TensorRT, 0 = ncnn-Vulkan).
+trt_ok = _trt_backend_complete(svp_dir)
+ncnn_ok = _rife_dir(svp_dir) is not None
+
+# Engine selection. The CineSVP preference wins; "auto" follows SVP's profile
+# when possible, but falls back to any available backend instead of failing.
 if engine_choice == "trt":
-    use_trt = True
+    use_trt = trt_ok
 elif engine_choice == "ncnn":
     use_trt = False
 else:
-    use_trt = int(prof.get("rife_engine", 0)) == 1
+    svp_prefers_trt = int(prof.get("rife_engine", 0)) == 1
+    use_trt = trt_ok and (svp_prefers_trt or not ncnn_ok)
 
 src_fmt = clip.format.id
 
 if not do_interp:
     smooth = clip
-elif use_trt and svp_dir:
+elif use_trt:
     rife_dir = os.path.join(svp_dir, "rife")
     cuda = os.path.join(rife_dir, "vsmlrt-cuda")
     os.environ["PATH"] = cuda + os.pathsep + rife_dir + os.pathsep + os.environ.get("PATH", "")
@@ -180,7 +210,7 @@ else:
         ncnn_gpu = int(prof.get("rife_gpu", 0))
         rgb = clip.resize.Bicubic(format=vs.PresetVideoFormat.RGBS, matrix_in_s="709")
         common = dict(
-            model_path=os.path.join(rife_dir, "rife-v4"),
+            model_path=os.path.join(rife_dir, PORTABLE_RIFE_MODEL_DIR),
             gpu_id=ncnn_gpu,
             gpu_thread=2,
             tta=False,

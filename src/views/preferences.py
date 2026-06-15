@@ -30,7 +30,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gio", "2.0")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Adw, Gdk, Gio, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 settings = Gio.Settings.new(APP_ID)
 
@@ -271,8 +271,16 @@ class Preferences(Adw.Dialog):
             title=_("Smooth Motion (RIFE)"),
             subtitle=_("Interpolate to a higher frame rate while playing"),
         )
-        self.interp_enable_row.set_active(bool(cfg.get("enabled", True)))
-        self.interp_enable_row.connect("notify::active", self._on_interp_enable)
+        engine = cfg.get("engine", "auto")
+        if engine == "trt" and not interp_config.trt_available():
+            engine = "ncnn"
+            cfg["engine"] = engine
+            interp_config.save(cfg)
+        backend_ok = interp_config.backend_available(engine)
+        self.interp_enable_row.set_active(backend_ok and bool(cfg.get("enabled", True)))
+        self._interp_enable_handler_id = self.interp_enable_row.connect(
+            "notify::active", self._on_interp_enable
+        )
         group.add(self.interp_enable_row)
 
         self.interp_engine_row = Adw.ComboRow(
@@ -284,14 +292,136 @@ class Preferences(Adw.Dialog):
                 [_("Automatic (SVP)"), _("ncnn — any GPU"), _("TensorRT — NVIDIA")]
             )
         )
-        engine = cfg.get("engine", "auto")
         self.interp_engine_row.set_selected(
             interp_config.ENGINES.index(engine) if engine in interp_config.ENGINES else 0
         )
-        self.interp_engine_row.connect("notify::selected", self._on_interp_engine)
+        self._interp_engine_handler_id = self.interp_engine_row.connect(
+            "notify::selected", self._on_interp_engine
+        )
         group.add(self.interp_engine_row)
 
+        self.download_revealer = Gtk.Revealer()
+        self.download_revealer.set_transition_type(Gtk.RevealerTransitionType.CROSSFADE)
+        self.download_revealer.set_transition_duration(1200)
+
+        self.download_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.download_box.set_margin_top(8)
+        self.download_box.set_margin_bottom(8)
+        self.download_box.set_margin_start(12)
+        self.download_box.set_margin_end(12)
+
+        self.download_label = Gtk.Label(label=_("Downloading..."))
+        self.download_label.set_halign(Gtk.Align.START)
+        self.download_label.set_hexpand(True)
+        self.download_box.append(self.download_label)
+
+        self.download_progress = Gtk.ProgressBar()
+        self.download_progress.set_show_text(True)
+        self.download_progress.set_hexpand(True)
+        self.download_box.append(self.download_progress)
+
+        self.download_revealer.set_child(self.download_box)
+        self.download_revealer.set_reveal_child(False)
+        self.download_revealer.set_visible(False)
+        group.add(self.download_revealer)
+
         self.prefs_page.add(group)
+
+    def _set_interp_switch_active(self, active):
+        handler_id = getattr(self, "_interp_enable_handler_id", 0)
+        if handler_id:
+            self.interp_enable_row.handler_block(handler_id)
+            self.interp_enable_row.set_active(active)
+            self.interp_enable_row.handler_unblock(handler_id)
+        else:
+            self.interp_enable_row.set_active(active)
+
+    def _set_interp_engine(self, engine):
+        idx = interp_config.ENGINES.index(engine) if engine in interp_config.ENGINES else 0
+        handler_id = getattr(self, "_interp_engine_handler_id", 0)
+        if handler_id:
+            self.interp_engine_row.handler_block(handler_id)
+            self.interp_engine_row.set_selected(idx)
+            self.interp_engine_row.handler_unblock(handler_id)
+        else:
+            self.interp_engine_row.set_selected(idx)
+
+    def _save_scroll_position(self):
+        scrolled = self._find_scrolled_window()
+        if scrolled:
+            vadj = scrolled.get_vadjustment()
+            if vadj:
+                self._saved_scroll_pos = vadj.get_value()
+
+    def _restore_scroll_position(self):
+        scrolled = self._find_scrolled_window()
+        if scrolled:
+            vadj = scrolled.get_vadjustment()
+            if vadj and hasattr(self, "_saved_scroll_pos"):
+                vadj.set_value(self._saved_scroll_pos)
+
+    def _find_scrolled_window(self):
+        def find(w):
+            if isinstance(w, Gtk.ScrolledWindow):
+                return w
+            child = w.get_first_child()
+            while child:
+                found = find(child)
+                if found:
+                    return found
+                child = child.get_next_sibling()
+            return None
+        return find(self.prefs_page)
+
+    def _show_download_ui(self):
+        self.download_box.remove_css_class("download-success")
+        self.download_box.remove_css_class("error")
+        self.download_revealer.set_visible(True)
+        self.download_revealer.set_reveal_child(True)
+        self.download_label.set_text(_("Downloading..."))
+        self.download_progress.set_text("")
+        self.download_progress.set_fraction(0)
+
+    def _on_download_progress(self, current, total, desc):
+        GLib.idle_add(self._update_download_ui, current, total, desc)
+
+    def _update_download_ui(self, current, total, desc):
+        if not self.win:
+            return False
+        fraction = min(current / total, 1.0) if total > 0 else 0
+        pct = int(fraction * 100)
+        self.download_progress.set_fraction(fraction)
+        current_mb = current / (1024 * 1024)
+        total_mb = total / (1024 * 1024)
+        self.download_progress.set_text(f"{pct}% ({current_mb:.1f}/{total_mb:.1f} MB)")
+        self.download_label.set_text(desc)
+        return False
+
+    def _on_download_success(self):
+        self.download_box.add_css_class("download-success")
+        self.download_progress.set_fraction(1.0)
+        self.download_progress.set_text("100%")
+        self.download_label.set_text(_("Download Complete"))
+        GLib.timeout_add(2000, self._fade_out_download_row)
+
+    def _on_download_failed(self):
+        self.download_label.set_text(_("Download Failed"))
+        self.download_progress.set_text("")
+        self.download_box.add_css_class("error")
+        GLib.timeout_add(3000, self._fade_out_download_row)
+
+    def _fade_out_download_row(self):
+        if not self.win:
+            return False
+        self.download_revealer.set_reveal_child(False)
+        GLib.timeout_add(1500, self._cleanup_download_row)
+        return False
+
+    def _cleanup_download_row(self):
+        if not self.win:
+            return False
+        self.download_revealer.set_visible(False)
+        return False
 
     def _setup_config_section(self):
         base = os.environ.get("APPDATA") or os.path.expanduser("~")
@@ -320,18 +450,65 @@ class Preferences(Adw.Dialog):
     def _on_interp_enable(self, row, *_a):
         enabled = bool(row.get_active())
         cfg = interp_config.load()
+        engine = cfg.get("engine", "auto")
         if not self.win:
             cfg["enabled"] = enabled
             interp_config.save(cfg)
+            return
+
+        if enabled and engine == "trt" and not interp_config.trt_available():
+            engine = "ncnn"
+            cfg["engine"] = engine
+            interp_config.save(cfg)
+            self._set_interp_engine(engine)
+
+        if enabled and not interp_config.backend_available(engine):
+            self._save_scroll_position()
+            self._start_backend_download(row, cfg)
             return
         try:
             active = self.win._apply_rife(enabled)
             cfg["enabled"] = active if enabled else False
             interp_config.save(cfg)
             if enabled and not active:
-                row.set_active(False)
+                self._set_interp_switch_active(False)
         except Exception as exc:
             print("[CineSVP] interpolation toggle failed:", exc)
+
+    def _start_backend_download(self, row, cfg):
+        if not self.win:
+            return
+        cfg["engine"] = "ncnn"
+        cfg["enabled"] = False
+        interp_config.save(cfg)
+        self._set_interp_engine("ncnn")
+        self._set_interp_switch_active(False)
+        self._restore_scroll_position()
+        self._show_download_ui()
+
+        def on_done(success):
+            GLib.idle_add(self._on_backend_download_finished, success, row, cfg)
+
+        interp_config.install_bundled_rife_async(
+            callback=on_done,
+            progress_callback=self._on_download_progress,
+        )
+
+    def _on_backend_download_finished(self, success, row, cfg):
+        if not self.win:
+            return
+        if success and interp_config.backend_available(cfg.get("engine", "auto")):
+            self._on_download_success()
+            try:
+                active = self.win._apply_rife(True)
+                cfg["enabled"] = active
+                interp_config.save(cfg)
+                if active:
+                    self._set_interp_switch_active(True)
+            except Exception as exc:
+                print("[CineSVP] post-download enable failed:", exc)
+            return
+        self._on_download_failed()
 
     def _on_interp_engine(self, row, *_a):
         idx = row.get_selected()
@@ -340,12 +517,29 @@ class Preferences(Adw.Dialog):
         cfg["engine"] = engine
         interp_config.save(cfg)
         if self.win and getattr(self, "interp_enable_row", None) and self.interp_enable_row.get_active():
+            if engine == "trt" and not interp_config.trt_available():
+                engine = "ncnn"
+                cfg["engine"] = engine
+                interp_config.save(cfg)
+                self._set_interp_engine(engine)
+
+            if not interp_config.backend_available(engine):
+                try:
+                    self.win._apply_rife(False)
+                except Exception as exc:
+                    print("[CineSVP] interpolation disable failed:", exc)
+                self._set_interp_switch_active(False)
+                cfg["enabled"] = False
+                interp_config.save(cfg)
+                self._save_scroll_position()
+                self._start_backend_download(self.interp_enable_row, cfg)
+                return
             try:
                 active = self.win.reload_rife()
                 if not active:
                     cfg["enabled"] = False
                     interp_config.save(cfg)
-                    self.interp_enable_row.set_active(False)
+                    self._set_interp_switch_active(False)
             except Exception as exc:
                 print("[CineSVP] interpolation engine change failed:", exc)
 
