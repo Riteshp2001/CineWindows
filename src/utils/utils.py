@@ -127,10 +127,10 @@ def is_local_path(path: str | os.PathLike[str]) -> bool:
     return not parsed.scheme or parsed.scheme == "file" or len(parsed.scheme) == 1
 
 
-def get_gpu_vendor(display, libgl=None):
+def get_gpu_vendor(libgl=None):
     from .compat import get_gpu_vendor as _compat_gpu_vendor
 
-    return _compat_gpu_vendor(display)
+    return _compat_gpu_vendor()
 
 
 def format_time(seconds) -> str:

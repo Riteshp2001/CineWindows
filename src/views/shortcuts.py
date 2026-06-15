@@ -61,8 +61,8 @@ shift+WHEEL_UP   seek 5 keyframes; show-text "⯈⯈"
 =                add video-zoom 0.05; show-text "{_("Zoom")}: ${{video-zoom}}" #{_("Zoom In")}
 +                add video-zoom 0.05; show-text "{_("Zoom")}: ${{video-zoom}}" #{_("Zoom In")}
 -                add video-zoom -0.05; show-text "{_("Zoom")}: ${{video-zoom}}" #{_("Zoom Out")}
-ctrl+WHEEL_UP    add video-zoom 0.1; show-text "{_("Zoom")}: ${{video-zoom}}"
-ctrl+WHEEL_DOWN  add video-zoom -0.1; show-text "{_("Zoom")}: ${{video-zoom}}"
+Ctrl+WHEEL_UP    script-binding positioning/cursor-centric-zoom 0.05
+Ctrl+WHEEL_DOWN  script-binding positioning/cursor-centric-zoom -0.05
 ,                add sub-delay -0.1; show-text "{_("Subtitle Delay")}: ${{sub-delay}}" #{_("Decrease Subtitle Delay")}
 .                add sub-delay +0.1; show-text "{_("Subtitle Delay")}: ${{sub-delay}}" #{_("Increase Subtitle Delay")}
 PGUP             add sub-pos -1; show-text "{_("Subtitle Position")}: ${{sub-pos}}" #{_("Move Subtitles Up")}

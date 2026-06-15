@@ -174,7 +174,7 @@ class CineWindow(Adw.ApplicationWindow):
         self.offload: Gtk.GraphicsOffload = Gtk.GraphicsOffload(child=self.gl_area)
         self.offload.set_black_background(True)
 
-        vendor: str | None = get_gpu_vendor(display, _gl)
+        vendor: str | None = get_gpu_vendor(_gl)
         if vendor and "nvidia" in vendor:
             self.offload.set_enabled(Gtk.GraphicsOffloadEnabled.DISABLED)
 
@@ -231,7 +231,7 @@ class CineWindow(Adw.ApplicationWindow):
         self.last_preview_seek: int = 0
         self.error_count: int = 0
         self.pressed_combos: set[str] = set()
-        self.key_state: Gdk.ModifierType
+        self.key_state: Gdk.ModifierType = Gdk.ModifierType.NO_MODIFIER_MASK
         self.hide_timeout_id: int = 0
         self.is_fs: bool = False
         self.is_inactive: bool = False
@@ -639,7 +639,6 @@ class CineWindow(Adw.ApplicationWindow):
             if not self.is_inactive:
                 GLib.timeout_add(self.click_time // 2, setattr, self, "is_inactive", False)
             else:
-                self._set_space_holding(False)
                 self.space_holding = False
                 self._set_space_holding(False)
                 self.is_inactive = True
@@ -786,6 +785,11 @@ class CineWindow(Adw.ApplicationWindow):
         if None not in (x, y):
             if (x, y) == self.prev_motion_xy or self.click_holding:
                 return
+
+            if self.key_state & Gdk.ModifierType.CONTROL_MASK:
+                mpv_x = int(x * self.props.scale_factor)
+                mpv_y = int(y * self.props.scale_factor)
+                self.mpv.command_async("mouse", mpv_x, mpv_y)
 
             self.prev_motion_xy = (x, y)
             self._show_ui()
@@ -1992,9 +1996,6 @@ class CineWindow(Adw.ApplicationWindow):
 
         return True
 
-    def _get_display_param(self):
-        return get_display_param(display)
-
     def _on_realize_area(self, area):
         area.make_current()
 
@@ -2002,7 +2003,7 @@ class CineWindow(Adw.ApplicationWindow):
             lambda _inst, name: egl_get_proc_address(name)
         )
 
-        display_param = self._get_display_param()
+        display_param = get_display_param(display)
 
         self.mpv_ctx = mpv.MpvRenderContext(
             self.mpv,
@@ -2021,17 +2022,14 @@ class CineWindow(Adw.ApplicationWindow):
         self.fbo = ctypes.c_int()
 
     def _on_render_area(self, area, _context):
-        if not self.mpv_ctx:
-            return
         try:
             _glGetIntegerv(GL_FRAMEBUFFER_BINDING, self.fbo)
-            scale = area.props.scale_factor
 
             self.mpv_ctx.render(
                 flip_y=True,
                 opengl_fbo={
-                    "w": int(area.get_width() * scale),
-                    "h": int(area.get_height() * scale),
+                    "w": area.get_width() * area.props.scale_factor,
+                    "h": area.get_height() * area.props.scale_factor,
                     "fbo": self.fbo.value,
                 },
             )
@@ -2571,6 +2569,12 @@ class CineWindow(Adw.ApplicationWindow):
             if not value:
                 # clear the last frame, which sometimes can still be present
                 GLib.idle_add(self.gl_area.queue_render)
+
+        @self.mpv.property_observer("video-zoom")
+        def on_zoom_change(_name, value):
+            if round(value, 2) == 0.00:
+                self.mpv["video-align-x"] = 0
+                self.mpv["video-align-y"] = 0
 
         @self.mpv.event_callback("shutdown")
         def on_quit(_event):

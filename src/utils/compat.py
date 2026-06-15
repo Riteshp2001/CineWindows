@@ -9,6 +9,8 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GLib", "2.0")
 from gi.repository import Gdk, GLib
 
+display = Gdk.Display.get_default()
+
 def _get_platform_config_dir():
     base = os.environ.get("APPDATA") or os.path.expanduser("~")
     return os.path.join(base, APP_DEVELOPER, APP_NAME)
@@ -50,20 +52,23 @@ for filename in ("mpv.conf", "input.conf"):
     if not os.path.exists(path):
         open(path, "w", encoding="utf-8").close()
 
-def get_gpu_vendor(display):
+def get_gpu_vendor():
+    if not display:
+        return None
     try:
-        context = display.get_default_seat().get_display().create_gl_context()
-        context.realize()
-        context.make_current()
-        try:
-            opengl32 = ctypes.CDLL("opengl32.dll")
-            glGetString = opengl32.glGetString
-            glGetString.restype = ctypes.c_char_p
-            glGetString.argtypes = [ctypes.c_uint]
-            vendor = glGetString(0x1F00).decode("utf-8").lower()
-            return vendor
-        except Exception:
-            return None
+        if seat := display.get_default_seat():
+            context = seat.get_display().create_gl_context()
+            context.realize()
+            context.make_current()
+            try:
+                opengl32 = ctypes.CDLL("opengl32.dll")
+                glGetString = opengl32.glGetString
+                glGetString.restype = ctypes.c_char_p
+                glGetString.argtypes = [ctypes.c_uint]
+                vendor = glGetString(0x1F00).decode("utf-8").lower()
+                return vendor
+            except Exception:
+                return None
     except Exception as e:
         print(f"get_gpu_vendor error: {e}")
         return None
