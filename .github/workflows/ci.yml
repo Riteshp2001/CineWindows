@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify sources
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compile Python sources
+        shell: pwsh
+        run: |
+          python -m py_compile `
+            src/main.py `
+            src/utils/compat.py `
+            src/utils/constants.py `
+            src/utils/interp_config.py `
+            src/utils/utils.py `
+            src/views/preferences.py `
+            src/views/shortcuts.py `
+            src/views/window.py
+          python -c "import py_compile; py_compile.compile('scripts/rife.vpy', doraise=True)"
+
+      - name: Check whitespace
+        shell: pwsh
+        run: git diff --check HEAD

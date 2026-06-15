@@ -13,8 +13,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
     <child>
       <object class="AdwToolbarView">
         <child type="top">
-          <object class="AdwHeaderBar">
-          </object>
+          <object class="AdwHeaderBar"></object>
         </child>
         <property name="content">
           <object class="AdwPreferencesPage" id="prefs_page">
@@ -241,7 +240,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                     <property name="title" translatable="yes">Application</property>
                     <child type="suffix">
                       <object class="GtkLabel" id="about_app_name_label">
-                        <property name="label">CineWindows</property>
+                        <property name="label" translatable="yes">CineWindows</property>
                         <property name="wrap">true</property>
                         <style>
                           <class name="heading"/>
@@ -255,7 +254,6 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                     <property name="title" translatable="yes">Version</property>
                     <child type="suffix">
                       <object class="GtkLabel" id="about_version_label">
-                        <property name="label">1.0.2</property>
                         <property name="wrap">true</property>
                         <style>
                           <class name="heading"/>
@@ -273,6 +271,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                         <property name="valign">3</property>
                         <style>
                           <class name="pill"/>
+                          <class name="small"/>
                         </style>
                       </object>
                     </child>

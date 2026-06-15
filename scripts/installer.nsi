@@ -10,11 +10,11 @@ SetCompressorDictSize 64
 !include "WordFunc.nsh"
 
 !ifndef APP_VERSION
-  !define APP_VERSION "1.0.2"
+  !define APP_VERSION "1.0.3"
 !endif
 
 !ifndef APP_VERSION_QUAD
-  !define APP_VERSION_QUAD "1.0.2.0"
+  !define APP_VERSION_QUAD "1.0.3.0"
 !endif
 
 !define APP_NAME "CineWindows"
