@@ -10,7 +10,7 @@ import os
 import threading
 import urllib.request
 
-DEFAULTS = {"enabled": True, "engine": "auto"}  # engine: auto | ncnn | trt
+DEFAULTS = {"enabled": False, "engine": "auto"}  # engine: auto | ncnn | trt
 ENGINES = ["auto", "ncnn", "trt"]
 PORTABLE_RIFE_MODEL_DIR = "rife-v4"
 UPSTREAM_RIFE_MODEL_DIR = "rife-v4.26_ensembleFalse"

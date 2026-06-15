@@ -29,8 +29,15 @@ from urllib.error import URLError
 
 from ..utils.constants import APP_DEVELOPER, APP_ID, APP_NAME, APP_REPOSITORY_URL, RESOURCE_PREFIX
 
-if renderer := os.environ.get("CINE_GSK_RENDERER"):
-    os.environ.setdefault("GSK_RENDERER", renderer)
+# GTK4's default GSK renderer on Windows is the Vulkan one, which is frequently
+# slower/jankier than the GL renderer for transparent, layered windows like our
+# decoupled video overlay. Pin "gl" as the Windows default so the UI stays smooth.
+# Users can still override with CINE_GSK_RENDERER=ngl|vulkan|cairo to benchmark.
+_renderer = os.environ.get("CINE_GSK_RENDERER")
+if not _renderer and sys.platform == "win32":
+    _renderer = "gl"
+if _renderer:
+    os.environ.setdefault("GSK_RENDERER", _renderer)
 
 gi.require_version("Adw", "1")
 gi.require_version("Gio", "2.0")

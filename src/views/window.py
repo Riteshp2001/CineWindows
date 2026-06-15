@@ -239,6 +239,7 @@ class CineWindow(Adw.ApplicationWindow):
         self._show_remaining: bool = settings.get_boolean("show-remaining")
         self._last_progress_label: str | None = None
         self._last_progress_margin: int | None = None
+        self._last_progress_tick_us: int = 0
 
         _decouple_mpv_kwargs = {}
         if self.decouple and self.mpv_window is not None:
@@ -252,9 +253,7 @@ class CineWindow(Adw.ApplicationWindow):
             )
 
         self.mpv = mpv.MPV(
-            # terminal=True,
-            # log_handler=print,
-            loglevel="info",
+            loglevel="error",
             audio_client_name=_(APP_NAME),
             screenshot_directory=SCREENSHOT_DIR,
             screenshot_template="cine_%n",
@@ -2071,7 +2070,10 @@ class CineWindow(Adw.ApplicationWindow):
         # (GTK doesn't notify us of native window moves) and tracks minimize.
         # SetWindowPos does not trigger any GTK present, so this is cheap.
         if not self._video_geo_timer:
-            self._video_geo_timer = GLib.timeout_add(50, self._video_geo_tick)
+            # 100 ms (10 Hz) is plenty to keep the native video window glued
+            # behind GTK during drags/resizes; the tick early-outs when nothing
+            # moved, so the only cost when idle is one cheap GetWindowRect.
+            self._video_geo_timer = GLib.timeout_add(100, self._video_geo_tick)
 
     def _on_active_decouple(self, *_args):
         if self.mpv_window is not None and self._gtk_hwnd and self.props.is_active:
@@ -2358,6 +2360,15 @@ class CineWindow(Adw.ApplicationWindow):
 
         def _smooth_progress(widget, frame_clock):
             try:
+                # The frame clock ticks every monitor refresh (60-144 Hz). Moving
+                # the seekbar that often forces a full GTK4 recomposite of the
+                # transparent overlay every frame — expensive on Windows and
+                # invisible to the eye (the bar advances < 1 px per refresh).
+                # Throttle to ~10 Hz: smooth enough, a fraction of the GPU/CPU cost.
+                now = frame_clock.get_frame_time()
+                if now - self._last_progress_tick_us < 100_000:  # 100 ms
+                    return True
+                self._last_progress_tick_us = now
                 time_pos = self.mpv.time_pos
                 if time_pos is not None and not self.mpv.core_idle:
                     self._update_progress(float(time_pos), update_bar=True)
