@@ -18,6 +18,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import gi
+import os
+import subprocess
 from gettext import gettext as _
 
 from ..utils.constants import APP_ID, APP_NAME, APP_DEVELOPER, APP_REPOSITORY_URL, RESOURCE_PREFIX
@@ -117,6 +119,7 @@ class Preferences(Adw.Dialog):
         self._setup_mpv_updates()
         self._setup_about_section()
         self._setup_interpolation_ui()
+        self._setup_config_section()
 
         font = settings.get_string("subtitle-font")
         self.font_label.set_label(font)
@@ -288,6 +291,30 @@ class Preferences(Adw.Dialog):
         self.interp_engine_row.connect("notify::selected", self._on_interp_engine)
         group.add(self.interp_engine_row)
 
+        self.prefs_page.add(group)
+
+    def _setup_config_section(self):
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+        config_dir = os.path.join(base, "cine")
+
+        group = Adw.PreferencesGroup(
+            title=_("Configuration"),
+        )
+
+        row = Adw.ActionRow(
+            title=_("Open Configuration Folder"),
+            subtitle=config_dir,
+            icon_name="folder-open-symbolic",
+        )
+
+        btn = Gtk.Button(label=_("Open"))
+        btn.add_css_class("pill")
+        btn.add_css_class("small")
+        btn.connect("clicked", lambda *a: subprocess.Popen(["explorer", config_dir]))
+        row.add_suffix(btn)
+        row.set_activatable_widget(btn)
+
+        group.add(row)
         self.prefs_page.add(group)
 
     def _on_interp_enable(self, row, *_a):
