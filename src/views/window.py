@@ -890,6 +890,9 @@ class CineWindow(Adw.ApplicationWindow):
         if isinstance(dialog := self.get_visible_dialog(), Playlist):
             dialog.spinner.set_visible(loading)
 
+    MAX_FOLDER_FILES = 500
+    BATCH_SIZE = 50
+
     def _load_media_paths(self, paths, first_mode="append-play", start_playback=False):
         mode = first_mode
         loaded = False
@@ -903,21 +906,54 @@ class CineWindow(Adw.ApplicationWindow):
         return loaded
 
     def _load_media_folder_async(self, path, first_mode="append-play", start_playback=False):
+        if getattr(self, "_loading_folder", False):
+            return
+        self._loading_folder = True
         self.spinner.set_visible(True)
         self._set_playlist_loading(True)
 
         def scan():
-            paths = list_media_files(path)
+            try:
+                paths = list_media_files(path)
+            except Exception as exc:
+                print(f"folder scan error: {exc}")
+                paths = []
 
-            def finish():
-                try:
-                    self._load_media_paths(paths, first_mode, start_playback)
-                finally:
+            if len(paths) > self.MAX_FOLDER_FILES:
+                print(f"folder scan truncated {len(paths) - self.MAX_FOLDER_FILES} files")
+                paths = paths[:self.MAX_FOLDER_FILES]
+
+            def load_batch(idx=0, has_started=False):
+                if idx >= len(paths):
                     self.spinner.set_visible(False)
                     self._set_playlist_loading(False)
+                    self._loading_folder = False
+                    return False
+
+                batch = paths[idx:idx + self.BATCH_SIZE]
+                mode = first_mode if idx == 0 else "append-play"
+                for p in batch:
+                    try:
+                        self.mpv.loadfile(p, mode)
+                        if mode == "replace":
+                            mode = "append-play"
+                            has_started = True
+                    except (mpv.ShutdownError, RuntimeError):
+                        self.spinner.set_visible(False)
+                        self._set_playlist_loading(False)
+                        self._loading_folder = False
+                        return False
+
+                if not has_started and start_playback:
+                    try:
+                        self.mpv.pause = False
+                    except Exception:
+                        pass
+
+                GLib.timeout_add(10, load_batch, idx + self.BATCH_SIZE, has_started)
                 return False
 
-            GLib.idle_add(finish)
+            GLib.idle_add(load_batch)
 
         threading.Thread(target=scan, daemon=True).start()
 
@@ -936,10 +972,15 @@ class CineWindow(Adw.ApplicationWindow):
                 folder = dialog.select_folder_finish(result)
 
                 if not add_mode:
-                    self.mpv.stop()
+                    try:
+                        self.mpv.stop()
+                    except Exception:
+                        pass
                     self.shuffle_toggle_btn.set_active(False)
 
                 path = folder.get_path()
+                if not path:
+                    return
                 mode = "append-play" if add_mode else "replace"
                 self._load_media_folder_async(path, mode, start_playback=not add_mode)
 
@@ -2217,11 +2258,26 @@ class CineWindow(Adw.ApplicationWindow):
             GLib.timeout_add(350, self.revealer_icon_indicator.set_reveal_child, False)
 
     def do_close_request(self) -> bool:
+        if self.preview_player:
+            try:
+                self.preview_player.terminate()
+            except Exception:
+                pass
+            self.preview_player = None
+        if self._video_geo_timer:
+            GLib.source_remove(self._video_geo_timer)
+            self._video_geo_timer = 0
         same_playlist = is_same_playlist(self.mpv.playlist)
         save_pos = settings.get_boolean("save-video-position")
         if same_playlist or save_pos:
-            self.mpv.write_watch_later_config()
-        self.mpv.quit()
+            try:
+                self.mpv.write_watch_later_config()
+            except Exception:
+                pass
+        try:
+            self.mpv.quit()
+        except Exception:
+            pass
         return False
 
     def _splice_playlist(self):
@@ -2230,18 +2286,6 @@ class CineWindow(Adw.ApplicationWindow):
         new_items = []
         for idx, item in enumerate(cast(list, self.mpv.playlist)):
             new_items.append(PlaylistItemObj(item, idx))
-
-            try:
-                has_doc_path = f"/run/user/{os.getuid()}/doc/" not in item.get("filename")
-            except AttributeError:
-                has_doc_path = True
-            if (
-                self.has_some_doc_path
-                or has_doc_path
-                or has_host_permission(item.get("filename"))
-            ):
-                continue
-            self.has_some_doc_path = True
 
         if isinstance(dialog := self.get_visible_dialog(), Playlist):
             dialog._set_save_btn_playlist()
@@ -2255,7 +2299,10 @@ class CineWindow(Adw.ApplicationWindow):
         @self.mpv.event_callback("start-file")
         def on_start_file(event):
             GLib.idle_add(self.spinner.set_visible, True)
-            self.loaded_path = str(self.mpv.path)
+            try:
+                self.loaded_path = str(self.mpv.path)
+            except (mpv.ShutdownError, RuntimeError):
+                pass
 
         @self.mpv.event_callback("file-loaded")
         def on_files_loaded(event):
@@ -2284,11 +2331,13 @@ class CineWindow(Adw.ApplicationWindow):
             reason = info["reason"]
 
             if reason == b"error":
-                # Avoid stopping playback on last file/folder error
-                current_pos = self.mpv.playlist_pos
-                playlist_count = len(cast(list, self.mpv.playlist))
-                if current_pos == playlist_count - 1:
-                    self.mpv.playlist_pos = 0
+                try:
+                    current_pos = self.mpv.playlist_pos
+                    playlist_count = len(cast(list, self.mpv.playlist))
+                    if current_pos == playlist_count - 1:
+                        self.mpv.playlist_pos = 0
+                except (mpv.ShutdownError, RuntimeError):
+                    return
 
                 print(f"File error path: {self.loaded_path}")
                 self.error_count += 1
@@ -2299,7 +2348,10 @@ class CineWindow(Adw.ApplicationWindow):
                     self.toast_overlay.add_toast(toast)
 
                 if self.error_count == 20:
-                    self.mpv.stop()
+                    try:
+                        self.mpv.stop()
+                    except Exception:
+                        pass
                     self.shuffle_toggle_btn.set_active(False)
                     self.error_count = 0
 
@@ -2584,8 +2636,11 @@ class CineWindow(Adw.ApplicationWindow):
         @self.mpv.property_observer("video-zoom")
         def on_zoom_change(_name, value):
             if round(value, 2) == 0.00:
-                self.mpv["video-align-x"] = 0
-                self.mpv["video-align-y"] = 0
+                try:
+                    self.mpv["video-align-x"] = 0
+                    self.mpv["video-align-y"] = 0
+                except (mpv.ShutdownError, RuntimeError):
+                    pass
 
         @self.mpv.event_callback("shutdown")
         def on_quit(_event):

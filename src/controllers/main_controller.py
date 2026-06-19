@@ -21,6 +21,7 @@ import os
 import gi
 import sys
 import json
+import mpv
 import threading
 from typing import cast
 from gettext import gettext as _
@@ -31,11 +32,13 @@ from ..utils.constants import APP_DEVELOPER, APP_ID, APP_NAME, APP_REPOSITORY_UR
 
 # GTK4's default GSK renderer on Windows is the Vulkan one, which is frequently
 # slower/jankier than the GL renderer for transparent, layered windows like our
-# decoupled video overlay. Pin "gl" as the Windows default so the UI stays smooth.
-# Users can still override with CINE_GSK_RENDERER=ngl|vulkan|cairo to benchmark.
+# decoupled video overlay. Try Cairo first (most compatible, works on all GPUs),
+# and let GTK fall back to its own defaults if Cairo isn't available.
+# Users can still override with CINE_GSK_RENDERER=vulkan|gl|ngl|cairo to force a
+# specific renderer.
 _renderer = os.environ.get("CINE_GSK_RENDERER")
 if not _renderer and sys.platform == "win32":
-    _renderer = "gl"
+    _renderer = "cairo"
 if _renderer:
     os.environ.setdefault("GSK_RENDERER", _renderer)
 
@@ -108,7 +111,7 @@ class CineApplication(Adw.Application):
         return 0
 
     def do_open(self, files, n_files, hint):
-        win: CineWindow = cast(CineWindow, self.props.active_window)
+        win = self.props.active_window
         open_new = settings.get_boolean("open-new-windows") or not win
 
         if open_new:
@@ -142,7 +145,6 @@ class CineApplication(Adw.Application):
                     ).strip()
 
                     if output:
-                        # "1920x1080x-90" or just "1920x1080"
                         parts = output.splitlines()[0].split("x")
 
                         width = int(parts[0])
@@ -170,20 +172,29 @@ class CineApplication(Adw.Application):
                 if is_same_playlist(win.mpv.playlist):
                     win.mpv.write_watch_later_config()
                 win.mpv.stop()
-            except AttributeError:
-                pass # mpv not fully loaded yet
+            except (AttributeError, mpv.ShutdownError):
+                pass
 
         for gfile in files:
             path = gfile.get_path() or gfile.get_uri()
             if path:
-                win.mpv.loadfile(path, "append-play")
+                try:
+                    win.mpv.loadfile(path, "append-play")
+                except (mpv.ShutdownError, RuntimeError):
+                    break
 
         for window in self.get_windows():
-            w = cast(CineWindow, window)
-            # Pause previous opened windows
-            w.mpv.pause = w != win
+            try:
+                w = window
+                if hasattr(w, 'mpv') and w != win and not getattr(w.mpv, 'idle_active', True):
+                    w.mpv.pause = True
+            except (mpv.ShutdownError, RuntimeError):
+                pass
 
-        win._hide_ui_timeout()
+        try:
+            win._hide_ui_timeout()
+        except Exception:
+            pass
 
     def find_first_file(self, gfile, visited=None):
         """Local-only recursive search."""

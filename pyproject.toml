@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "CineWindows"
-version = "1.0.3"
+version = "1.0.4"
 description = "A Windows-focused GTK4 video player powered by mpv"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}

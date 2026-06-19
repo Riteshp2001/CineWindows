@@ -3,8 +3,8 @@
 APP_ICON ICON "CineWindows.ico"
 
 APP_VERSION VERSIONINFO
-FILEVERSION 1,0,3,0
-PRODUCTVERSION 1,0,3,0
+FILEVERSION 1,0,4,0
+PRODUCTVERSION 1,0,4,0
 FILEFLAGSMASK   0x3fL
 FILEFLAGS       0x0L
 FILEOS          VOS_NT_WINDOWS32
@@ -17,12 +17,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "gyrolet"
       VALUE "FileDescription", "CineWindows Media Player"
-      VALUE "FileVersion", "1.0.3"
+      VALUE "FileVersion", "1.0.4"
       VALUE "InternalName", "CineWindows"
       VALUE "LegalCopyright", "(C) 2026 gyrolet. GPL-3.0"
       VALUE "OriginalFilename", "CineWindows.exe"
       VALUE "ProductName", "CineWindows"
-      VALUE "ProductVersion", "1.0.3"
+      VALUE "ProductVersion", "1.0.4"
     END
   END
   BLOCK "VarFileInfo"
