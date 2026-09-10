@@ -11,7 +11,7 @@
 #
 # Project: CineWindows
 # Author:  Ritesh Pandit
-build*/
+build*
 bin/
 out/
 /lib/
@@ -37,6 +37,7 @@ packaging/windows/artifacts/
 packaging/windows/*-setup.exe
 packaging/windows/*.zip
 packaging/linux/artifacts/
+packaging/flatpak/artifacts/
 packaging/macos/artifacts/
 packaging/macos/CineWindows.icns
 

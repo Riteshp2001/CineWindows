@@ -61,9 +61,9 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 | Framework | Qt 6.8+ (Core, Gui, Qml, Quick, Network, Svg) |
 | Video Backend | libmpv via KDE MpvQt 1.2.0 |
 | Build System | CMake 3.25+ (Ninja) |
-| Platform | Windows x86_64, macOS arm64/x86_64, Linux x86_64 (AppImage) |
+| Platform | Windows x86_64, macOS arm64/x86_64, Linux x86_64 (AppImage and Flatpak) |
 | Streaming | yt-dlp |
-| Packaging | Windows: NSIS installer + portable ZIP — macOS: .dmg — Linux: AppImage |
+| Packaging | Windows: NSIS installer + portable ZIP — macOS: .dmg — Linux: AppImage + Flatpak |
 
 ---
 
@@ -116,7 +116,7 @@ CineWindows/
 | Platform | Architecture | CI | Release package |
 |----------|--------------|----|-----------------|
 | Windows | x86_64 (MinGW) | Yes | Installer and portable ZIP |
-| Linux | x86_64 | Yes | AppImage |
+| Linux | x86_64 | Yes | AppImage and Flatpak bundle |
 | macOS | arm64 | Yes | DMG |
 | macOS | x86_64 | Yes | DMG |
 
@@ -212,6 +212,16 @@ bash scripts/package/deploy_linux.sh "build/release" "packaging/linux/artifacts"
 Uses `linuxdeploy` + `linuxdeploy-plugin-qt` to bundle dependencies into a portable AppImage. Produces:
 - 📦 `CineWindows-x86_64.AppImage` → `packaging/linux/artifacts/`
 
+### Linux (Flatpak)
+
+```bash
+bash scripts/package/deploy_flatpak.sh
+```
+
+Builds pinned libmpv, MpvQt, and yt-dlp dependencies inside the KDE Flatpak
+runtime, validates the installed application layout, and produces:
+- `CineWindows-x86_64.flatpak` → `packaging/flatpak/artifacts/`
+
 ### macOS (DMG)
 
 ```bash
@@ -272,9 +282,9 @@ All shortcuts are **fully remappable** via `Preferences → Shortcuts` or by edi
 
 | Workflow | Platform | Trigger | Artifacts |
 |----------|----------|---------|-----------|
-| **CI** | Windows, Linux, macOS | Push/PR to main | Build only |
+| **CI** | Windows, Linux, macOS | Push/PR to main | Native and Flatpak builds |
 | **Release** | Windows | Tag `v*` | NSIS installer + portable ZIP |
-| **Release** | Linux | Tag `v*` | AppImage |
+| **Release** | Linux | Tag `v*` | AppImage + Flatpak bundle |
 | **Release** | macOS arm64 + x86_64 | Tag `v*` | Architecture-specific DMGs |
 
 ### Dependencies

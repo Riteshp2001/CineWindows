@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(CineWindows VERSION 0.0.1 LANGUAGES CXX)
 
-
+set(CINEWINDOWS_APP_ID "com.gyrolet.CineWindows")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -449,7 +449,7 @@ if(APPLE)
     set_target_properties(CineWindows PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.gyrolet.CineWindows"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.gyrolet.CineWindows"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
@@ -481,6 +481,23 @@ install(TARGETS CineWindows
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+if(UNIX AND NOT APPLE)
+    install(FILES packaging/linux/CineWindows.desktop
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+        RENAME ${CINEWINDOWS_APP_ID}.desktop
+    )
+    install(FILES resources/icons/apps/CineWindows.svg
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
+        RENAME ${CINEWINDOWS_APP_ID}.svg
+    )
+    install(FILES packaging/linux/${CINEWINDOWS_APP_ID}.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo
+    )
+    install(FILES LICENSE.md THIRD_PARTY_NOTICES.md
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses/${CINEWINDOWS_APP_ID}
+    )
+endif()
 
 if(APPLE)
     qt_generate_deploy_qml_app_script(

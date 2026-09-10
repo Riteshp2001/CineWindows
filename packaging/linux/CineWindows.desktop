@@ -17,10 +17,13 @@
 [Desktop Entry]
 Type=Application
 Name=CineWindows
+GenericName=Media Player
 Comment=Modern high-performance media player
-Exec=CineWindows %F
-Icon=CineWindows
+TryExec=CineWindows
+Exec=CineWindows %U
+Icon=com.gyrolet.CineWindows
 Categories=AudioVideo;Player;
 Terminal=false
 StartupNotify=true
-MimeType=video/*;audio/*;application/ogg;application/x-mpegURL;
+StartupWMClass=CineWindows
+MimeType=video/mp4;video/x-matroska;video/webm;video/quicktime;video/x-msvideo;audio/mpeg;audio/flac;audio/ogg;audio/x-wav;application/ogg;application/vnd.apple.mpegurl;application/x-mpegurl;

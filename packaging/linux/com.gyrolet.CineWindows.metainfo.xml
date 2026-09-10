@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.gyrolet.CineWindows</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-CineWindows-Community</project_license>
+  <name>CineWindows</name>
+  <summary>Play local and streamed media with libmpv</summary>
+  <description>
+    <p>
+      CineWindows is a desktop media player built with Qt, QML, and libmpv. It
+      supports hardware-accelerated playback, subtitles, playlists, streaming,
+      video filters, screenshots, and a local companion remote.
+    </p>
+  </description>
+  <developer id="com.gyrolet">
+    <name>Ritesh Pandit</name>
+  </developer>
+  <launchable type="desktop-id">com.gyrolet.CineWindows.desktop</launchable>
+  <provides>
+    <binary>CineWindows</binary>
+  </provides>
+  <url type="homepage">https://cinewindows.vercel.app</url>
+  <url type="bugtracker">https://github.com/Riteshp2001/CineWindows/issues</url>
+  <url type="vcs-browser">https://github.com/Riteshp2001/CineWindows</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Riteshp2001/CineWindows/main/website/public/player-clean.png</image>
+      <caption>CineWindows media playback window</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Riteshp2001/CineWindows/main/website/public/player-controls.png</image>
+      <caption>Playback controls and media information</caption>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.0.1" date="2026-09-10">
+      <description>
+        <p>Initial source-available release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

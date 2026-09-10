@@ -23,6 +23,7 @@ set -euo pipefail
 BUILD_DIR="${1:-build/release}"
 ARTIFACT_DIR="${2:-packaging/linux/artifacts}"
 APP_NAME="CineWindows"
+APP_ID="com.gyrolet.CineWindows"
 DESKTOP_FILE="packaging/linux/${APP_NAME}.desktop"
 APPDIR="AppDir"
 
@@ -82,11 +83,11 @@ download_verified \
 echo "==> Creating AppDir..."
 mkdir -p "${APPDIR}/usr/bin"
 mkdir -p "${APPDIR}/usr/share/applications"
-mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "${APPDIR}/usr/share/icons/hicolor/scalable/apps"
 
 cp "${EXEC_PATH}" "${APPDIR}/usr/bin/"
-cp "${DESKTOP_FILE}" "${APPDIR}/usr/share/applications/"
-cp "resources/icons/apps/CineWindows.svg" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/"
+cp "${DESKTOP_FILE}" "${APPDIR}/usr/share/applications/${APP_ID}.desktop"
+cp "resources/icons/apps/CineWindows.svg" "${APPDIR}/usr/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
 
 # linuxdeploy-plugin-qt cannot discover QML imports that were compiled into the
 # executable unless it is explicitly given the source QML directory. Without
@@ -121,8 +122,8 @@ export EXTRA_PLATFORM_PLUGINS="${EXTRA_PLATFORM_PLUGINS:+${EXTRA_PLATFORM_PLUGIN
 echo "==> Running linuxdeploy with Qt/QML deployment..."
 ./linuxdeploy --appdir "${APPDIR}" \
     --plugin qt \
-    --desktop-file "${APPDIR}/usr/share/applications/${APP_NAME}.desktop" \
-    --icon-file "${APPDIR}/usr/share/icons/hicolor/256x256/apps/CineWindows.svg"
+    --desktop-file "${APPDIR}/usr/share/applications/${APP_ID}.desktop" \
+    --icon-file "${APPDIR}/usr/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
 
 # Do not publish another broken AppImage. Validate the two runtime components
 # that caused the reported Fedora/Wayland startup failure before packaging.

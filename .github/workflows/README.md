@@ -1,6 +1,7 @@
 # GitHub Actions Workflows
 
-Continuous integration and tagged-release automation for Windows, Linux, macOS, the website, and the companion remote.
+Continuous integration and tagged-release automation for Windows, Linux native
+and Flatpak builds, macOS, the website, and the companion remote.
 
 ## Scope
 

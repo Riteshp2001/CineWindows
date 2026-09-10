@@ -1,0 +1,151 @@
+app-id: com.gyrolet.CineWindows
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+command: CineWindows
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=host:ro
+  - --filesystem=home
+  - --filesystem=xdg-run/pipewire-0:ro
+  - --filesystem=xdg-data/Trash
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.freedesktop.FileManager1
+  - --system-talk-name=org.freedesktop.UDisks2
+
+cleanup:
+  - '*.a'
+  - '*.la'
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/man
+
+modules:
+  - name: libmpv
+    buildsystem: meson
+    config-opts:
+      - -Dlibmpv=true
+      - -Dcplayer=false
+      - -Dlua=enabled
+      - -Ddebug=false
+      - -Dbuild-date=false
+      - -Dalsa=disabled
+      - -Dmanpage-build=disabled
+    cleanup:
+      - /share/applications
+      - /share/bash-completion
+      - /share/fish
+      - /share/icons
+      - /share/zsh
+    sources:
+      - type: archive
+        url: https://github.com/mpv-player/mpv/archive/refs/tags/v0.41.0.tar.gz
+        sha256: ee21092a5ee427353392360929dc64645c54479aefdb5babc5cfbb5fad626209
+    modules:
+      - name: luajit
+        no-autogen: true
+        make-args:
+          - BUILDMODE=dynamic
+          - PREFIX=/app
+        make-install-args:
+          - PREFIX=/app
+        cleanup:
+          - /bin
+        sources:
+          - type: git
+            url: https://github.com/openresty/luajit2.git
+            tag: v2.1-20260824
+            commit: fbfc558aacd57a54623df0ced4c31a28f81f8ff2
+
+      - name: libplacebo
+        buildsystem: meson
+        config-opts:
+          - -Ddemos=false
+        sources:
+          - type: git
+            url: https://github.com/haasn/libplacebo.git
+            tag: v7.360.1
+            commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
+
+      - name: libXpresent
+        buildsystem: autotools
+        sources:
+          - type: archive
+            url: https://xorg.freedesktop.org/archive/individual/lib/libXpresent-1.0.2.tar.xz
+            sha256: 4e5b21b4812206a4b223013606ae31170502c1043038777a1ef8f70c09d37602
+
+      - name: libass
+        buildsystem: autotools
+        config-opts:
+          - --disable-static
+        sources:
+          - type: archive
+            url: https://github.com/libass/libass/releases/download/0.17.5/libass-0.17.5.tar.gz
+            sha256: caab4b993dd7be6187c55623b789ed75dddefea6e65938af134637c732fe094a
+
+      - name: uchardet
+        buildsystem: cmake-ninja
+        config-opts:
+          - -DBUILD_STATIC=OFF
+          - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        cleanup:
+          - /bin
+        sources:
+          - type: archive
+            url: https://gitlab.freedesktop.org/uchardet/uchardet/-/archive/v0.0.8/uchardet-v0.0.8.tar.gz
+            sha256: 5aa402a1b5b1dbb8d81096f141ff1224e079f4d3a1db0f79ecca782756d3a416
+
+  - name: mpvqt
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DBUILD_SHARED_LIBS=ON
+      - -DBUILD_TESTING=OFF
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: archive
+        url: https://download.kde.org/stable/mpvqt/mpvqt-1.2.0.tar.xz
+        sha256: 8660ad79c0d60fed77f29b36e1742841466af5405de702c81a121e6eeb625ebb
+
+  - name: yt-dlp
+    no-autogen: true
+    no-make-install: true
+    make-args:
+      - yt-dlp
+      - PYTHON=/usr/bin/python3
+    post-install:
+      - install -Dm755 yt-dlp /app/bin/yt-dlp
+    sources:
+      - type: archive
+        url: https://github.com/yt-dlp/yt-dlp/archive/refs/tags/2026.08.19.tar.gz
+        sha256: a0779c45179a846986a852bce31bddbe9259b594574f75c0ec146d0567058f7e
+
+  - name: cinewindows
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCINEWINDOWS_FETCH_MPVQT=OFF
+      - -DCINEWINDOWS_ENABLE_IPO=OFF
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - .git
+          - .deps
+          - AppDir
+          - build
+          - packaging/flatpak/artifacts
+          - packaging/linux/artifacts
+          - packaging/macos/artifacts
+          - packaging/windows/artifacts
+          - website/dist
+          - website/docs/dist
+          - website/docs/node_modules
+          - website/node_modules

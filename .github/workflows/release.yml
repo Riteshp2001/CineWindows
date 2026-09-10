@@ -270,6 +270,40 @@ jobs:
           path: packaging/linux/artifacts/*
           if-no-files-found: error
 
+  linux-flatpak:
+    name: Linux Flatpak
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Build Flatpak bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: CineWindows-x86_64.flatpak
+          manifest-path: packaging/flatpak/com.gyrolet.CineWindows.yml
+          upload-artifact: false
+
+      - name: Stage Flatpak artifacts
+        run: |
+          mkdir -p packaging/flatpak/artifacts
+          mv CineWindows-x86_64.flatpak packaging/flatpak/artifacts/
+          cd packaging/flatpak/artifacts
+          sha256sum CineWindows-x86_64.flatpak > SHA256SUMS-flatpak.txt
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-flatpak
+          path: packaging/flatpak/artifacts/*
+          if-no-files-found: error
+
   macos-dmg:
     name: macOS DMG (${{ matrix.arch }})
     strategy:
@@ -353,6 +387,7 @@ jobs:
     needs:
       - windows-installer
       - linux-appimage
+      - linux-flatpak
       - macos-dmg
     runs-on: ubuntu-latest
     permissions:
@@ -388,6 +423,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: CineWindows-linux
+          path: release-assets
+
+      - name: Download Flatpak artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CineWindows-flatpak
           path: release-assets
 
       - name: Download macOS arm64 artifacts
