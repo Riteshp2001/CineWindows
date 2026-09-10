@@ -1,0 +1,142 @@
+<!--
+  CineWindows - Video Player
+  Copyright (c) 2026 Ritesh Pandit
+
+  CineWindows Community License
+
+  This source code is made available for personal, non-commercial
+  use only. Organizations may not use, copy, modify, or distribute
+  this code without written permission from Ritesh Pandit.
+
+  See the LICENSE.md file for full license terms.
+
+  Project: CineWindows
+  Author:  Ritesh Pandit
+  Last modified: 2026-09-10
+  Modified by: Ritesh Pandit
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0f10" />
+    <meta name="color-scheme" content="dark" />
+    <title>CineWindows — Cinema, without the clutter</title>
+    <meta
+      name="description"
+      content="A fast, native Windows media player for local video, streaming, subtitles, playlists, and precise playback control."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="__SITE_URL__/" />
+    <meta name="author" content="Ritesh Pandit" />
+    <meta name="application-name" content="CineWindows" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content="CineWindows" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:title" content="CineWindows — Cinema, without the clutter" />
+    <meta
+      property="og:description"
+      content="A fast, native Windows media player that keeps the movie in focus."
+    />
+    <meta property="og:image" content="__SITE_URL__/social-card.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="__SITE_URL__/" />
+    <meta name="twitter:title" content="CineWindows — Cinema, without the clutter" />
+    <meta
+      name="twitter:description"
+      content="A fast, native Windows media player that keeps the movie in focus."
+    />
+    <meta name="twitter:image" content="__SITE_URL__/social-card.svg" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/site.webmanifest" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CineWindows",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Windows 10, Windows 11",
+        "url": "__SITE_URL__/",
+        "description": "A native Windows media player for local video, streaming, subtitles, playlists, and precise playback control.",
+        "softwareVersion": "1.0.0",
+        "author": {
+          "@type": "Person",
+          "name": "Ritesh Pandit"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "CineWindows",
+        "url": "__SITE_URL__/",
+        "description": "A fast, native Windows media player for local video, streaming, subtitles, playlists, and precise playback control.",
+        "inLanguage": "en",
+        "publisher": {
+          "@type": "Organization",
+          "name": "CineWindows"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What can CineWindows play?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CineWindows uses libmpv and FFmpeg, so it supports a broad range of video, audio, subtitle, and playlist formats. That includes common MP4, MKV, AVI, MOV, MP3, FLAC, SRT, ASS, SSA, VTT, M3U, and M3U8 files."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it require an account or internet connection?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No account is required. Local playback works offline. An internet connection is only needed for online streams, opening external links, or checking GitHub for app updates."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I stream from a URL?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. CineWindows includes yt-dlp integration for supported media URLs. Availability depends on the provider, your network, and the provider's own terms."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I customize keyboard shortcuts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Every key binding can be changed in Preferences, and advanced users can work directly with an mpv-style input configuration."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does CineWindows collect analytics?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. CineWindows does not include analytics, advertising trackers, or an account system. Optional update checks contact GitHub, and online playback connects to the media provider you choose."
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

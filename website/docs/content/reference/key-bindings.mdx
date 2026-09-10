@@ -1,0 +1,210 @@
+---
+title: Key Bindings Reference
+description: Complete default keyboard shortcut mappings
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+CineWindows shortcuts are fully remappable from `Preferences > Shortcuts` (`Ctrl+/`). Player shortcuts mirror mpv's official defaults when CineWindows intercepts them for app behaviour or OSD; unlisted mpv defaults are forwarded directly to libmpv.
+
+<Badge variant="accent">Fully remappable</Badge>
+<Badge variant="default">Ctrl+/ to open</Badge>
+
+<Accordion>
+<AccordionItem title="General">
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+O` | Open Files |
+| `Ctrl+N` | New Window |
+| `Ctrl+I` | Open Folder |
+| `Ctrl+U` | Open URL |
+| `Ctrl+Shift+O` | Add Files |
+| `Ctrl+Shift+I` | Add Folder |
+| `Ctrl+Shift+U` | Add URL to Playlist |
+| `Ctrl+P` | Playlist |
+| `Ctrl+,` | Preferences |
+| `Ctrl+/` | Shortcuts |
+| `Ctrl+Shift+S` | Subtitle Menu |
+| `Ctrl+A` | Audio Menu |
+| `Ctrl+C` | Chapters Menu |
+| `Shift+Q` | Save Session and Close |
+| `Ctrl+W` | Close Window |
+| `Ctrl+Q` | Quit |
+| `Q` | Close Window |
+
+</AccordionItem>
+<AccordionItem title="Playback">
+
+| Shortcut | Action |
+|----------|--------|
+| `Space` | Play / Pause |
+| `K` | Play / Pause |
+| `P` | Play / Pause |
+| `[` | Decrease Speed |
+| `]` | Increase Speed |
+| `{` | Halve Speed |
+| `}` | Double Speed |
+| `Backspace` | Reset Speed |
+| `Shift+Backspace` | Undo Previous Seek |
+| `Ctrl+Shift+Backspace` | Mark Position for Undo Seek |
+| `Shift+L` | Loop File |
+| `L` | Set / Clear A-B Loop |
+
+</AccordionItem>
+<AccordionItem title="Navigation">
+
+| Shortcut | Action |
+|----------|--------|
+| `Right` | Seek 5s Forward |
+| `Left` | Seek 5s Backward |
+| `Up` | Seek 1m Forward |
+| `Down` | Seek 1m Backward |
+| `Shift+Right` | Seek 1s Forward (Exact) |
+| `Shift+Left` | Seek 1s Backward (Exact) |
+| `Shift+Up` | Seek 5s Forward (Exact) |
+| `Shift+Down` | Seek 5s Backward (Exact) |
+| `Home` | Seek to Start |
+| `Shift+PgUp` | Seek 10m Forward |
+| `Shift+PgDown` | Seek 10m Backward |
+| `PgDown` | Previous Chapter |
+| `PgUp` | Next Chapter |
+| `Ctrl+Left` | Previous Subtitle Line |
+| `Ctrl+Right` | Next Subtitle Line |
+| `Ctrl+Shift+Left` | Sync to Previous Subtitle |
+| `Ctrl+Shift+Right` | Sync to Next Subtitle |
+| `,` | Previous Frame |
+| `.` | Next Frame |
+| `<` | Previous Playlist Item |
+| `>` | Next Playlist Item |
+| `Enter` | Next Playlist Item |
+| `Shift+Home` | First Playlist Item |
+| `Shift+End` | Last Playlist Item |
+
+</AccordionItem>
+<AccordionItem title="Speed">
+
+| Shortcut | Action |
+|----------|--------|
+| `[` | Decrease Speed |
+| `]` | Increase Speed |
+| `{` | Halve Speed |
+| `}` | Double Speed |
+| `Backspace` | Reset Speed to 1.0x |
+
+</AccordionItem>
+<AccordionItem title="Video / Display">
+
+| Shortcut | Action |
+|----------|--------|
+| `F` | Fullscreen |
+| `Alt++` | Zoom In |
+| `Alt+-` | Zoom Out |
+| `Alt+Backspace` | Reset Zoom and Pan |
+| `Shift+A` | Cycle Aspect Ratio |
+| `B` | Toggle Debanding |
+| `D` | Toggle Deinterlace |
+| `W` | Decrease Panscan |
+| `Shift+W` | Increase Panscan |
+| `E` | Increase Panscan |
+| `1` | Decrease Contrast |
+| `2` | Increase Contrast |
+| `3` | Decrease Brightness |
+| `4` | Increase Brightness |
+| `5` | Decrease Gamma |
+| `6` | Increase Gamma |
+| `7` | Decrease Saturation |
+| `8` | Increase Saturation |
+
+</AccordionItem>
+<AccordionItem title="Audio">
+
+| Shortcut | Action |
+|----------|--------|
+| `0` | Volume Increase |
+| `9` | Volume Decrease |
+| `*` | Volume Increase |
+| `/` | Volume Decrease |
+| `M` | Mute / Unmute |
+| `#` | Next Audio Track |
+| `Ctrl+Shift+A` | Previous Audio Track |
+| `Ctrl+-` | Decrease Audio Delay |
+| `Ctrl++` | Increase Audio Delay |
+
+</AccordionItem>
+<AccordionItem title="Subtitles">
+
+| Shortcut | Action |
+|----------|--------|
+| `V` | Show / Hide Subtitles |
+| `Alt+V` | Show / Hide Secondary Subtitles |
+| `Shift+V` | Cycle ASS Video Data |
+| `U` | Toggle ASS Style Override |
+| `J` | Next Subtitle Track |
+| `Shift+J` | Previous Subtitle Track |
+| `Alt+Z` | Next Secondary Subtitle |
+| `Ctrl+Z` | Previous Secondary Subtitle |
+| `Z` | Decrease Subtitle Delay |
+| `Shift+Z` | Increase Subtitle Delay |
+| `X` | Increase Subtitle Delay |
+| `R` | Move Subtitles Up |
+| `Shift+R` | Move Subtitles Down |
+| `T` | Move Subtitles Down |
+| `Shift+F` | Decrease Subtitle Scale |
+| `Shift+G` | Increase Subtitle Scale |
+
+</AccordionItem>
+<AccordionItem title="Miscellaneous">
+
+| Shortcut | Action |
+|----------|--------|
+| `S` | Screenshot (with subtitles) |
+| `Shift+S` | Screenshot (without subtitles) |
+| `Ctrl+S` | Screenshot Window |
+| `Alt+S` | Screenshot Every Frame |
+| `Shift+O` | Toggle OSD Level |
+| `O` | Show Progress |
+| `Shift+P` | Show Progress |
+| `I` | Statistics (Temporary) |
+| `F1` | Stats Page 1 (Default) |
+| `F2` | Stats Page 2 (Frame Timings) |
+| `F3` | Stats Page 3 (Cache) |
+| `F4` | Stats Page 4 (Key Bindings) |
+| `F5` | Stats Page 5 (Tracks) |
+| `Shift+I` | Statistics Overlay (Persistent) |
+| `1`–`5` | Switch stats pages while stats is visible |
+| `?` | mpv Key Bindings Page |
+| `` ` `` | Debug Console |
+
+</AccordionItem>
+</Accordion>
+
+## Mouse
+
+| Input | Action |
+|-------|--------|
+| Wheel Up | Volume Increase |
+| Wheel Down | Volume Decrease |
+| Wheel Left | Seek 10s Backward |
+| Wheel Right | Seek 10s Forward |
+| Back Mouse Button | Previous Playlist Item |
+| Forward Mouse Button | Next Playlist Item |
+| Double Left Click | Fullscreen |
+
+## Remapping Shortcuts
+
+1. Press `Ctrl+/` to open the Shortcuts dialog
+2. Click the edit icon next to any binding
+3. Press the new key combination
+4. Use the row reset button or `Reset all` to restore defaults
+
+<Callout type="info">
+  Custom bindings are serialised as a JSON string stored in the `input/keyBindings` preference. The Shortcuts dialog provides a visual editor — manual JSON editing is not recommended.
+</Callout>
+
+<Callout type="tip">
+  If you have an existing `input.conf` in your mpv config directory, CineWindows loads it at startup via the `MpvConfig` loader. Key sequences in `input.conf` override the application defaults. The Preferences Shortcuts dialog shows warning badges when a sequence is also bound in `input.conf`.
+</Callout>

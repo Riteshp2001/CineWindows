@@ -1,0 +1,14 @@
+{
+  "name": "cinewindows-docs",
+  "private": true,
+  "version": "1.0.0",
+  "description": "CineWindows — Modern media player for Windows. Comprehensive documentation.",
+  "scripts": {
+    "dev": "blume dev",
+    "build": "blume build",
+    "preview": "blume preview"
+  },
+  "dependencies": {
+    "blume": "^1.6.4"
+  }
+}

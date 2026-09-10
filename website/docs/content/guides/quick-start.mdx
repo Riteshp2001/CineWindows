@@ -1,0 +1,75 @@
+---
+title: Quick Start
+description: Open media, control playback, navigate UI
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Step from "blume/components/content/Step.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+This guide gets you playing video in under a minute.
+
+## Play Your First File
+
+<Steps>
+<Step title="Launch CineWindows">
+  Double-click the CineWindows icon. The Start Page appears with a welcome screen and recent files list.
+</Step>
+<Step title="Open a media file">
+  Do one of the following:
+  - Press **Ctrl + O** to open the file dialog
+  - Drag a video or audio file from File Explorer onto the CineWindows window
+  - Double-click a supported media file in Explorer if you set file associations during installation
+</Step>
+<Step title="Control playback">
+  Use the **Space** key to toggle play and pause, or click the play/pause button on the Control Bar. The seek bar at the bottom shows your progress — click anywhere on it to jump to that position.
+</Step>
+<Step title="Adjust the volume">
+  Scroll the mouse wheel over the video area to adjust volume, or drag the volume slider next to the Control Bar. A small overlay shows the current level.
+</Step>
+<Step title="Enter fullscreen">
+  Press **F11** or double-click the video area to enter fullscreen mode. The Control Bar and Header Bar auto-hide after a moment of inactivity. Move the mouse to reveal them again. Press **Esc** or **F11** to exit fullscreen.
+</Step>
+</Steps>
+
+<Callout type="tip">
+  You can also launch CineWindows from the command line: `CineWindows.exe "C:\path\to\video.mp4"`. Pass multiple paths to queue them in a playlist: `CineWindows.exe video1.mp4 video2.mkv`.
+</Callout>
+
+## Basic Shortcuts
+
+| Key | Action |
+|---|---|
+| **Space** | Play / Pause |
+| **Ctrl + O** | Open file |
+| **Ctrl + I** | Open file via path input |
+| **F11** | Toggle fullscreen |
+| **Left / Right** | Seek backward / forward 5 seconds |
+| **Up / Down** | Volume up / down |
+| **Ctrl + Left / Right** | Seek backward / forward 30 seconds |
+| **Shift + Left / Right** | Seek backward / forward 1 minute |
+| **M** | Mute / unmute |
+| **F** | Toggle fit-to-window (video zoom modes) |
+| **N** | Next file in playlist |
+| **P** | Previous file in playlist |
+| **Ctrl + S** | Toggle A-B loop |
+| **Ctrl + Z** | Reset A-B loop |
+| **S** | Take screenshot |
+| **Ctrl + Q** | Quit |
+| **Esc** | Exit fullscreen / close dialog |
+| **Tab** | Cycle focus between UI sections |
+| **Ctrl + H** | Toggle Media Hub sidebar |
+
+## Next Steps
+
+<CardGroup>
+<Card title="User Interface Guide" icon="layout" description="Explore every panel, bar, and overlay in detail. Understand the chrome auto-hide system, the Media Hub sidebar, and the Start Page." href="/guides/user-interface" />
+
+<Card title="Playback Controls" icon="play" description="Deep dive into seek precision, A-B looping, frame stepping, speed control, chapter navigation, and video filter adjustments." href="/guides/playback" />
+
+<Card title="Subtitles" icon="subtitles" description="Load, customize, and download subtitles. Configure font, size, color, border, shadow, position, and delay." href="/guides/subtitles" />
+
+<Card title="Playlists" icon="list" description="Create and manage M3U playlists with drag-and-drop reordering, track selection, and session save and restore." href="/guides/playlists" />
+</CardGroup>

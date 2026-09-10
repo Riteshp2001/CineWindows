@@ -1,0 +1,169 @@
+---
+title: User Interface
+description: Tour of all UI elements
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Step from "blume/components/content/Step.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+The CineWindows interface is built from QML components layered over a C++ window shell. Every element is designed for efficient media interaction while staying out of the way during playback.
+
+## Application Shell
+
+The top-level `App.qml` creates the QWinWindow that hosts all child components. It manages window state (normal, maximized, fullscreen, minimized), high-DPI scaling, and the event filter for global shortcuts. The shell delegates all visual content to a stacked layout of overlays.
+
+## Header Bar
+
+The header bar sits at the top of the window and provides:
+
+- **Title bar area** — displays the current media filename on the left, with minimize, maximize, and close window controls on the right
+- **Menu access** — clicking the application icon opens the system menu with options for file open, settings, and quit
+- **Window dragging** — drag the header bar to reposition the window (also works by dragging the video area outside fullscreen)
+
+In fullscreen mode the header bar hides together with the control bar and reappears on mouse hover.
+
+## Control Bar
+
+The control bar is the primary playback interface, anchored at the bottom of the window. It contains:
+
+- **Seek bar** — a horizontal slider showing playback progress with time labels (elapsed / remaining). Thumbnail previews appear on hover for supported formats. Click to seek, drag to scrub.
+- **Playback buttons** — previous track, play/pause, next track
+- **Time display** — current position and total duration with chapter markers when available
+- **Volume** — slider with mute toggle, scroll-wheel adjustable
+- **Quick actions** — fullscreen toggle, playlist toggle, subtitle menu, audio track menu
+
+The control bar auto-hides after 2 seconds of inactivity in fullscreen mode. It fades out with a smooth opacity transition and reappears instantly on any mouse movement.
+
+## Chrome Auto-Hide System
+
+Both the header bar and control bar participate in the chrome auto-hide system. In fullscreen mode:
+
+1. After 2 seconds without mouse movement, both bars fade to 0 opacity
+2. The seek bar remains visible for an additional 3 seconds before hiding
+3. Any mouse movement or key press restores full opacity immediately
+4. The system pauses while any popup, dialog, or menu is open
+
+<Callout type="tip">
+  Press **Ctrl + H** to toggle the chrome auto-hide behavior. When disabled, both bars remain visible at all times, which is useful when you need constant access to playback controls.
+</Callout>
+
+## Media Hub
+
+The Media Hub is a resizable sidebar anchored to the right edge of the window. It provides three panels:
+
+- **Playlist** — shows the current M3U playlist with drag-and-drop reordering, double-click track selection, and context menu actions (remove, clear, save)
+- **Chapters** — lists all available chapter markers for the current file. Click any chapter to seek to its start time
+- **Subtitle Browser** — displays loaded subtitle tracks with preview text for the current position. Manage embedded and external subtitle files
+
+The sidebar is toggled with **Ctrl + H** or the sidebar button on the Control Bar. Its width is adjustable by dragging the left edge separator. The active panel is remembered across sessions.
+
+## Start Page
+
+The Start Page appears when no file is loaded. It includes:
+
+- **Welcome heading** — the CineWindows logo and version number
+- **Recent files** — a scrollable list of recently opened media, each showing filename, file path, and last opened timestamp. Click to reopen, use the **X** button to remove an entry
+- **Action buttons** — **Open File** (Ctrl+O) and **Open Path** (Ctrl+I) launch their respective dialogs
+- **Quick tips** — a rotating set of usage tips for new users
+
+The Start Page is replaced by the video view when a file loads and returns when playback ends or the playlist empties.
+
+## Picture-in-Picture Mode
+
+PiP pops the video into a compact, always-on-top window detached from the main application. The PiP window includes:
+
+- The video renderer at a reduced resolution
+- A minimal control overlay (play/pause, close) that appears on hover
+- Draggable positioning — click and drag the window to any screen location
+- Resizable — drag the bottom-right corner to adjust size proportionally
+
+PiP is toggled from **View > Picture-in-Picture** or via a configurable shortcut. The main window returns to the Start Page or remains idle while PiP is active.
+
+## Overlays
+
+### Playback OSD
+
+The on-screen display shows brief information overlays during playback:
+
+- **Seek notification** — "Forward 0:05" or "Backward 0:30" with the current and new time
+- **Speed indicator** — "1.5×" when playback speed deviates from 1.0
+- **Track change** — audio track name or subtitle track label when switching
+- **Chapter jump** — chapter title on chapter navigation
+
+Each notification fades out after 1.5 seconds. Multiple notifications are queued and displayed sequentially.
+
+### Volume Overlay
+
+Appears on the left side of the video area when volume changes. Shows a vertical volume bar with the current percentage and mute icon (when muted). It fades out 1 second after the last volume change.
+
+### Toast Notifications
+
+Transient messages appear at the top-right corner of the window for non-critical events:
+
+- Playlist saved successfully
+- Screenshot captured
+- Subtitle track loaded
+- Filter value reset
+
+Toasts auto-dismiss after 4 seconds. They stack vertically if multiple arrive simultaneously.
+
+## Dialogs
+
+### Settings Dialog
+
+Accessible from **File > Settings** or **Ctrl + ,**. Organized into categorized tabs:
+
+- **General** — language, recent files count, startup behavior, auto-hide delay
+- **Video** — renderer backend, hardware acceleration, default zoom, aspect ratio
+- **Audio** — default device, volume normalization, channel layout, audio delay
+- **Subtitles** — font family, size, color, border, shadow, position, default encoding
+- **Playlist** — playback order (sequential / shuffle / repeat), auto-load next file
+- **Shortcuts** — customizable keybindings for all actions
+
+### Playback Info Dialog
+
+Opened from **View > Playback Info** or **Ctrl + I** (in playback mode). Displays real-time statistics:
+
+- Video codec, resolution, frame rate, bitrate
+- Audio codec, sample rate, channels, bitrate
+- Hardware decoder in use (if any)
+- Dropped frames, render latency
+- File path and container format
+
+### About Dialog
+
+Shows version information, build date, Qt and libmpv version strings, and a list of contributors.
+
+<Callout type="info">
+  All dialogs are modal to the main window but non-blocking — you can interact with the video behind them while a dialog is open.
+</Callout>
+
+## Theme & Design System
+
+CineWindows uses a token-based design system defined in QML singleton objects. The system provides:
+
+<Accordion>
+<AccordionItem title="Color Tokens">
+Surface, text, accent, border, success, warning, and danger colors, each with light and dark variants. Accent colors are applied to active controls, selection highlights, and focused elements.
+</AccordionItem>
+<AccordionItem title="Typography">
+System font stack with defined sizes (caption, body, body-large, heading, title) and weights (regular, medium, bold). All text elements reference these tokens rather than hardcoded sizes.
+</AccordionItem>
+<AccordionItem title="Spacing & Elevation">
+A 4-pixel base unit spacing scale (4, 8, 12, 16, 24, 32, 48). Elevation levels control box-shadow depth for surfaces, cards, dialogs, and popups.
+</AccordionItem>
+<AccordionItem title="Animation">
+Standardized duration and easing curves for transitions: 200ms ease-out for fades, 250ms ease-in-out for size changes, 300ms spring for entrance animations. All UI animations respect the system "reduce motion" setting.
+</AccordionItem>
+<AccordionItem title="Icons">
+All icons are rendered from a single Material Symbols font resource, ensuring consistent stroke weight and alignment across the interface. No bitmap icons are used.
+</AccordionItem>
+</Accordion>
+
+<Callout type="tip">
+  The theme automatically follows your Windows system light/dark mode preference. Override this in **Settings > General > Theme** by choosing Light, Dark, or System.
+</Callout>

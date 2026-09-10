@@ -1,0 +1,79 @@
+---
+title: CLI & Command Line
+description: Command-line arguments, flags, and usage examples
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import CodeGroup from "blume/components/content/CodeGroup.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+CineWindows supports a set of command-line arguments for controlling the runtime behaviour, enabling IPC, and opening media files directly.
+
+<Badge variant="accent">CineWindows.exe</Badge>
+<Badge variant="default">Qt QCommandLineParser</Badge>
+
+## Arguments Reference
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--cli`, `-c` | Enable interactive CLI mode. Reads newline-delimited JSON IPC or raw mpv commands from stdin. On Windows, opens a terminal window if no parent console is attached. | Disabled |
+| `--ipc-server=<port>` | Enable the localhost TCP IPC server on the given port. Binds to `127.0.0.1` only. Valid range: `1`–`65535`. | Disabled |
+| `--help`, `-h` | Display help information and exit. | — |
+| `--version`, `-v` | Display version information and exit. | — |
+| `file-or-url` | Any positional arguments (file paths or URLs) are passed to the application for opening. These are handled by `QGuiApplication` and forwarded to the QML shell. | — |
+
+<Callout type="info">
+  File and URL arguments are processed by Qt's built-in argument handling and forwarded to the application via `QGuiApplication`. The application does not currently parse positional arguments for automatic loading — this is reserved for future enhancement.
+</Callout>
+
+## Examples
+
+<CodeGroup>
+```powershell title="Basic launch"
+.\CineWindows.exe
+```
+
+```powershell title="CLI mode"
+.\CineWindows.exe --cli
+```
+
+```powershell title="Custom IPC port"
+.\CineWindows.exe --ipc-server=32322
+```
+
+```powershell title="Both CLI and IPC"
+.\CineWindows.exe --cli --ipc-server=32321
+```
+
+```powershell title="Help"
+.\CineWindows.exe --help
+```
+
+```powershell title="Version"
+.\CineWindows.exe --version
+```
+</CodeGroup>
+
+## mpv Flag Compatibility
+
+CineWindows does **not** pass command-line flags directly to mpv. The application intercepts all arguments through `QCommandLineParser`. To configure mpv behaviour at startup, use an `mpv.conf` file in the mpv configuration directory (see the Configuration reference).
+
+<CardGroup>
+<Card title="--cli mode" icon="terminal" description="Opens a console on Windows (AllocConsole if no parent console attached), then reads JSON-RPC commands from stdin on a background QThread. Responses and property-change events are written to stdout." />
+
+<Card title="--ipc-server mode" icon="server" description="Starts a QTcpServer on 127.0.0.1 after the QML engine has loaded and the CineMpvItem is available. Supports multiple concurrent clients with per-session property observation state." />
+
+<Card title="Port validation" icon="check" description="The --ipc-server argument validates that the port is in the valid range 1–65535. If invalid, the application prints an error to stderr and exits with a non-zero status code." />
+</CardGroup>
+
+## Environment
+
+CineWindows reads one environment variable:
+
+| Variable | Purpose |
+|----------|---------|
+| `QSG_RHI_BACKEND` | Forced to `opengl` at startup for mpv renderer compatibility |
+
+`PathUtils::setupMpvEnvironment()` configures mpv-specific paths at startup, setting the mpv configuration directory and ensuring yt-dlp is discovered correctly.

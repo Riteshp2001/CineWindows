@@ -1,0 +1,105 @@
+---
+title: Streaming & URLs
+description: YouTube and streaming support via yt-dlp
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Step from "blume/components/content/Step.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+CineWindows streams media from the internet through its integration with `yt-dlp` and mpv's native network protocols. Open URLs directly, search YouTube from within the player, or paste a streaming link into the URL dialog.
+
+## yt-dlp Integration
+
+`yt-dlp` is the backbone of CineWindows' streaming support. It handles URL resolution, format selection, and extraction for hundreds of sites. The player launches `yt-dlp` as an external process — detected automatically via `PathUtils::mediaToolPath()` or bundled alongside the CineWindows executable.
+
+### Auto-Update
+
+yt-dlp can be updated from within CineWindows when a newer version is available. The integrated update mechanism runs yt-dlp's self-update routine and reports the result via the toast notification system.
+
+## Supported Protocols
+
+CineWindows streams any URL that mpv and yt-dlp support:
+
+| Protocol | Examples |
+|----------|----------|
+| HTTP / HTTPS | Direct media links, HLS playlists (.m3u8) |
+| HLS | Live streams, adaptive bitrate streams |
+| DASH | MPEG-DASH manifests (.mpd) |
+| RTMP | RTMP live streams |
+| RTSP | IP camera streams, RTSP servers |
+| YouTube | `youtu.be/*`, `youtube.com/watch?v=*` |
+| YouTube Music | `music.youtube.com/*` |
+| Twitch, Vimeo, Dailymotion | Site-specific extraction via yt-dlp |
+
+<Callout type="warning">
+  Streaming performance depends on your network connection. For high-bitrate 4K content, a wired connection or strong Wi-Fi signal is recommended.
+</Callout>
+
+## URL Dialog
+
+Open the URL dialog with `Ctrl+U` or from the **Media** menu. Paste any supported link and press Enter to begin playback. The dialog supports:
+
+- Direct media URLs (`.mp4`, `.webm`, `.mkv`, `.mp3`, `.aac`, etc.)
+- YouTube and streaming site links
+- HLS and DASH manifest URLs
+- RTMP and RTSP stream URLs
+
+URLs are added to the current playlist and can be mixed with local files.
+
+## Network Caching
+
+Streaming uses mpv's built-in network cache with configurable buffer size:
+
+| Setting | Default | Range |
+|---------|---------|-------|
+| Cache size | 150 MB | 10 MB – 1024 MB |
+| Cache pause | auto | pauses playback when cache runs low |
+
+Adjust cache settings in **Preferences > Advanced > Network Cache**. Larger cates buffer more content for smoother playback on unstable connections at the cost of higher memory usage.
+
+## Watch from YouTube
+
+<Steps>
+<Step>
+### Open YouTube Search
+
+Press `Ctrl+U` and paste a YouTube URL, or open **Media > YouTube Search** (`Ctrl+Shift+Y`) to use the built-in `YouTubeSearchDialog`.
+</Step>
+<Step>
+### Search or Paste
+
+Type a query in the search field — the `YouTubeSearchService` launches `yt-dlp ytsearch12:<query>` with `--flat-playlist --dump-single-json --skip-download` to fetch 12 results as JSON. Results display title, channel, duration, view count, upload date, and a thumbnail from `i.ytimg.com`.
+</Step>
+<Step>
+### Select and Play
+
+Click a result or press **Enter** to load it. CineWindows resolves the URL through yt-dlp and opens the best available stream in the player. Live streams are flagged with a live badge in the search results.
+</Step>
+<Step>
+### Full Playback Control
+
+Once loaded, streaming content behaves like local files — seek, pause, adjust speed, apply filters, toggle subtitles. The `MediaLibraryService` tracks play position and history for streaming URLs just as it does for local files.
+</Step>
+</Steps>
+
+<Accordion>
+<AccordionItem title="YouTube Search Service Details">
+The `YouTubeSearchService` manages a `QProcess` that runs yt-dlp with the following arguments:
+
+- `--ignore-config` — prevents user config from interfering
+- `--flat-playlist` — fast metadata-only extraction
+- `--dump-single-json` — structured JSON output
+- `--skip-download` — no media downloaded during search
+- `--ignore-errors` — continues past unavailable videos
+- `--no-warnings` — suppresses diagnostic warnings
+
+Results are parsed from the JSON entries array, extracting id, title, channel/uploader, duration, view count, upload date, and live status. The search can be canceled mid-flight — the process is killed and results are discarded.
+</AccordionItem>
+<AccordionItem title="Security & Privacy">
+CineWindows does not send telemetry or browsing data to any server. yt-dlp requests are direct between the tool and the streaming site. URL history is stored locally in the media library database and can be cleared at any time.
+</AccordionItem>
+</Accordion>

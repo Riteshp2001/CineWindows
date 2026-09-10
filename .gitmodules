@@ -1,0 +1,19 @@
+# CineWindows - Video Player
+# Copyright (c) 2026 Ritesh Pandit
+#
+# CineWindows Community License
+#
+# This source code is made available for personal, non-commercial
+# use only. Organizations may not use, copy, modify, or distribute
+# this code without written permission from Ritesh Pandit.
+#
+# See the LICENSE.md file for full license terms.
+#
+# Project: CineWindows
+# Author:  Ritesh Pandit
+[submodule "third_party/RinUI"]
+	path = third_party/RinUI
+	url = https://github.com/RinLit-233-shiroko/Rin-UI.git
+[submodule "third_party/QR-Code-generator"]
+	path = third_party/QR-Code-generator
+	url = https://github.com/nayuki/QR-Code-generator.git

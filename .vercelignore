@@ -1,0 +1,15 @@
+/build/
+/bin/
+/.deps/
+/packaging/
+/third_party/
+/qml/
+/src/
+/tests/
+/i18n/
+/scripts/
+/resources/
+/.git/
+*.exe
+*.dll
+*.zip

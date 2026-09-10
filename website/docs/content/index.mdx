@@ -1,0 +1,114 @@
+---
+title: CineWindows Documentation
+description: Official end-to-end documentation for CineWindows — modern, high-performance desktop media player for Windows.
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+Welcome to the official documentation for **CineWindows**, a modern, high-performance desktop media player engineered exclusively for Windows 10 and 11.
+
+CineWindows combines a native C++20 backend with a fluid QML interface and the powerful **libmpv** rendering engine to deliver hardware-accelerated playback across all major video and audio formats.
+
+<Badge variant="accent">Windows 10 / 11</Badge>
+<Badge variant="default">Source-Available</Badge>
+<Badge variant="default">GitHub Release Binaries (.exe & .zip)</Badge>
+<Badge variant="default">mpv Engine Core</Badge>
+
+---
+
+## Downloads & Distribution
+
+CineWindows is a source-available desktop application distributed as ready-to-run executables. Official binaries (`.exe` installer and standalone portable `.zip` archives) are provided directly via GitHub Releases.
+
+<CardGroup>
+<Card title="Official GitHub Releases" icon="download" description="Download the latest NSIS installer (CineWindows-Setup-*.exe) or zero-install portable archive (CineWindows-Portable-*.zip)." href="/guides/installation" />
+</CardGroup>
+
+---
+
+## Getting Started
+
+<CardGroup>
+<Card title="Overview" icon="info" description="Explore the feature set, platform support, and core architecture of CineWindows." href="/guides/overview" />
+
+<Card title="Installation Guide" icon="download" description="Step-by-step setup instructions for Portable ZIP and NSIS setup." href="/guides/installation" />
+
+<Card title="Quick Start" icon="zap" description="Get up and playing in under a minute with basic controls and mouse/keyboard navigation." href="/guides/quick-start" />
+</CardGroup>
+
+---
+
+## Playback & UI
+
+<CardGroup>
+<Card title="User Interface" icon="layout" description="Detailed walkthrough of the main window, auto-hiding controls, header bar, and sidebar." href="/guides/user-interface" />
+
+<Card title="Playback Controls" icon="play" description="Learn about seek controls, speed adjustments, frame stepping, A-B loops, and video filters." href="/guides/playback" />
+
+<Card title="Playlists" icon="list" description="Manage M3U/M3U8 playlists, drag-and-drop file queueing, track reordering, and session restore." href="/guides/playlists" />
+
+<Card title="Subtitles" icon="subtitles" description="Load embedded & external subtitles, set custom styling, adjust timing offsets, and fetch from OpenSubtitles." href="/guides/subtitles" />
+
+<Card title="Audio & Filters" icon="sliders" description="Configure audio channels, equalizer settings, volume normalization, and video post-processing filters." href="/guides/audio-filters" />
+
+<Card title="Keyboard Shortcuts" icon="key" description="Full list of keyboard shortcuts for playback, seeking, navigation, and window controls." href="/guides/keyboard-shortcuts" />
+</CardGroup>
+
+---
+
+## Media & Features
+
+<CardGroup>
+<Card title="Media Hub" icon="database" description="Browse local media libraries, recent history, YouTube search integration, and favorite tracks." href="/guides/media-hub" />
+
+<Card title="Streaming & URLs" icon="globe" description="Stream online video streams, network URLs, and live broadcasts directly within CineWindows." href="/guides/streaming" />
+
+<Card title="Picture-in-Picture" icon="pip" description="Pop out media into a floating, always-on-top window while multitasking in other applications." href="/guides/picture-in-picture" />
+</CardGroup>
+
+---
+
+## Integrations & Remote
+
+<CardGroup>
+<Card title="Remote Control" icon="smartphone" description="Control playback remotely over your local network using the built-in web companion interface." href="/guides/remote-control" />
+
+<Card title="Casting (DLNA)" icon="tv" description="Cast media to DLNA/UPnP compatible smart TVs and devices on your local network." href="/guides/casting" />
+
+<Card title="IPC Protocol" icon="terminal" description="Integrate CineWindows with external tools via TCP socket or standard input JSON-RPC protocol." href="/guides/ipc-protocol" />
+</CardGroup>
+
+---
+
+## Settings & Support
+
+<CardGroup>
+<Card title="Preferences" icon="settings" description="Customize appearance, theme colors, hardware decoding, subtitle defaults, and updates." href="/guides/preferences" />
+
+<Card title="Localization" icon="globe" description="Multi-language UI translation setup, language switching, and locale configurations." href="/guides/localization" />
+
+<Card title="Troubleshooting" icon="help-circle" description="Solutions for display, audio, subtitle, remote connection, and performance questions." href="/guides/troubleshooting" />
+</CardGroup>
+
+---
+
+## Technical Reference
+
+<CardGroup>
+<Card title="CLI & Command Line" icon="terminal" description="Command-line flags (--cli, --ipc-server), executable launch parameters, and environment settings." href="/reference/cli" />
+
+<Card title="Key Bindings Reference" icon="key" description="JSON schema for custom keybinding configurations and mpv input.conf integration." href="/reference/key-bindings" />
+
+<Card title="Configuration Reference" icon="file-text" description="Settings paths (INI), session.json, SQLite library database, and mpv.conf options." href="/reference/configuration" />
+
+<Card title="IPC Protocol Reference" icon="code" description="Complete specification for JSON-RPC methods, event notifications, and socket communication." href="/reference/ipc-protocol" />
+</CardGroup>
+
+---
+
+<Callout type="tip">
+  Need help or want to report an issue with the application release? Visit our official GitHub Releases page or submit feedback through our official support channel.
+</Callout>

@@ -1,0 +1,14 @@
+# CineWindows - Video Player
+# Copyright (c) 2026 Ritesh Pandit
+#
+# CineWindows Community License
+# See the LICENSE.md file for full license terms.
+
+blank_issues_enabled: false
+contact_links:
+  - name: General discussion
+    url: https://github.com/Riteshp2001/CineWindows/discussions
+    about: Ask questions or discuss ideas before filing a tracked issue.
+  - name: Security vulnerability
+    url: https://github.com/Riteshp2001/CineWindows/blob/main/SECURITY.md
+    about: Review the private security reporting process before sharing details.

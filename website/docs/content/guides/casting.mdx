@@ -1,0 +1,152 @@
+---
+title: Casting (DLNA)
+description: Stream to Chromecast and DLNA devices
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Step from "blume/components/content/Step.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+CineWindows can stream media to Chromecast, DLNA-compatible TVs, and UPnP media renderers on your local network. The `CastService` handles device discovery via UPnP SSDP and sends media URLs using SOAP-based AVTransport control.
+
+## How Casting Works
+
+The `CastService` uses UPnP (Universal Plug and Play) to discover and control media renderers:
+
+1. **Discovery** — Sends an SSDP `M-SEARCH` multicast to `239.255.255.250:1900` requesting `MediaRenderer:1` devices
+2. **Description** — Devices respond with a description URL; the service fetches the XML and extracts the `friendlyName` and `AVTransport` control URL
+3. **Streaming** — Sends the media URL to the device via `SetAVTransportURI` SOAP action, followed by a `Play` command
+
+<Badge variant="default">UPnP AV Transport 1.0</Badge>
+<Badge variant="default">SSDP v1.0</Badge>
+
+## Device Discovery
+
+Trigger discovery from the **Cast** dialog (**Media > Cast**). The service broadcasts an `M-SEARCH` request with a 2-second MX (response wait time) and collects responses for 3.5 seconds total. Compatible devices appear in a list as they are found.
+
+### Discovery Process
+
+```
+M-SEARCH * HTTP/1.1
+HOST: 239.255.255.250:1900
+MAN: "ssdp:discover"
+MX: 2
+ST: urn:schemas-upnp-org:device:MediaRenderer:1
+```
+
+The service listens on a UDP socket bound to `QHostAddress::AnyIPv4`. Each response is parsed for the `LOCATION` header, which points to the device's XML description. The description is fetched over HTTP, parsed with `QXmlStreamReader`, and registered if it exposes an `AVTransport` service with a `controlURL`.
+
+### Device Information
+
+Discovered devices provide:
+
+- **Name** — `friendlyName` from the device description (e.g. "Living Room TV", "Office Chromecast")
+- **Control URL** — SOAP endpoint for `AVTransport` commands
+- **Description URL** — Device description URL for metadata
+
+## Streaming a URL
+
+Once a device is selected, CineWindows sends the media URL to the device via a SOAP XML envelope:
+
+### SetAVTransportURI
+
+```xml
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+  s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+      <InstanceID>0</InstanceID>
+      <CurrentURI>https://example.com/video.mp4</CurrentURI>
+      <CurrentURIMetaData></CurrentURIMetaData>
+    </u:SetAVTransportURI>
+  </s:Body>
+</s:Envelope>
+```
+
+### Play
+
+Immediately after the URI is set (on success), the service sends a `Play` SOAP action:
+
+```xml
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+  s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+      <InstanceID>0</InstanceID>
+      <Speed>1</Speed>
+    </u:Play>
+  </s:Body>
+</s:Envelope>
+```
+
+<Callout type="info">
+  The current casting implementation supports **direct HTTP and HTTPS media URLs** only. Local file paths and unsupported protocols will show an error message. The device must be able to reach the URL directly on your network.
+</Callout>
+
+## Same-Network Requirement
+
+Both your computer and the casting device must be on the same local network. UPnP SSDP discovery uses multicast (239.255.255.250:1900) which does not route across subnets or through NAT. The media URL must also be accessible from the casting device — local file paths will not work unless served by an HTTP server reachable on the LAN.
+
+## Casting Steps
+
+<Steps>
+<Step>
+### Connect Devices to the Same Network
+
+Ensure your computer and the target device (Chromecast, DLNA TV, etc.) are on the same Wi-Fi or wired network. Devices on separate VLANs or guest networks will not discover each other.
+</Step>
+<Step>
+### Open the Cast Dialog
+
+Click **Media > Cast** from the menu bar or right-click the video and select **Cast**. The Cast dialog opens with a **Discover Devices** button and a device list.
+</Step>
+<Step>
+### Discover Devices
+
+Click **Discover Devices**. The service broadcasts SSDP and lists every found `MediaRenderer` on the network. Discovery runs for ~3.5 seconds. If no devices are found, the dialog shows a "No compatible devices found" message.
+</Step>
+<Step>
+### Select a Device
+
+Click a device name from the list. CineWindows immediately sends the currently-playing media URL to the device.
+</Step>
+<Step>
+### Streaming Begins
+
+The device starts playback. CineWindows shows a confirmation toast. The local player continues playing independently — casting does not stop local playback. Use the device's own controls (remote, TV interface) to pause, seek, or stop.
+</Step>
+</Steps>
+
+<Accordion>
+<AccordionItem title="Supported Devices">
+CineWindows' UPnP implementation is compatible with:
+
+- **Chromecast** (1st, 2nd, 3rd gen, Chromecast Ultra, Chromecast with Google TV)
+- **Google Nest Hub** and **Nest Max**
+- **DLNA-certified TVs** (Samsung, LG, Sony, Panasonic, Vizio)
+- **Game consoles** (PS4, PS5, Xbox One, Xbox Series X/S — DLNA mode)
+- **Software renderers** (VLC in renderer mode, Plex, Universal Media Server)
+
+Note that Chromecast requires the media URL to be an HTTP/HTTPS link. Local file paths will not cast to Chromecast devices.
+</AccordionItem>
+<AccordionItem title="Limitations">
+The first release of casting supports:
+
+- **HTTP/HTTPS URLs only** — local files and YouTube links resolved by yt-dlp are not cast directly. To cast YouTube content, use the Chromecast's native YouTube app.
+- **No playlist support** — single media URL per cast session
+- **No transport monitoring** — CineWindows does not poll the device for playback position or status after casting starts
+- **No queuing** — subsequent cast actions replace the current URI
+
+These limitations are expected to be addressed in future releases as the cast service matures.
+</AccordionItem>
+<AccordionItem title="Troubleshooting">
+**No devices found** — Check that all devices are on the same network. Verify UPnP is enabled on the target device (often in network settings). Try disabling and re-enabling the network interface. Some corporate or guest networks block SSDP multicast.
+
+**Device found but cast fails** — Ensure the media URL is accessible from the casting device. Test by opening the URL in a browser on the device. Check that the URL uses HTTP or HTTPS — local files are not supported.
+
+**Playback does not start** — The device may not support the media format. Try a standard MP4 with H.264 video and AAC audio. Some devices require specific container formats.
+</AccordionItem>
+</Accordion>

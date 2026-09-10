@@ -1,0 +1,254 @@
+---
+title: Localization
+description: 86+ language translations
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import FileTree from "blume/components/content/FileTree.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+import Badge from "blume/components/content/Badge.astro";
+
+CineWindows ships with translations for **86 languages** covering the majority of the world's spoken languages. The interface language can be changed at any time from **Preferences > General > Language** and takes effect after restarting the application.
+
+## Translation Architecture
+
+CineWindows uses the Qt Linguist framework for all user-facing text. This is the standard Qt i18n system, integrated via CMake's `qt_add_translations()`.
+
+| Component | Function |
+|-----------|----------|
+| **QML** | `qsTr("string")` for inline translatable strings |
+| **C++** | `tr("string")` or `QCoreApplication::translate()` in backend code |
+| **Context** | Translation context derived from the file or class name |
+
+All .ts files are stored in the `i18n/` directory at the project root.
+
+<FileTree>
+- i18n/
+  - CineWindows_en.ts
+  - CineWindows_hi.ts
+  - CineWindows_fr.ts
+  - CineWindows_de.ts
+  - CineWindows_es.ts
+  - CineWindows_ja.ts
+  - CineWindows_zh_CN.ts
+  - CineWindows_zh_TW.ts
+  - CineWindows_ar.ts
+  - CineWindows_ru.ts
+  - CineWindows_pt.ts
+  - ... (86 total files)
+  - README.md
+</FileTree>
+
+## Qt Linguist Workflow
+
+The translation pipeline follows the standard Qt Linguist process:
+
+### 1. Source Strings
+
+Translatable strings are marked in QML source files with `qsTr()`:
+
+```qml
+Button {
+    text: qsTr("Play")
+}
+```
+
+In C++ source, `tr()` is used:
+
+```cpp
+setStatusMessage(tr("Could not start device discovery"));
+```
+
+### 2. Update Translations (lupdate)
+
+Run the update script to extract all source strings and merge them into the .ts files:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\generate\update_translations.ps1
+```
+
+This runs `lupdate` over the QML and C++ sources, updating every language's .ts file with new, obsolete, and unchanged strings.
+
+### 3. Translate
+
+Open any `.ts` file in **Qt Linguist** to provide translations. Each string shows:
+
+- Source text in English
+- Context (file and class name)
+- Translator comments (if provided in source)
+- Status (untranslated / finished / obsolete)
+
+### 4. Compile Translations (lrelease)
+
+Compile .ts files into binary .qm resources:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\generate\update_translations.ps1 -ReleaseOnly
+```
+
+This runs `lrelease`, producing `.qm` files that are embedded into the CineWindows binary via Qt's resource system.
+
+## Changing the Language
+
+Navigate to **Preferences > General > Language** and select your preferred language from the dropdown. The change requires an application restart to take full effect — CineWindows will prompt you to restart.
+
+<Callout type="tip">
+  The language selector displays native language names (e.g. "हिन्दी", "Français", "日本語") for easier identification.
+</Callout>
+
+## Supported Locales
+
+<Accordion>
+<AccordionItem title="Germanic Languages">
+
+| Code | Language |
+|------|----------|
+| `en` | English |
+| `de` | German |
+| `nl` | Dutch |
+| `sv` | Swedish |
+| `da` | Danish |
+| `nb` | Norwegian Bokmål |
+| `nn` | Norwegian Nynorsk |
+| `is` | Icelandic |
+| `af` | Afrikaans |
+
+</AccordionItem>
+<AccordionItem title="Romance Languages">
+
+| Code | Language |
+|------|----------|
+| `fr` | French |
+| `es` | Spanish |
+| `pt` | Portuguese |
+| `it` | Italian |
+| `ro` | Romanian |
+| `ca` | Catalan |
+| `gl` | Galician |
+
+</AccordionItem>
+<AccordionItem title="Slavic Languages">
+
+| Code | Language |
+|------|----------|
+| `ru` | Russian |
+| `uk` | Ukrainian |
+| `be` | Belarusian |
+| `pl` | Polish |
+| `cs` | Czech |
+| `sk` | Slovak |
+| `bg` | Bulgarian |
+| `sr` | Serbian |
+| `hr` | Croatian |
+| `sl` | Slovenian |
+| `mk` | Macedonian |
+| `bs` | Bosnian |
+
+</AccordionItem>
+<AccordionItem title="Indo-Aryan Languages">
+
+| Code | Language |
+|------|----------|
+| `hi` | Hindi |
+| `bn` | Bengali |
+| `mr` | Marathi |
+| `gu` | Gujarati |
+| `pa` | Punjabi |
+| `ur` | Urdu |
+| `ne` | Nepali |
+| `si` | Sinhala |
+| `ps` | Pashto |
+
+</AccordionItem>
+<AccordionItem title="Sino-Tibetan & East Asian Languages">
+
+| Code | Language |
+|------|----------|
+| `zh_CN` | Chinese (Simplified) |
+| `zh_TW` | Chinese (Traditional) |
+| `ja` | Japanese |
+| `ko` | Korean |
+| `my` | Burmese |
+
+</AccordionItem>
+<AccordionItem title="Austronesian & Southeast Asian Languages">
+
+| Code | Language |
+|------|----------|
+| `id` | Indonesian |
+| `ms` | Malay |
+| `tl` | Tagalog |
+| `fil` | Filipino |
+| `vi` | Vietnamese |
+| `th` | Thai |
+| `km` | Khmer |
+| `mn` | Mongolian |
+
+</AccordionItem>
+<AccordionItem title="Dravidian Languages">
+
+| Code | Language |
+|------|----------|
+| `te` | Telugu |
+| `ta` | Tamil |
+| `kn` | Kannada |
+| `ml` | Malayalam |
+
+</AccordionItem>
+<AccordionItem title="Turkic & Central Asian Languages">
+
+| Code | Language |
+|------|----------|
+| `tr` | Turkish |
+| `az` | Azerbaijani |
+| `uz` | Uzbek |
+| `kk` | Kazakh |
+| `ky` | Kyrgyz |
+| `tk` | Turkmen |
+| `ug` | Uyghur |
+
+</AccordionItem>
+<AccordionItem title="Semitic & Afroasiatic Languages">
+
+| Code | Language |
+|------|----------|
+| `ar` | Arabic |
+| `he` | Hebrew |
+| `mt` | Maltese |
+| `am` | Amharic (if present) |
+
+</AccordionItem>
+<AccordionItem title="Other Languages">
+
+| Code | Language |
+|------|----------|
+| `fi` | Finnish |
+| `et` | Estonian |
+| `hu` | Hungarian |
+| `el` | Greek |
+| `hy` | Armenian |
+| `ka` | Georgian |
+| `eu` | Basque |
+| `cy` | Welsh |
+| `ga` | Irish |
+| `gd` | Scottish Gaelic |
+| `yi` | Yiddish |
+| `wa` | Walloon |
+| `sq` | Albanian |
+| `lv` | Latvian |
+| `lt` | Lithuanian |
+| `mi` | Maori |
+| `xh` | Xhosa |
+| `zu` | Zulu |
+| `sw` | Swahili |
+| `ast` | Asturian |
+| `tg` | Tajik |
+| `te` | Telugu |
+
+</AccordionItem>
+</Accordion>
+
+<Callout type="info">
+  Not all translations may be complete at any given time. Untranslated strings fall back to English automatically. Translation contributions are welcome — see the project repository for contribution guidelines.
+</Callout>

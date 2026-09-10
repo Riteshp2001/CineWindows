@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">CineWindows</title>
+  <desc id="desc">Cinema, without the clutter.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10c7d1" stop-opacity=".08"/>
+      <stop offset="100%" stop-color="#10c7d1" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0d0f10"/>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <circle cx="960" cy="200" r="300" fill="#10c7d1" opacity=".035"/>
+  <circle cx="960" cy="200" r="200" fill="#10c7d1" opacity=".05"/>
+  <rect x="770" y="135" width="340" height="360" rx="32" fill="#151718" stroke="#10c7d1" stroke-width="2" stroke-opacity=".15"/>
+  <g transform="translate(940,315)">
+    <rect x="-48" y="-48" width="96" height="96" rx="20" fill="#151718" stroke="#10c7d1" stroke-width="2" stroke-opacity=".2"/>
+    <path d="M-14-26.68a5 5 0 0 0-5 5v43.36a5 5 0 0 0 7.56 4.24l31.74-21.68a5 5 0 0 0 0-8.48L-11.44-22.44A5 5 0 0 0-14-26.68Z" fill="#10c7d1"/>
+  </g>
+  <text x="80" y="145" fill="#10c7d1" font-family="Segoe UI, -apple-system, sans-serif" font-size="30" font-weight="700" letter-spacing="4">CINEWINDOWS</text>
+  <text x="80" y="300" fill="#f1f4ed" font-family="Segoe UI, -apple-system, sans-serif" font-size="76" font-weight="700" letter-spacing="-1.5">Cinema,</text>
+  <text x="80" y="390" fill="#f1f4ed" font-family="Segoe UI, -apple-system, sans-serif" font-size="76" font-weight="700" letter-spacing="-1.5">without the clutter.</text>
+  <text x="82" y="478" fill="#aeb7b2" font-family="Segoe UI, -apple-system, sans-serif" font-size="26" font-weight="500">Fast. Native. Made for Windows.</text>
+</svg>

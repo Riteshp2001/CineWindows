@@ -1,0 +1,172 @@
+---
+title: Audio & Video Filters
+description: Audio equalizer, video filters configuration
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+CineWindows provides real-time control over audio and video processing through its integration with libmpv's filter pipeline. Audio adjustments run through the `AdvancedPlaybackController` and video adjustments through the `VideoOptionsController`, both accessible from the player controls and the right-click context menu.
+
+<Tabs>
+<Tab title="Audio Filters">
+
+## Volume & Mute
+
+Volume ranges from 0 to 200 and is adjustable with the `0`/`9` and `*`/`/` shortcuts. Mute toggles with `M`. The `VolumeOsd` overlay provides visual feedback on every change.
+
+Volume preferences persist across sessions through `QSettings`.
+
+## Track Cycling
+
+Use `#` for the next audio track and `Ctrl+Shift+A` for the previous one. When a file contains multiple audio streams (e.g. director commentary, alternate language dubs), CineWindows lists them in the **Audio Menu** (`Ctrl+A`).
+
+## Audio Delay
+
+Compensate for desynchronized audio with `Ctrl+-` (decrease) and `Ctrl++` (increase). Delay values are applied via mpv's `audio-delay` property and persist for the current session.
+
+## 10-Band Equalizer
+
+The equalizer operates on ten ISO-standard frequency bands:
+
+| Band | Frequency | Range |
+|------|-----------|-------|
+| 1 | 31 Hz | ±12 dB |
+| 2 | 62 Hz | ±12 dB |
+| 3 | 125 Hz | ±12 dB |
+| 4 | 250 Hz | ±12 dB |
+| 5 | 500 Hz | ±12 dB |
+| 6 | 1 kHz | ±12 dB |
+| 7 | 2 kHz | ±12 dB |
+| 8 | 4 kHz | ±12 dB |
+| 9 | 8 kHz | ±12 dB |
+| 10 | 16 kHz | ±12 dB |
+
+Each band uses a Q-factor of 1.0 (wide bell curve) and is chained into a single lavfi filter graph with a `alimiter=limit=0.95` stage to prevent clipping.
+
+### Presets
+
+<Badge variant="default">Bass</Badge> Boosts low-end (+6 dB through 250 Hz) with a gentle roll-off above.
+<Badge variant="default">Treble</Badge> Brightens high-end (+6 dB from 4 kHz upward) while attenuating sub-bass.
+<Badge variant="default">Voice</Badge> Enhances vocal clarity with a mid-range bump centered around 1-2 kHz.
+<Badge variant="default">Flat</Badge> Resets all bands to 0 dB and disables the equalizer.
+
+Presets are applied via `applyEqualizerPreset()` and saved to `QSettings` so the last-used configuration is restored on next launch.
+
+## Loudnorm (LUFS Normalization)
+
+CineWindows integrates EBU R128 loudness normalization through mpv's `loudnorm` lavfi filter, targeting an integrated loudness of -20 LUFS. Toggle it from the **Audio** menu or the equalizer panel — the filter is applied and removed dynamically via `af add` / `af remove` commands with the `@cine_loudnorm` label.
+
+<Callout type="info">
+  Loudnorm is most useful for content with wide dynamic range — movies, podcasts, and user-generated content where volume levels vary significantly between scenes.
+</Callout>
+
+## Audio Visualization
+
+When playing audio-only content (no video track), CineWindows can render real-time visualizations:
+
+<Badge variant="default">Waves</Badge> `showwaves` with cline mode, 1280x720 resolution, color `#10c7d1`.
+<Badge variant="default">Spectrum</Badge> `showspectrum` with scroll slide, combined mode, log scale, intensity color.
+
+Visualization is selected through `setVisualization()` and rendered via mpv's `lavfi-complex` option, which splits the audio signal into an output channel and the visualization overlay.
+
+</Tab>
+<Tab title="Video Filters">
+
+## Image Adjustments
+
+All adjustments use mpv's built-in video equalizer properties with integer ranges:
+
+| Property | Range | Shortcuts |
+|----------|-------|-----------|
+| Contrast | -100 to 100 | `1` / `2` |
+| Brightness | -100 to 100 | `3` / `4` |
+| Gamma | -100 to 100 | `5` / `6` |
+| Saturation | -100 to 100 | `7` / `8` |
+| Hue | -100 to 100 | via menu |
+
+Values persist for the current playback session. Reset all adjustments from the **Video** menu or via the `resetAll()` method on `VideoOptionsController`.
+
+## Deinterlacing
+
+Toggle with `D`. Uses mpv's `deinterlace` property which applies yadif (yet another deinterlacing filter) with the default algorithm. Automatically detects interlaced content where possible.
+
+## Debanding
+
+Toggle with `B`. Applies mpv's `deband` filter to smooth out banding artifacts common in low-bitrate video. The filter uses default parameters (threshold, range, grain) which work well for most content.
+
+<Callout type="tip">
+  Debanding is particularly effective with anime, gradients in skies, and dark scenes in highly compressed video files.
+</Callout>
+
+## Aspect Ratio & Crop
+
+Cycle between aspect ratios with `Shift+A`. Available ratios include original, 4:3, 16:9, 16:10, 21:9, 32:9, and 1:1. The crop feature parses the target ratio and calculates pixel-exact crop dimensions from the video's native resolution.
+
+For manual crop ratios, `VideoOptionsController::setCropRatio()` accepts both colon-separated (`"16:9"`) and decimal (`"1.777"`) formats.
+
+## Zoom & Pan
+
+| Action | Shortcut |
+|--------|----------|
+| Zoom In | `Alt++` |
+| Zoom Out | `Alt+-` |
+| Reset Zoom & Pan | `Alt+Backspace` |
+| Decrease Panscan | `W` |
+| Increase Panscan | `Shift+W` |
+
+The zoom property (`video-zoom`) is a floating-point value — positive numbers zoom in, negatives zoom out. The panscan value controls how much of the video is visible when the aspect ratio does not match the window.
+
+## Rotation
+
+Rotate the video in 90-degree increments:
+
+| Action | Method |
+|--------|--------|
+| Rotate Left | `rotateLeft()` — adds 270° (equivalent to -90°) |
+| Rotate Right | `rotateRight()` — adds 90° |
+| Reset Rotation | `resetRotation()` — sets to 0° |
+
+Rotation uses mpv's `video-rotate` property which stores the cumulative angle modulo 360.
+
+## Horizontal & Vertical Flip
+
+Toggled through mpv's `hflip` and `vflip` video filters with labeled filter entries (`@hflip`, `@vflip`). Multiple toggles are cumulative — the same shortcut alternately applies and removes each flip. Reset both with a single action from the **Video** menu.
+
+## HDR Tone Mapping
+
+For HDR content on SDR displays, CineWindows provides configurable tone mapping:
+
+| Setting | Options | Default |
+|---------|---------|---------|
+| Tone Mapping | `hable`, `mobius`, `bt.2390`, `bt.2446a`, `reinhard`, `gamma`, `linear`, `clip` | `hable` |
+| Target Peak | 100–1000 nits | 100 |
+| Compute Peak | auto | `yes` |
+
+HDR parameters are managed by `AdvancedPlaybackController::applyHdr()` and persist across sessions via `QSettings`.
+
+## Stereo 3D Conversion
+
+Convert between stereoscopic 3D formats:
+
+- **Input formats**: `off`, `sbs2l`, `sbs2r`, `ab2l`, `ab2r`, `abl`, `abr`, `sbsl`, `sbsr`
+- **Output formats**: `arcd`, `aybd`, `ml`, `mr`, `sbsl`, `sbsr`, `abl`, `abr`
+
+Applied as a lavfi `stereo3d` filter (`@cine_stereo`) on the video filter chain.
+
+</Tab>
+</Tabs>
+
+<Accordion>
+<AccordionItem title="Under the Hood — Filter Architecture">
+Audio and video filters in CineWindows are managed through label-based mpv filter commands. Each filter is assigned a unique label (e.g. `@cine_eq`, `@cine_loudnorm`, `@cine_stereo`, `@hflip`) which allows individual removal and replacement without disturbing other active filters.
+
+The `AdvancedPlaybackController` applies all audio filters on `fileLoaded`, ensuring every new file starts with the correct filter state. Video filters are applied on-demand through `VideoOptionsController` and reset when `resetAll()` is called.
+
+Filter state — including equalizer band gains, enabled state, tone mapping mode, and stereo 3D configuration — is persisted to `QSettings` and restored at startup.
+</AccordionItem>
+</Accordion>
