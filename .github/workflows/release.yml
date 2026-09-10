@@ -379,25 +379,25 @@ jobs:
           echo "Publishing $tag from $GITHUB_SHA"
 
       - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: CineWindows-windows
           path: release-assets
 
       - name: Download Linux artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: CineWindows-linux
           path: release-assets
 
       - name: Download macOS arm64 artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: CineWindows-macos-arm64
           path: release-assets
 
       - name: Download macOS x86_64 artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: CineWindows-macos-x86_64
           path: release-assets
