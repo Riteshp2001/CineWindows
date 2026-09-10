@@ -53,6 +53,14 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 
 ---
 
+## Screenshots
+
+| Distraction-free playback | Full playback controls |
+|---|---|
+| <img src="website/public/player-clean.png" alt="CineWindows playing video with the interface hidden" width="720"> | <img src="website/public/player-controls.png" alt="CineWindows playback window with transport controls visible" width="720"> |
+
+---
+
 ## Stack
 
 | Layer | Technology |

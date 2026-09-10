@@ -22,6 +22,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react"
+import ReactMarkdown from "react-markdown"
 import {
   ArrowRight,
   Captions,
@@ -64,6 +65,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import changelogMarkdown from "../../CHANGELOG.md?raw"
+import packageMetadata from "../package.json"
 
 const configuredSiteUrl = (import.meta.env.VITE_SITE_URL || "").replace(
   /\/$/,
@@ -73,6 +76,7 @@ const githubRepositoryUrl = "https://github.com/Riteshp2001/CineWindows"
 const githubReleasesUrl = `${githubRepositoryUrl}/releases`
 const githubReleasesApiUrl =
   "https://api.github.com/repos/Riteshp2001/CineWindows/releases"
+const currentVersion = packageMetadata.version
 
 const navigation: { href: string; label: string; external?: boolean }[] = [
   { href: "/#features", label: "Features" },
@@ -600,7 +604,7 @@ function DownloadSection() {
               </a>
             </Button>
             <p className="text-sm leading-6 text-muted">
-              Version 1.0.0 &mdash; Windows 10 and 11 (64-bit)
+              Version {currentVersion} &mdash; Windows, Linux, and macOS
             </p>
           </div>
         </div>
@@ -969,6 +973,32 @@ type GitHubRelease = {
   published_at: string
   prerelease: boolean
   assets: ReleaseAsset[]
+  bundled?: boolean
+}
+
+function changelogEntry(markdown: string, version: string) {
+  const heading = `## [${version}]`
+  const headingStart = markdown.indexOf(heading)
+  if (headingStart < 0) return ""
+
+  const bodyStart = markdown.indexOf("\n", headingStart)
+  const nextRelease = markdown.indexOf("\n## [", bodyStart + 1)
+  const linkReference = markdown.indexOf(`\n[${version}]:`, bodyStart + 1)
+  const candidates = [nextRelease, linkReference].filter((index) => index >= 0)
+  const bodyEnd = candidates.length ? Math.min(...candidates) : markdown.length
+  return markdown.slice(bodyStart + 1, bodyEnd).trim()
+}
+
+const bundledRelease: GitHubRelease = {
+  id: -1,
+  tag_name: `v${currentVersion}`,
+  name: `CineWindows ${currentVersion}`,
+  body: changelogEntry(changelogMarkdown, currentVersion),
+  html_url: `${githubReleasesUrl}/tag/v${currentVersion}`,
+  published_at: "2026-09-10T00:00:00Z",
+  prerelease: false,
+  assets: [],
+  bundled: true,
 }
 
 function useReleaseFeed(all = false) {
@@ -991,10 +1021,13 @@ function useReleaseFeed(all = false) {
         const data = await response.json() as GitHubRelease | GitHubRelease[]
         return Array.isArray(data) ? data : [data]
       })
-      .then(setReleases)
+      .then((liveReleases) => {
+        setReleases(liveReleases.length ? liveReleases : [bundledRelease])
+      })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return
-        setError(reason instanceof Error ? reason.message : "Could not load releases")
+        setReleases([bundledRelease])
+        setError(reason instanceof Error ? reason.message : "Could not load live release data")
       })
       .finally(() => setLoading(false))
     return () => controller.abort()
@@ -1008,27 +1041,101 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+type DownloadPackage = {
+  asset: ReleaseAsset
+  label: string
+  platform: string
+  detail: string
+  order: number
+}
+
+function describeDownload(asset: ReleaseAsset): DownloadPackage | null {
+  const name = asset.name.toLowerCase()
+  if (name.endsWith("-win64-setup.exe")) {
+    return { asset, label: "Windows installer", platform: "Windows", detail: "x86_64 setup", order: 1 }
+  }
+  if (name.endsWith("-win64-portable.zip")) {
+    return { asset, label: "Portable ZIP", platform: "Windows", detail: "x86_64 portable", order: 2 }
+  }
+  if (name.endsWith(".appimage")) {
+    return { asset, label: "AppImage", platform: "Linux", detail: "x86_64 portable", order: 3 }
+  }
+  if (name.endsWith(".flatpak")) {
+    return { asset, label: "Flatpak bundle", platform: "Linux", detail: "x86_64 bundle", order: 4 }
+  }
+  if (name.endsWith("-arm64.dmg")) {
+    return { asset, label: "Apple silicon DMG", platform: "macOS", detail: "arm64", order: 5 }
+  }
+  if (name.endsWith("-x86_64.dmg")) {
+    return { asset, label: "Intel DMG", platform: "macOS", detail: "x86_64", order: 6 }
+  }
+  return null
+}
+
 function ReleaseDownloads({ release }: { release: GitHubRelease }) {
-  const installer = release.assets.find((asset) => asset.name.endsWith("-win64-setup.exe"))
-  const portable = release.assets.find((asset) => asset.name.endsWith("-win64-portable.zip"))
+  const packages = release.assets
+    .map(describeDownload)
+    .filter((item): item is DownloadPackage => item !== null)
+    .sort((left, right) => left.order - right.order)
+  const checksums = release.assets.filter((asset) => asset.name.startsWith("SHA256SUMS"))
+
+  if (!packages.length) {
+    return (
+      <div className="feature-card mt-8">
+        <p className="font-semibold">Release packages are being published.</p>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          Follow the canonical GitHub Releases page for installers and checksums.
+        </p>
+        <Button className="mt-5" variant="outline" asChild>
+          <a href={githubReleasesUrl} target="_blank" rel="noreferrer">
+            Open GitHub Releases
+            <ArrowRight className="size-4" />
+          </a>
+        </Button>
+      </div>
+    )
+  }
+
   return (
-    <div className="mt-8 grid gap-4 sm:grid-cols-2" data-stagger>
-      {[installer, portable].filter(Boolean).map((asset) => asset && (
-        <a
-          className="feature-card group block outline-none focus-visible:ring-2 focus-visible:ring-accent reveal"
-          href={asset.browser_download_url}
-          key={asset.id}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-semibold">{asset.name.includes("setup") ? "Windows installer" : "Portable ZIP"}</p>
-              <p className="mt-1 text-sm text-muted">{formatBytes(asset.size)}</p>
+    <div className="mt-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-stagger>
+        {packages.map(({ asset, detail, label, platform }) => (
+          <a
+            className="feature-card group block outline-none focus-visible:ring-2 focus-visible:ring-accent reveal"
+            href={asset.browser_download_url}
+            key={asset.id}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-accent">{platform}</p>
+                <p className="mt-1 font-semibold">{label}</p>
+                <p className="mt-1 text-sm text-muted">{detail} · {formatBytes(asset.size)}</p>
+              </div>
+              <Download className="size-5 text-accent transition-transform group-hover:translate-y-0.5" />
             </div>
-            <Download className="size-5 text-accent transition-transform group-hover:translate-y-0.5" />
-          </div>
-          {asset.digest && <code className="mt-5 block break-all text-[11px] text-muted">{asset.digest}</code>}
-        </a>
-      ))}
+            {asset.digest && <code className="mt-5 block break-all text-[11px] text-muted">{asset.digest}</code>}
+          </a>
+        ))}
+      </div>
+      {checksums.length > 0 && (
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+          <span>Checksums:</span>
+          {checksums.map((asset) => (
+            <a className="font-semibold text-foreground underline" href={asset.browser_download_url} key={asset.id}>
+              {asset.name}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReleaseNotes({ body }: { body: string | null }) {
+  if (!body) return <p className="mt-5 text-sm text-muted">No release notes were provided.</p>
+  return (
+    <div className="release-notes">
+      <ReactMarkdown>{body}</ReactMarkdown>
     </div>
   )
 }
@@ -1040,24 +1147,16 @@ function DownloadPage() {
     <>
       <Header />
       <main id="main-content" className="site-container section-space min-h-[70svh]">
-        <p className="eyebrow text-accent reveal">Windows 10 and 11</p>
+        <p className="eyebrow text-accent reveal">Windows · Linux · macOS</p>
         <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-[-0.055em] sm:text-7xl reveal" style={{ "--reveal-delay": "60ms" } as CSSProperties}>Download CineWindows</h1>
-        <p className="mt-6 max-w-2xl text-lg leading-8 text-muted reveal" style={{ "--reveal-delay": "120ms" } as CSSProperties}>Choose the signed installer for automatic setup or the portable archive for a self-contained copy.</p>
+        <p className="mt-6 max-w-2xl text-lg leading-8 text-muted reveal" style={{ "--reveal-delay": "120ms" } as CSSProperties}>Choose the package for your platform. Every download and checksum comes from the canonical CineWindows GitHub release.</p>
         {loading && <p className="mt-12 text-muted">Loading the latest release…</p>}
         {error && <p className="mt-12 text-red-400">{error}</p>}
-        {!loading && !error && !release && (
-          <div className="feature-card mt-12 max-w-2xl reveal">
-            <h2 className="text-xl font-semibold">The first public CineWindows release is being prepared.</h2>
-            <p className="mt-3 text-sm leading-6 text-muted">
-              Downloads will appear here automatically after they are published on{" "}
-              <a href={githubReleasesUrl} target="_blank" rel="noreferrer">CineWindows GitHub Releases</a>.
-            </p>
-          </div>
-        )}
         {release && (
-          <section className="mt-12 max-w-4xl reveal" style={{ "--reveal-delay": "180ms" } as CSSProperties}>
+          <section className="mt-12 max-w-6xl reveal" style={{ "--reveal-delay": "180ms" } as CSSProperties}>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
               <h2 className="text-2xl font-semibold">{release.name || release.tag_name}</h2>
+              {release.bundled && <Badge variant="outline">Release notes ready</Badge>}
               <time className="text-sm text-muted">{new Date(release.published_at).toLocaleDateString()}</time>
             </div>
             <ReleaseDownloads release={release} />
@@ -1084,16 +1183,16 @@ function ChangelogPage() {
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted reveal" style={{ "--reveal-delay": "120ms" } as CSSProperties}>Every shipped CineWindows build, with release notes and verified artifacts from the canonical CineWindows repository.</p>
         {loading && <p className="mt-12 text-muted">Loading releases…</p>}
         {error && <p className="mt-12 text-red-400">{error}</p>}
-        {!loading && !error && releases.length === 0 && <p className="feature-card mt-12 max-w-2xl text-muted reveal">No public CineWindows releases have been published yet.</p>}
         <div className="mt-14 max-w-4xl" data-stagger>
           {releases.map((release) => (
             <article className="border-t border-border py-10 reveal" key={release.id}>
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-2xl font-semibold">{release.name || release.tag_name}</h2>
                 {release.prerelease && <Badge variant="outline">Pre-release</Badge>}
+                {release.bundled && <Badge variant="outline">Bundled release notes</Badge>}
                 <time className="text-sm text-muted">{new Date(release.published_at).toLocaleDateString()}</time>
               </div>
-              <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-muted">{release.body || "No release notes were provided."}</p>
+              <ReleaseNotes body={release.body} />
               <ReleaseDownloads release={release} />
             </article>
           ))}

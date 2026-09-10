@@ -1,7 +1,7 @@
 {
   "name": "cinewindows-website",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.1",
   "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=22.22.2"
@@ -25,6 +25,7 @@
     "lucide-react": "^1.44.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

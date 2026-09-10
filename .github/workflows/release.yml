@@ -394,6 +394,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
       - name: Resolve release tag
         id: release
         shell: bash
@@ -411,7 +414,21 @@ jobs:
             tag="v${version}"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
           echo "Publishing $tag from $GITHUB_SHA"
+
+      - name: Prepare release notes from changelog
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          awk -v version="$RELEASE_VERSION" '
+            $0 ~ "^## \\[" version "\\] - " { capture = 1 }
+            capture && /^## \[/ && $0 !~ "^## \\[" version "\\] - " { exit }
+            capture && /^\[[^]]+\]:/ { exit }
+            capture { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          test -s RELEASE_NOTES.md
 
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
@@ -464,5 +481,6 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
           files: release-assets/*
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
           fail_on_unmatched_files: true
