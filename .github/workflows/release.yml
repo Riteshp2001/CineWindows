@@ -1,0 +1,427 @@
+# CineWindows - Video Player
+# Copyright (c) 2026 Ritesh Pandit
+#
+# CineWindows Community License
+#
+# This source code is made available for personal, non-commercial
+# use only. Organizations may not use, copy, modify, or distribute
+# this code without written permission from Ritesh Pandit.
+#
+# See the LICENSE.md file for full license terms.
+#
+# Project: CineWindows
+# Author:  Ritesh Pandit
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 1.0.0 or v1.0.0"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.8.3
+
+jobs:
+  windows-installer:
+    name: Windows installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install MSYS2 media dependencies
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-x86_64-binutils
+            mingw-w64-x86_64-extra-cmake-modules
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-nsis
+            mingw-w64-x86_64-vulkan-headers
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_mingw
+          cache: true
+          tools: >-
+            tools_cmake,qt.tools.cmake
+            tools_ninja,qt.tools.ninja
+            tools_mingw1310,qt.tools.win64_mingw1310
+
+      - name: Cache native media dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            .deps/libmpv-static
+            .deps/media-tools
+            .deps/mpvqt-install
+          key: native-media-${{ runner.os }}-${{ env.QT_VERSION }}-v1.2.0-${{ hashFiles('scripts/setup/bootstrap_libmpv_windows.ps1', 'scripts/setup/bootstrap_media_tools_windows.ps1', 'scripts/setup/bootstrap_mpvqt_windows.ps1') }}
+
+      - name: Bootstrap standalone media binaries
+        shell: pwsh
+        run: |
+          if (-not (Test-Path ".deps\libmpv-static\bin\libmpv-2.dll")) {
+            & scripts\setup\bootstrap_libmpv_windows.ps1
+          }
+          if (-not (Test-Path ".deps\media-tools\bin\ffmpeg.exe") -or
+              -not (Test-Path ".deps\media-tools\bin\ffprobe.exe") -or
+              -not (Test-Path ".deps\media-tools\bin\yt-dlp.exe")) {
+            & scripts\setup\bootstrap_media_tools_windows.ps1
+          }
+
+      - name: Bootstrap MpvQt
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR
+          if (-not $qtRoot -and $env:Qt6_DIR) {
+            $qtRoot = Split-Path (Split-Path (Split-Path $env:Qt6_DIR))
+          }
+          $qtCompilerBin = Join-Path $env:IQTA_TOOLS "mingw1310_64\bin"
+          $msysPrefix = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
+          if (-not (Test-Path ".deps\mpvqt-install\lib\cmake\MpvQt\MpvQtConfig.cmake")) {
+            & scripts\setup\bootstrap_mpvqt_windows.ps1 `
+              -QtRoot $qtRoot `
+              -QtCompilerBin $qtCompilerBin `
+              -MsysPrefix $msysPrefix `
+              -StaticLibmpvPrefix "$PWD\.deps\libmpv-static" `
+              -SkipMsysPackageInstall
+          }
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR
+          if (-not $qtRoot -and $env:Qt6_DIR) {
+            $qtRoot = Split-Path (Split-Path (Split-Path $env:Qt6_DIR))
+          }
+          $qtCompilerBin = Join-Path $env:IQTA_TOOLS "mingw1310_64\bin"
+          $qtNinjaBin = Join-Path $env:IQTA_TOOLS "Ninja"
+          $msysPrefix = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
+          $env:PATH = "$qtRoot\bin;$qtCompilerBin;$qtNinjaBin;$msysPrefix\bin;$env:PATH"
+          cmake --preset release `
+            -DCINEWINDOWS_MPVQT_PREFIX="$PWD\.deps\mpvqt-install" `
+            -DCINEWINDOWS_LIBMPV_PREFIX="$PWD\.deps\libmpv-static" `
+            -DCINEWINDOWS_LIBMPV_RUNTIME="$PWD\.deps\libmpv-static\bin\libmpv-2.dll"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build --preset release
+
+      - name: QML lint
+        shell: pwsh
+        run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Release translations
+        shell: pwsh
+        run: cmake --build --preset release --target release_translations
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR
+          if (-not $qtRoot -and $env:Qt6_DIR) {
+            $qtRoot = Split-Path (Split-Path (Split-Path $env:Qt6_DIR))
+          }
+          $qtCompilerBin = Join-Path $env:IQTA_TOOLS "mingw1310_64\bin"
+          $qtNinjaBin = Join-Path $env:IQTA_TOOLS "Ninja"
+          $msysPrefix = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
+          $env:PATH = "$qtRoot\bin;$qtCompilerBin;$qtNinjaBin;$msysPrefix\bin;$env:PATH"
+          & scripts\package\deploy_windows.ps1 `
+            -BuildDir "build/release" `
+            -Configuration Release `
+            -ArtifactDir packaging/windows/artifacts `
+            -LibmpvBin "$PWD\.deps\libmpv-static\bin" `
+            -MediaToolsBin "$PWD\.deps\media-tools\bin" `
+            -MsysBin "$msysPrefix\bin" `
+            -QtBin "$qtRoot\bin" `
+            -SkipGuiStartupCheck
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem packaging/windows/artifacts -File |
+            Where-Object Name -ne 'SHA256SUMS-windows.txt' |
+            ForEach-Object { "$(Get-FileHash $_.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash)  $($_.Name)" } |
+            Set-Content packaging/windows/artifacts/SHA256SUMS-windows.txt
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-windows
+          path: packaging/windows/artifacts/*
+          if-no-files-found: error
+
+      - name: Upload media tools artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-windows-media-tools
+          path: packaging/windows/artifacts/*media-tools*
+          if-no-files-found: error
+
+  linux-appimage:
+    name: Linux AppImage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            libmpv-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libxkbcommon-dev \
+            libdbus-1-dev \
+            libfuse2t64 \
+            pkg-config \
+            file
+
+      - name: Install ECM 6.15.0 (MpvQt dependency)
+        run: |
+          git clone --depth 1 --branch v6.15.0 \
+            https://invent.kde.org/frameworks/extra-cmake-modules.git /tmp/ecm
+          cmake -S /tmp/ecm -B /tmp/ecm/build -DCMAKE_INSTALL_PREFIX=/usr
+          sudo cmake --install /tmp/ecm/build
+
+      - name: Set up Python for aqtinstall compatibility
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          cache: true
+          setup-python: false
+          modules: >-
+            qtshadertools
+            qt5compat
+            qtmultimedia
+            qtimageformats
+            qtquick3d
+            qtquicktimeline
+            qtlottie
+            qtwaylandcompositor
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: QML lint
+        run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Release translations
+        run: cmake --build --preset release --target release_translations
+
+      - name: Remove unused Qt SQL drivers
+        run: |
+          sql_driver_dir="${QT_ROOT_DIR}/plugins/sqldrivers"
+          test -f "${sql_driver_dir}/libqsqlite.so"
+          find "${sql_driver_dir}" -maxdepth 1 -type f \
+            -name 'libqsql*.so' ! -name 'libqsqlite.so' -print -delete
+
+      - name: Package AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          chmod +x scripts/package/deploy_linux.sh
+          bash scripts/package/deploy_linux.sh "build/release" "packaging/linux/artifacts"
+
+      - name: Generate checksums
+        run: |
+          cd packaging/linux/artifacts
+          sha256sum * > SHA256SUMS-linux.txt
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-linux
+          path: packaging/linux/artifacts/*
+          if-no-files-found: error
+
+  macos-dmg:
+    name: macOS DMG (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Set up Python for aqtinstall compatibility
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          cache: true
+          setup-python: false
+          modules: >-
+            qtshadertools
+            qt5compat
+            qtmultimedia
+            qtimageformats
+            qtquick3d
+            qtquicktimeline
+            qtlottie
+
+      - name: Install system dependencies
+        run: brew install extra-cmake-modules librsvg mpv ninja pkg-config create-dmg
+
+      - name: Generate application icon
+        run: bash scripts/generate/generate_icns.sh
+
+      - name: Configure
+        run: |
+          export PKG_CONFIG_PATH="$(brew --prefix mpv)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          cmake --preset release \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$(brew --prefix mpv);$(brew --prefix extra-cmake-modules)" \
+            -DCINEWINDOWS_MACOS_ARCHITECTURES="${{ matrix.arch }}"
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: QML lint
+        run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Release translations
+        run: cmake --build --preset release --target release_translations
+
+      - name: Package and verify
+        run: bash scripts/package/deploy_macos.sh "build/release" "packaging/macos/artifacts" "${{ matrix.arch }}"
+
+      - name: Generate checksum
+        working-directory: packaging/macos/artifacts
+        run: shasum -a 256 *.dmg > "SHA256SUMS-${{ matrix.arch }}.txt"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-macos-${{ matrix.arch }}
+          path: packaging/macos/artifacts/*
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
+    needs:
+      - windows-installer
+      - linux-appimage
+      - macos-dmg
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            version="${INPUT_VERSION#v}"
+            if [[ -z "$version" ]]; then
+              echo "ERROR: workflow_dispatch releases require a version input."
+              exit 1
+            fi
+            tag="v${version}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Publishing $tag from $GITHUB_SHA"
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CineWindows-windows
+          path: release-assets
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CineWindows-linux
+          path: release-assets
+
+      - name: Download macOS arm64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CineWindows-macos-arm64
+          path: release-assets
+
+      - name: Download macOS x86_64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CineWindows-macos-x86_64
+          path: release-assets
+
+      - name: Generate combined checksum manifest
+        shell: bash
+        run: |
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name 'SHA256SUMS*.txt' -printf '%f\0' \
+            | sort -z \
+            | xargs -0 sha256sum > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Verify release assets
+        shell: bash
+        run: |
+          test -n "$(find release-assets -maxdepth 1 -type f -print -quit)"
+          find release-assets -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: release-assets/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

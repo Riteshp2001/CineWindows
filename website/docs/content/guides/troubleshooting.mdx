@@ -1,0 +1,138 @@
+---
+title: Troubleshooting
+description: Common issues, their causes, and solutions
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import CodeGroup from "blume/components/content/CodeGroup.astro";
+
+<Accordion>
+<AccordionItem title="mpv stats pages 2–4 don't show">
+
+  **Cause:** CineWindows forces the OpenGL RHI backend on Windows for mpv video rendering (`QSG_RHI_BACKEND=opengl`). Stats pages 2 (frame timings), 3 (cache), and 4 (key bindings) rely on Direct3D 11-specific mpv features and are not available under the OpenGL backend.
+
+  **Solution:** This is a known limitation of the current architecture. Pages 1 (default), 5 (tracks), and the keyboard shortcut reference (`?`) work correctly. Toggle stats with `F1`–`F5` — non-functional pages will show a blank overlay.
+
+  <Badge variant="default">Affects F2, F3, F4</Badge>
+
+</AccordionItem>
+
+<AccordionItem title="Video not rendering (audio plays, black screen)">
+
+  **Cause:** Qt 6 defaults to the Direct3D 11 RHI backend on Windows, but mpv's OpenGL render API is incompatible with D3D11. CineWindows forces `QSG_RHI_BACKEND=opengl` at startup, but this can fail on systems with broken or missing OpenGL drivers.
+
+  **Solution:** Ensure your GPU drivers are up to date. On systems with only D3D11 support, this may not work — consider a system with OpenGL 3.3+ support. Verify that `QSG_RHI_BACKEND=opengl` is being set by checking the application log for the RHI backend message.
+
+  <CodeGroup>
+  ```powershell title="Verify RHI backend"
+  # Check environment variable is set
+  echo $env:QSG_RHI_BACKEND
+  # Should output: opengl
+  ```
+  </CodeGroup>
+
+</AccordionItem>
+
+<AccordionItem title="Audio not working">
+
+  **Cause:** Several possibilities: system audio device is not available, mpv audio output driver selection fails, or the volume is muted or set to zero.
+
+  **Solution:**
+  - Check that `Mute` is not enabled (press `M` to toggle)
+  - Increase volume with `0` or `*`
+  - Verify your system audio device is working with other applications
+  - Check the audio output device selection in your system sound settings
+  - Try a different audio track (`#` cycles tracks)
+
+</AccordionItem>
+
+<AccordionItem title="Subtitles not loading">
+
+  **Cause:** Subtitle files may not be auto-detected, the wrong track is selected, or the subtitle visibility is toggled off.
+
+  **Solution:**
+  - Press `V` to toggle subtitle visibility
+  - Cycle subtitle tracks with `J` (next) or `Shift+J` (previous)
+  - For external subtitle files, drag and drop the file onto the window
+  - Check that the subtitle file name matches the video file name for auto-loading
+  - Verify subtitle font and scale settings in Preferences
+
+</AccordionItem>
+
+<AccordionItem title="yt-dlp not found (streaming fails)">
+
+  **Cause:** CineWindows requires yt-dlp to be in the application directory or on the system `PATH` for URL streaming (YouTube, etc.).
+
+  **Solution:**
+  - The official setup installer and portable releases fetch and place `yt-dlp.exe` automatically during installation or packaging
+  - If running from a portable ZIP, ensure `yt-dlp.exe` is present in the application directory next to `CineWindows.exe`
+  - Download official application updates and release packages from GitHub Releases
+  - Verify with `yt-dlp --version` in a terminal if custom pathing is used
+
+  <Callout type="info">
+    yt-dlp is packaged into official release builds. The installer and deployment pipeline fetch the latest release binaries from official GitHub releases.
+  </Callout>
+
+</AccordionItem>
+
+<AccordionItem title="Remote control not discovering">
+
+  **Cause:** The LAN companion remote service may not be running on the expected port, or firewall rules are blocking connections.
+
+  **Solution:**
+  - Open Preferences and verify the Remote Control service is enabled
+  - Default port is `32322` — check your firewall allows inbound connections on this port
+  - Ensure both devices are on the same local network
+  - Regenerate the pairing code from the Remote Control settings
+  - The companion remote web interface URL is displayed in the Remote Control settings panel
+
+</AccordionItem>
+
+<AccordionItem title="Crashes on startup">
+
+  **Cause:** Typically a missing Qt runtime DLL, incompatible libmpv version, or corrupt configuration file.
+
+  **Solution:**
+  - Run from a command prompt to see any error messages before the crash
+  - Verify Qt 6.8+ runtime DLLs are available (windeployqt should have deployed them)
+  - Check that libmpv is version 2.x and compatible with MpvQt 1.2.0
+  - Delete or rename the configuration directory (`%APPDATA%/gyrolet/CineWindows/`) to reset settings
+  - Try the portable ZIP distribution instead of the installed version
+
+  <CodeGroup>
+  ```powershell title="Reset configuration"
+  # Backup and remove
+  Rename-Item "$env:APPDATA\gyrolet\CineWindows" "$env:APPDATA\gyrolet\CineWindows.backup"
+  ```
+  </CodeGroup>
+
+</AccordionItem>
+
+<AccordionItem title="Performance issues (stuttering video)">
+
+  **Cause:** Software decoding of high-resolution video, insufficient GPU capabilities, or missing hardware acceleration.
+
+  **Solution:**
+  - Open Preferences and enable Hardware Acceleration (`auto-safe`)
+  - Verify your GPU supports DXVA2 or D3D11VA decoding
+  - Close other GPU-intensive applications
+  - Reduce video quality or resolution in mpv.conf if needed
+  - Check CPU usage — if it's near 100%, hardware decoding is not active
+
+  <Badge variant="default">Hardware decoding auto-safe</Badge>
+
+</AccordionItem>
+</Accordion>
+
+## Getting Help
+
+If none of the above solutions resolve your issue:
+
+- Check the application log for error messages (visible via the debug console with the `` ` `` key)
+- Verify your system meets the minimum requirements: Windows 10 build 1809+, Qt 6.8+ runtime, GPU with OpenGL 3.3+ support
+- File an issue on the project repository with your system details and a description of the problem

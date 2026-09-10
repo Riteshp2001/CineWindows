@@ -1,0 +1,408 @@
+---
+title: IPC Protocol Reference
+description: Complete JSON-RPC IPC command and event reference
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+import CodeGroup from "blume/components/content/CodeGroup.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+CineWindows implements the [mpv JSON IPC protocol](https://mpv.io/manual/stable/#json-ipc) over TCP and stdin. This reference covers every supported command, event, property, and protocol detail for external tool and script integration.
+
+<Badge variant="accent">mpv JSON IPC</Badge>
+<Badge variant="default">TCP 127.0.0.1</Badge>
+<Badge variant="default">stdin (--cli)</Badge>
+
+## Overview
+
+| Aspect | Detail |
+|--------|--------|
+| Transport | TCP (localhost only) or stdin |
+| Default port | `32321` |
+| Encoding | UTF-8 |
+| Delimiter | `\n` (newline) |
+| Protocol | Newline-delimited JSON (NDJSON) |
+| Max clients | Unlimited (OS-limited) |
+
+## Request / Response Format
+
+Every request is a JSON object with a `command` array and a `request_id` for correlation.
+
+<CodeGroup>
+```json title="Request"
+{"command":["<method>","<arg1>","<arg2>",...],"request_id":<number>}
+```
+
+```json title="Success Response"
+{"error":"success","request_id":<number>,"data":<value>}
+```
+
+```json title="Error Response"
+{"error":"<message>","request_id":<number>,"data":null}
+```
+</CodeGroup>
+
+### Error Messages
+
+| Error | Meaning |
+|-------|---------|
+| `success` | Command executed successfully |
+| `unknown command` | The method name is not recognised |
+| `property not found` | The requested property does not exist |
+| `invalid parameter` | One or more arguments are invalid |
+| `unsupported` | The command is valid but not implemented |
+
+## Events
+
+Events are pushed automatically to all connected TCP clients (or written to stdout in CLI mode). Each event is a JSON object with an `event` field.
+
+<CodeGroup>
+```json title="Standard Event"
+{"event":"start-file","request_id":0}
+```
+
+```json title="Property Change Event"
+{"event":"property-change","id":1,"request_id":0,"name":"time-pos","data":43.1}
+```
+</CodeGroup>
+
+| Event | Trigger | Extra Fields |
+|-------|---------|--------------|
+| `start-file` | A new file begins loading | — |
+| `file-loaded` | File loading completes successfully | — |
+| `end-file` | Current file playback ends | `reason` (`"eof"`, `"stop"`, `"error"`) |
+| `seek` | Seek operation occurs | — |
+| `playback-restart` | Playback resumes after seek or load | — |
+| `pause` | Pause state changes (on/off) | — |
+| `shutdown` | Application is shutting down | — |
+| `idle` | Player enters idle state (no media) | — |
+| `property-change` | An observed property changed value | `id`, `name`, `data` |
+
+## Services
+
+### IPC Server
+
+The `IpcServer` class implements the TCP server. It listens on `127.0.0.1` and manages per-client session state for property observations. The server uses reference counting for dynamic observations — when multiple clients observe the same property, only one mpv observation is registered and the value is broadcast to all subscribed clients.
+
+### Console Reader
+
+The `ConsoleReader` class implements the `--cli` stdin mode. It reads from stdin on a background `QThread` and marshals all player interaction to the Qt main thread via queued connections. It supports the same command set and property observation as the TCP server.
+
+## Command Groups
+
+<Accordion>
+<AccordionItem title="Playback Control">
+
+Commands for managing what is playing and the playback state.
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `loadfile` | `url`, `mode` | Load a file or URL. `mode` is `"replace"` or `"append"` |
+| `playlist-next` | — | Advance to the next playlist item |
+| `playlist-prev` | — | Return to the previous playlist item |
+| `playlist-play-index` | `index` | Play the playlist item at the given index |
+| `stop` | — | Stop playback and unload the media |
+| `quit` | — | Exit the application entirely |
+
+The `loadfile` command accepts local file paths and remote URLs supported by mpv and yt-dlp. The path must be UTF-8 encoded.
+
+</AccordionItem>
+<AccordionItem title="Property Operations">
+
+Read, write, and modify player and media properties.
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `get_property` | `name` | Read the current value of a property |
+| `set_property` | `name`, `value` | Write a value to a property |
+| `set` | `name`, `value` | Alias for `set_property` |
+| `cycle` | `name`, `direction` | Cycle a property `"up"` or `"down"` |
+| `add` | `name`, `value` | Add a numeric value to a property |
+| `multiply` | `name`, `value` | Multiply a property value |
+| `seek` | `amount`, `type` | Seek by `amount`. Type: `"relative"`, `"absolute"`, `"absolute-percent"`, `"relative-percent"` |
+| `revert_seek` | — | Undo the last seek and restore the previous position |
+| `frame_step` | — | Advance playback by one frame |
+| `frame_back_step` | — | Reverse playback by one frame |
+| `screenshot` | — | Capture a screenshot to the default directory |
+| `screenshot_raw` | — | Capture a screenshot and return it as base64-encoded data |
+
+</AccordionItem>
+<AccordionItem title="Observation">
+
+Subscribe to real-time property change notifications.
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `observe_property` | `id`, `name` | Subscribe to changes on a property. The `id` is a client-chosen numeric identifier. Changes produce `property-change` events with the raw typed value in `data` |
+| `observe_property_string` | `id`, `name` | Same as `observe_property`, but the value is sent as a formatted string in `data` |
+| `unobserve_property` | `id` | Unsubscribe from a previously observed property by its observation ID |
+
+Observation state is per-session. When a TCP client disconnects, all its observations are automatically cleaned up. If no clients remain subscribed to a given property, the underlying mpv observation is released.
+
+</AccordionItem>
+<AccordionItem title="Input Simulation">
+
+Simulate user input through mpv's key-binding system.
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `keypress` | `key_name` | Simulate a key press using mpv key names (e.g. `"Space"`, `"Ctrl+f"`) |
+| `keydown` | `key_name` | Simulate a key being held down |
+| `keyup` | `key_name` | Release a simulated key |
+| `mouse` | `x`, `y`, `button`, `mode` | Simulate a mouse event at pixel coordinates |
+
+</AccordionItem>
+<AccordionItem title="Utility">
+
+Diagnostic and helper commands.
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `get_version` | — | Returns the mpv client API version as a number |
+| `get_time_us` | — | Returns mpv's internal monotonic time in microseconds |
+| `get_property_string` | `name` | Read a property and return it formatted as a string |
+| `set_property_string` | `name`, `value` | Write a property value as a string |
+
+</AccordionItem>
+</Accordion>
+
+## Supported Properties
+
+Properties are read with `get_property` and written with `set_property` (or `set`). All standard mpv properties are accessible; the table below lists those most commonly used with CineWindows.
+
+### Playback State
+
+| Property | Type | Writable | Description |
+|----------|------|----------|-------------|
+| `time-pos` | number | Yes | Current playback position in seconds |
+| `duration` | number | No | Total media duration in seconds |
+| `percent-pos` | number | Yes | Position as percentage (0–100) |
+| `playback-time` | number | No | Current playback time accounting for speed |
+| `pause` | boolean | Yes | Pause state (`true` = paused) |
+| `speed` | number | Yes | Playback speed multiplier (0.25–4.0) |
+| `eof-reached` | boolean | No | End of file reached |
+| `chapter` | number | Yes | Current chapter index |
+| `edition` | number | Yes | Current edition (MKV editions) |
+
+### Volume & Audio
+
+| Property | Type | Writable | Description |
+|----------|------|----------|-------------|
+| `volume` | number | Yes | Audio volume (0–200) |
+| `mute` | boolean | Yes | Audio mute state |
+| `audio-delay` | number | Yes | Audio sync delay in seconds |
+| `audio-codec` | string | No | Active audio codec name |
+| `audio-params` | object | No | Audio format parameters (samplerate, channels, etc.) |
+
+### Video
+
+| Property | Type | Writable | Description |
+|----------|------|----------|-------------|
+| `fullscreen` | boolean | Yes | Fullscreen state |
+| `video-aspect` | string | Yes | Aspect ratio override (e.g. `"16:9"`, `"-1"`) |
+| `panscan` | number | Yes | Pan-and-scan range (0.0–1.0) |
+| `zoom` | number | Yes | Video zoom level |
+| `deinterlace` | boolean | Yes | Deinterlace filter state |
+| `deband` | boolean | Yes | Deband filter state |
+| `contrast` | number | Yes | Contrast (-100 to 100) |
+| `brightness` | number | Yes | Brightness (-100 to 100) |
+| `gamma` | number | Yes | Gamma (-100 to 100) |
+| `saturation` | number | Yes | Saturation (-100 to 100) |
+| `hue` | number | Yes | Hue (-100 to 100) |
+| `video-codec` | string | No | Active video codec name |
+| `video-params` | object | No | Video format parameters (width, height, fps, etc.) |
+| `width` | number | No | Video width in pixels |
+| `height` | number | No | Video height in pixels |
+| `dwidth` | number | No | Display width |
+| `dheight` | number | No | Display height |
+
+### Subtitles
+
+| Property | Type | Writable | Description |
+|----------|------|----------|-------------|
+| `sub-visibility` | boolean | Yes | Subtitle visibility |
+| `sub-delay` | number | Yes | Subtitle delay in seconds |
+| `sub-pos` | number | Yes | Subtitle vertical position (0–100) |
+| `sub-scale` | number | Yes | Subtitle font scale |
+| `sid` | number | Yes | Active subtitle track ID |
+| `secondary-sid` | number | Yes | Secondary subtitle track ID |
+| `sub-text` | string | No | Current subtitle text |
+| `sub-start` | number | No | Current subtitle start time |
+| `sub-end` | number | No | Current subtitle end time |
+
+### Playlist & Media Info
+
+| Property | Type | Writable | Description |
+|----------|------|----------|-------------|
+| `playlist-pos` | number | Yes | Current playlist index |
+| `playlist-count` | number | No | Number of items in playlist |
+| `playlist` | array | No | Full playlist contents |
+| `filename` | string | No | Current file name (no path) |
+| `file-size` | number | No | File size in bytes |
+| `path` | string | No | Full file path or URL |
+| `media-title` | string | No | Media title from metadata |
+| `metadata` | object | No | File metadata key-value pairs |
+| `chapter-list` | array | No | List of chapter objects |
+| `track-list` | array | No | List of all track objects |
+| `aid` | number | Yes | Active audio track ID |
+| `vid` | number | Yes | Active video track ID |
+| `disc-title` | number | Yes | Blu-ray disc title |
+
+## Examples
+
+<CodeGroup>
+```python title="Python"
+import json, socket
+
+def ipc(command):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", 32321))
+    s.sendall((json.dumps(command) + "\n").encode())
+    resp = s.makefile().readline()
+    s.close()
+    return json.loads(resp)
+
+# Observe time position
+ipc({"command": ["observe_property", 1, "time-pos"], "request_id": 1})
+
+# Set volume and mute
+ipc({"command": ["set", "volume", 70], "request_id": 2})
+ipc({"command": ["set", "mute", False], "request_id": 3})
+
+# Seek and adjust speed
+ipc({"command": ["seek", 30, "absolute"], "request_id": 4})
+ipc({"command": ["set", "speed", 1.5], "request_id": 5})
+
+# Load YouTube URL
+ipc({"command": ["loadfile",
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "replace"], "request_id": 6})
+```
+
+```javascript title="JavaScript (Node.js)"
+const net = require("net");
+
+function ipc(command) {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(32321, "127.0.0.1", () => {
+      client.write(JSON.stringify(command) + "\n");
+    });
+    let data = "";
+    client.on("data", (chunk) => {
+      data += chunk.toString();
+      if (data.endsWith("\n")) {
+        resolve(JSON.parse(data.trim()));
+        client.end();
+      }
+    });
+    client.on("error", reject);
+  });
+}
+
+async function main() {
+  const props = await Promise.all([
+    ipc({ command: ["get_property", "time-pos"], request_id: 1 }),
+    ipc({ command: ["get_property", "duration"], request_id: 2 }),
+    ipc({ command: ["get_property", "media-title"], request_id: 3 }),
+  ]);
+  console.log("Playback state:", props);
+}
+
+main();
+```
+
+```bash title="Bash (netcat)"
+#!/bin/bash
+IPC="127.0.0.1 32321"
+
+# Get current position
+echo '{"command":["get_property","time-pos"],"request_id":1}' | nc -q0 $IPC
+
+# Set A-B loop
+echo '{"command":["set","ab-loop-a",10.5],"request_id":2}' | nc -q0 $IPC
+echo '{"command":["set","ab-loop-b",45.2],"request_id":3}' | nc -q0 $IPC
+
+# Take screenshot with subs
+echo '{"command":["screenshot"],"request_id":4}' | nc -q0 $IPC
+
+# Observe volume changes
+echo '{"command":["observe_property",10,"volume"],"request_id":5}' | nc -q0 $IPC
+
+# Keep connection open to receive events
+nc -q-1 $IPC
+```
+
+```powershell title="PowerShell"
+function Send-IpcCommand {
+    param([string]$Command)
+    $client = New-Object System.Net.Sockets.TcpClient("127.0.0.1", 32321)
+    $stream = $client.GetStream()
+    $writer = New-Object System.IO.StreamWriter($stream)
+    $reader = New-Object System.IO.StreamReader($stream)
+    $writer.WriteLine($Command)
+    $writer.Flush()
+    $response = $reader.ReadLine()
+    $client.Close()
+    return $response | ConvertFrom-Json
+}
+
+# Usage
+Send-IpcCommand '{"command":["get_property","media-title"],"request_id":1}'
+Send-IpcCommand '{"command":["set","pause",true],"request_id":2}'
+Send-IpcCommand '{"command":["loadfile","C:\Movies\clip.mp4","replace"],"request_id":3}'
+```
+</CodeGroup>
+
+<Callout type="tip">
+  For persistent connections that receive property-change events, keep the TCP connection open and read lines continuously. Each line is a complete JSON object followed by `\n`.
+</Callout>
+
+## Implementation Details
+
+### Architecture
+
+```text
+TCP Client / stdin
+       │
+       ▼
+IpcServer / ConsoleReader
+       │
+       ├── IpcProtocol.parseLine()  ──→  IpcParsedLine
+       │
+       ├── executeIpcCommand()      ──→  CineMpvItem (libmpv)
+       │
+       └── IpcSessionState          ──→  Per-client observation tracking
+```
+
+### Key Source Files
+
+| File | Role |
+|------|------|
+| `src/player/IpcServer.h/.cpp` | TCP server + CLI reader implementation |
+| `src/player/IpcProtocol.h/.cpp` | Protocol parsing, JSON serialization, session state |
+| `src/player/IpcServer.h` | `IpcCommandResult`, `executeIpcCommand()`, observation management |
+
+### Classes
+
+| Class | Purpose |
+|-------|---------|
+| `IpcServer` | TCP server managing multiple client sessions, property observation, event broadcasting |
+| `ConsoleReader` | Stdin-based CLI reader running on a background thread |
+| `IpcProtocol` | Stateless helpers for line parsing, JSON encoding |
+| `IpcSessionState` | Per-client/CLI observation state tracking |
+| `IpcParsedLine` | Struct representing a parsed command line |
+| `IpcObservation` | Struct representing a property observation subscription |
+| `IpcCommandResult` | Struct returned by `executeIpcCommand()` |
+| `executeIpcCommand()` | Free function dispatching commands to `CineMpvItem` |
+
+### Technical Notes
+
+- **Thread safety:** All player interaction is marshaled to Qt's main thread; I/O runs asynchronously
+- **Observation reference counting:** If two TCP clients observe the same property, only one mpv observation is registered. When one client unsubscribes, the observation is released only when the reference count reaches zero
+- **Windows CLI:** `--cli` calls `AllocConsole()` if no parent console is attached, then `freopen_s` on stdin/stdout/stderr
+- **Socket lifetime:** Disconnecting a TCP client automatically releases all its observation subscriptions and cleans up session state
+- **Broadcast events:** `start-file`, `file-loaded`, `end-file`, `seek`, `playback-restart`, `pause`, `shutdown`, and `idle` are broadcast to all connected clients regardless of observation state

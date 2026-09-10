@@ -1,0 +1,209 @@
+---
+title: IPC Protocol
+description: Control CineWindows remotely via JSON-RPC over TCP or stdin
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import CodeGroup from "blume/components/content/CodeGroup.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Card from "blume/components/content/Card.astro";
+
+CineWindows implements the [mpv JSON IPC protocol](https://mpv.io/manual/stable/#json-ipc) over TCP and stdin, enabling external tools and scripts to control playback, query properties, and receive real-time events.
+
+<Badge variant="default">Port 32321</Badge>
+<Badge variant="default">Protocol mpv JSON IPC</Badge>
+<Badge variant="default">Encoding UTF-8</Badge>
+
+## Enabling IPC
+
+<CardGroup>
+<Card title="TCP Server" icon="server" description="Start CineWindows with --ipc-server=32321 to listen on 127.0.0.1. Multiple concurrent clients are supported with per-session property observation." />
+
+<Card title="CLI Mode" icon="terminal" description="Start with --cli to enter an interactive JSON-RPC terminal. Reads commands from stdin and writes responses to stdout on a background thread." />
+
+<Card title="Both Simultaneously" icon="layers" description="Pass both flags to enable the TCP server and CLI mode at the same time. Each session maintains its own observation state." />
+</CardGroup>
+
+## Request / Response Format
+
+Messages are **newline-delimited JSON** (`\n`). Every request and response carries a `request_id` for correlation.
+
+<CodeGroup>
+```json title="Request"
+{"command":["get_property","time-pos"],"request_id":1}
+```
+
+```json title="Success Response"
+{"error":"success","request_id":1,"data":42.5}
+```
+
+```json title="Error Response"
+{"error":"property not found","request_id":1,"data":null}
+```
+</CodeGroup>
+
+## Command Reference
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `loadfile` | `url`, `replace\|append` | Load a media file or URL |
+| `playlist-next` | — | Next playlist item |
+| `playlist-prev` | — | Previous playlist item |
+| `playlist-play-index` | `index` | Play item at index |
+| `stop` | — | Stop playback |
+| `quit` | — | Quit the application |
+| `set` | `property`, `value` | Set a property value |
+| `get_property` | `name` | Get a property value |
+| `set_property` | `name`, `value` | Alias for `set` |
+| `observe_property` | `id`, `name` | Subscribe to property changes |
+| `observe_property_string` | `id`, `name` | Subscribe with string formatting |
+| `unobserve_property` | `id` | Unsubscribe from property changes |
+| `cycle` | `name`, `direction` | Cycle a property (`up` or `down`) |
+| `add` | `name`, `value` | Add to a property (e.g. volume) |
+| `multiply` | `name`, `value` | Multiply a property value |
+| `seek` | `amount`, `type` | Seek (`relative`, `absolute`, etc.) |
+| `revert_seek` | — | Revert to position before last seek |
+| `frame_step` | — | Step forward one frame |
+| `frame_back_step` | — | Step backward one frame |
+| `screenshot` | — | Take a screenshot |
+| `screenshot_raw` | — | Capture screenshot (returns base64) |
+
+## Events
+
+Events are pushed automatically to connected TCP clients (or stdout in CLI mode).
+
+<CodeGroup>
+```json title="Event Format"
+{"event":"start-file","request_id":0}
+```
+
+```json title="Property Change Event"
+{"event":"property-change","id":1,"request_id":0,"name":"time-pos","data":43.1}
+```
+</CodeGroup>
+
+| Event | Trigger | Extra Fields |
+|-------|---------|--------------|
+| `start-file` | File loading begins | — |
+| `file-loaded` | File loading completes | — |
+| `end-file` | File playback ends | `reason` |
+| `seek` | Seek occurs | — |
+| `playback-restart` | Playback resumes after seek | — |
+| `pause` | Pause state changes | — |
+| `shutdown` | Application shutting down | — |
+| `idle` | Player enters idle state | — |
+| `property-change` | Observed property changed | `id`, `name`, `data` |
+
+## Supported Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `time-pos` | number | Current position in seconds |
+| `duration` | number | Media duration in seconds |
+| `percent-pos` | number | Position as percentage |
+| `playback-time` | number | Current playback time |
+| `volume` | number | Audio volume (0–100) |
+| `mute` | boolean | Audio mute state |
+| `pause` | boolean | Pause state |
+| `speed` | number | Speed multiplier |
+| `filename` | string | Current file name |
+| `path` | string | Full file path or URL |
+| `media-title` | string | Media title metadata |
+| `chapter` | number | Current chapter index |
+| `chapter-list` | array | Chapter list |
+| `track-list` | array | All tracks |
+| `vid` | number | Active video track ID |
+| `aid` | number | Active audio track ID |
+| `sid` | number | Active subtitle track ID |
+| `secondary-sid` | number | Secondary subtitle ID |
+| `fullscreen` | boolean | Fullscreen state |
+| `sub-visibility` | boolean | Subtitle visibility |
+| `sub-delay` | number | Subtitle delay |
+| `sub-pos` | number | Subtitle position |
+| `sub-scale` | number | Subtitle font scale |
+| `contrast` | number | Video contrast |
+| `brightness` | number | Video brightness |
+| `gamma` | number | Video gamma |
+| `saturation` | number | Video saturation |
+| `hue` | number | Video hue |
+| `deinterlace` | boolean | Deinterlace state |
+| `deband` | boolean | Deband filter state |
+| `video-aspect` | string | Aspect ratio override |
+| `panscan` | number | Pan-and-scan range |
+| `zoom` | number | Video zoom level |
+| `playlist-pos` | number | Playlist index |
+| `playlist-count` | number | Playlist size |
+
+## Examples
+
+<CodeGroup>
+```python title="Python"
+import json, socket
+
+def ipc(command):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect(("127.0.0.1", 32321))
+    s.sendall((json.dumps(command) + "\n").encode())
+    resp = s.makefile().readline()
+    s.close()
+    return json.loads(resp)
+
+# Get current position
+print(ipc({"command": ["get_property", "time-pos"], "request_id": 1}))
+
+# Toggle pause
+print(ipc({"command": ["set", "pause", True], "request_id": 2}))
+
+# Load a file
+print(ipc({"command": ["loadfile", "C:\\Movies\\clip.mp4", "replace"], "request_id": 3}))
+```
+
+```javascript title="JavaScript (Node.js)"
+const net = require("net");
+
+function ipc(command) {
+  return new Promise((resolve, reject) => {
+    const client = net.createConnection(32321, "127.0.0.1", () => {
+      client.write(JSON.stringify(command) + "\n");
+    });
+    client.on("data", (data) => {
+      resolve(JSON.parse(data.toString()));
+      client.end();
+    });
+    client.on("error", reject);
+  });
+}
+
+(async () => {
+  console.log(await ipc({ command: ["get_property", "volume"], request_id: 1 }));
+  console.log(await ipc({ command: ["set", "speed", 1.5], request_id: 2 }));
+})();
+```
+
+```bash title="Bash (netcat)"
+# Get media title
+echo '{"command":["get_property","media-title"],"request_id":1}' | nc -q0 127.0.0.1 32321
+
+# Set volume to 80
+echo '{"command":["set","volume",80],"request_id":2}' | nc -q0 127.0.0.1 32321
+
+# Seek to 50%
+echo '{"command":["seek",50,"absolute-percent"],"request_id":3}' | nc -q0 127.0.0.1 32321
+```
+</CodeGroup>
+
+<Callout type="info">
+  The IPC protocol is compatible with the mpv JSON IPC specification, but not every mpv command is implemented. Commands are dispatched through a `executeIpcCommand()` function in `src/player/IpcServer.h`.
+</Callout>
+
+## Compatibility Notes
+
+- TCP binds to `127.0.0.1` only — no remote access
+- Delimiter is `\n` (newline)
+- Max concurrent clients limited only by OS resources
+- Player interaction is marshaled to Qt's main thread; I/O runs asynchronously
+- On Windows, `--cli` calls `AllocConsole()` if no parent console is attached
+- Property observation uses reference counting: if multiple clients observe the same property, only one mpv observation is registered

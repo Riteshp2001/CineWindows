@@ -1,0 +1,77 @@
+---
+title: Installation
+description: Install via portable ZIP or NSIS
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Step from "blume/components/content/Step.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+
+Choose the installation method that best suits your workflow.
+
+<Tabs>
+<Tab title="Portable ZIP">
+The portable ZIP archive requires no installation. Extract it to any folder and run CineWindows.exe directly. All settings and configuration are stored inside the extracted folder, making it ideal for USB drives or temporary use.
+
+<Steps>
+<Step title="Download the ZIP">
+  Download the latest `CineWindows-Portable-*.zip` from the releases page. The file is approximately 80 MB.
+</Step>
+<Step title="Extract the archive">
+  Right-click the ZIP file and select **Extract All**, or use your preferred archive tool. Choose any destination — an external drive works fine.
+</Step>
+<Step title="Launch CineWindows">
+  Open the extracted folder and double-click `CineWindows.exe`. The application starts immediately with default settings.
+</Step>
+</Steps>
+
+<Callout type="info">
+  Portable mode stores configuration, playlists, and cache in a `data` subfolder next to the executable. To reset to defaults, delete this folder.
+</Callout>
+</Tab>
+<Tab title="NSIS Installer">
+The NSIS installer registers CineWindows with the Start Menu, adds optional file association context menu entries, and provides an uninstaller for clean removal.
+
+<Steps>
+<Step title="Download the installer">
+  Download `CineWindows-Setup-*.exe` from the releases page.
+</Step>
+<Step title="Run the installer">
+  Double-click the downloaded executable. If a SmartScreen prompt appears, click **More info** then **Run anyway**.
+</Step>
+<Step title="Choose installation options">
+  Select the destination folder (defaults to `%ProgramFiles%\CineWindows`). On the component page you may optionally:
+  - Register common media file associations (.mp4, .mkv, .avi, .mov, .webm, .flv, .wmv, .mp3, .flac, .aac, .ogg, .wav)
+  - Add a desktop shortcut
+  - Add an "Open with CineWindows" context menu entry
+</Step>
+<Step title="Complete installation">
+  Click **Install** and wait for the process to finish. Check **Launch CineWindows** and click **Finish** to start the application immediately.
+</Step>
+</Steps>
+
+<Callout type="tip">
+  File associations set during installation can be changed later from Windows Settings > Apps > Default Apps > CineWindows.
+</Callout>
+</Tab>
+
+</Tabs>
+
+## System Requirements
+
+<Badge variant="accent">Windows 10</Badge> build 1809 or later &nbsp; <Badge variant="accent">Windows 11</Badge> all versions
+
+| Component | Minimum | Recommended |
+|---|---|---|
+| Processor | x64, 2 cores, 2.0 GHz | x64, 4+ cores, 3.0 GHz |
+| RAM | 4 GB | 8 GB |
+| GPU | Direct3D 11 supporting Feature Level 11.0 | Direct3D 12 / Vulkan 1.2 |
+| Storage | 200 MB | 500 MB (for cache) |
+| Display | 1280 × 720 | 1920 × 1080 or higher |
+
+<Callout type="tip">
+  Hardware-accelerated video decoding requires a GPU with DXVA2 or D3D11VA support. Most integrated and dedicated GPUs from 2016 onward satisfy this requirement.
+</Callout>

@@ -1,0 +1,111 @@
+---
+title: Picture-in-Picture
+description: Compact always-on-top PiP mode
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Step from "blume/components/content/Step.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+Picture-in-Picture (PiP) shrinks the player to a compact always-on-top window that floats above other applications. It is ideal for watching video while working in another window — the video stays visible and accessible without losing focus on your primary task.
+
+## How PiP Works
+
+When PiP mode is activated, CineWindows sets `compactMode = 2` on the main `ApplicationWindow`. The window:
+
+- Resizes to the compact PiP dimensions: **minimum 320×180**, default **384×216**
+- Gains the `Qt.WindowStaysOnTopHint` flag so it always floats above other windows
+- Removes the standard window frame decorations (already frameless by default)
+- Hides the full header bar, control bar, and sidebar — replaced by a minimalist PiP overlay
+
+## Window Dimensions
+
+| State | Width | Height |
+|-------|-------|--------|
+| Minimum PiP | 320 | 180 |
+| Default PiP | 384 | 216 |
+| Full-sized PiP | adjustable by dragging edges | |
+
+The window is freely resizable in PiP mode. The `ViewportMetrics` component detects the PiP state and applies compact layout rules throughout the UI.
+
+## Always-on-Top
+
+The `Qt.WindowStaysOnTopHint` flag is applied conditionally based on `compactMode === 2`. When you exit PiP mode, the flag is removed and the window returns to normal z-ordering.
+
+## Drag Reposition
+
+Click and drag the video area to reposition the PiP window anywhere on screen. The standard window position tracking (`onXChanged`, `onYChanged`) saves the PiP position separately from the normal windowed geometry, so restoring from PiP returns you to your previous layout.
+
+## Compact Controls
+
+PiP mode replaces the full control bar with a minimal overlay that auto-hides:
+
+| Control | Location | Behavior |
+|---------|----------|----------|
+| Play / Pause | Center | Large button visible on hover or when paused |
+| Seek bar | Bottom edge | Thin progress strip, visible on hover |
+| PiP actions | Top-left | Transparency toggle, exit PiP |
+| PiP actions | Top-right | Close window, toggle compact mode |
+
+### Auto-Hide Behavior
+
+The PiP overlay auto-hides after a configurable delay when video is playing. It stays visible when:
+
+- Video is paused
+- The seek bar is being dragged
+- The mouse is hovering over any PiP control
+- The pause button was recently clicked (`pipControlsPinned()`)
+
+The `pipControlsHideTimer` manages this with a timer that hides controls when no interaction has occurred.
+
+### Transparency
+
+Toggle 70% opacity with the transparency button in the PiP top-left controls. This makes the video semi-transparent so you can see windows beneath it — useful when watching a tutorial while following along in an editor. The opacity is applied to the entire window content.
+
+## Compact Mode vs PiP Mode
+
+CineWindows supports two compact modes:
+
+| Mode | `compactMode` | Description |
+|------|---------------|-------------|
+| Normal | `0` | Full player interface |
+| Compact | `1` | Reduced UI, minimized controls |
+| Picture-in-Picture | `2` | Always-on-top floating window, minimalist controls |
+
+Compact mode (1) keeps the window in normal z-ordering with a condensed layout. PiP mode (2) adds `WindowStaysOnTopHint` and uses the PiP-specific overlay.
+
+## Setup Steps
+
+<Steps>
+<Step>
+### Start Playing Any Video
+
+Open a local file or streaming URL and begin playback. PiP requires active media to function — the player must be in a playing or paused state.
+</Step>
+<Step>
+### Activate PiP
+
+Press the **PiP button** on the control bar, select **Video > Picture-in-Picture** from the menu, or trigger it programmatically via `window.enterCompactMode(2)`. The window immediately shrinks and floats to the top.
+</Step>
+<Step>
+### Reposition and Resize
+
+Drag the window by its video area to any screen location. Resize by dragging edges or corners — the minimum size is 320×180. The video scales to fill the available space while maintaining aspect ratio.
+</Step>
+<Step>
+### Control Playback
+
+Use the auto-hiding overlay controls, or use keyboard shortcuts — all playback shortcuts (Space, arrows, volume keys) remain active in PiP mode. The subtitle track selection is preserved.
+</Step>
+<Step>
+### Exit PiP
+
+Click the **Exit PiP** button (top-left controls), press the PiP shortcut again, or double-click the video area. CineWindows restores your previous window geometry and removes the always-on-top flag. Playback continues uninterrupted.
+</Step>
+</Steps>
+
+<Callout type="info">
+  In PiP mode, the subtitle renderer continues to display subtitles over the scaled-down video. If subtitles were visible before entering PiP, they remain visible. The `pipSubtitleTrack` property preserves your subtitle selection so it is restored when you exit PiP.
+</Callout>

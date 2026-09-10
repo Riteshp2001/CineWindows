@@ -1,0 +1,142 @@
+---
+title: Configuration
+description: Configuration files, settings locations, and format reference
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+CineWindows stores configuration in multiple locations depending on the installation type and the data being persisted.
+
+<Badge variant="accent">QSettings</Badge>
+<Badge variant="default">JSON key bindings</Badge>
+<Badge variant="default">mpv.conf</Badge>
+
+## Settings Location
+
+<Tabs>
+<Tab title="Portable (ZIP)">
+
+```
+./portable/
+  └── settings.ini          # QSettings (INI format, all preferences)
+```
+
+When run from a portable ZIP, CineWindows creates a `portable/` directory next to the executable and stores all settings in `portable/settings.ini`.
+
+</Tab>
+<Tab title="Installed (NSIS / Store)">
+
+```
+%APPDATA%\gyrolet\
+  └── CineWindows\
+        ├── settings.ini    # QSettings (INI format, all preferences)
+        ├── session.json    # Session state (playlist + position)
+        └── library.db      # Media library SQLite database
+```
+
+For installed versions, the config root is `%APPDATA%/gyrolet/CineWindows/`.
+
+</Tab>
+<Tab title="mpv Config Directory">
+
+```
+%APPDATA%\mpv\
+  ├── mpv.conf              # Runtime mpv options (loaded via "include")
+  ├── input.conf            # Additional key bindings (via "keybind" command)
+  └── scripts\              # Lua/JS scripts (via "load-script" command)
+```
+
+CineWindows reads the standard mpv config directory at startup through the `MpvConfig` loader. This is separate from the application settings — it applies mpv-native options to the embedded libmpv instance.
+
+</Tab>
+</Tabs>
+
+## Settings Reference
+
+All application preferences are backed by `QSettings` and exposed through the `SettingsManager` QML singleton. Changes are persisted immediately.
+
+### General
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `ui/openNewWindow` | bool | `true` | Open media in a new window |
+| `ui/thumbnailPreview` | bool | `true` | Seek-bar thumbnail previews |
+| `ui/showRemaining` | bool | `false` | Show remaining time |
+| `ui/themeMode` | string | `"dark"` | `"dark"` or `"light"` |
+| `ui/accentColor` | string | `"#10c7d1"` | Accent colour hex ARGB |
+| `ui/reduceMotion` | bool | `false` | Reduce non-essential motion |
+| `ui/locale` | string | *(system)* | UI language code |
+| `input/leftClick` | int | `0` | Left-click action ID |
+| `input/rightClick` | int | `1` | Right-click action ID |
+
+### Playback
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `playback/volume` | int | `100` | Volume (0–200) |
+| `playback/muted` | bool | `false` | Mute state |
+| `playback/hwdec` | string | `"auto-safe"` | Hardware decoding backend |
+| `playback/normalizeVolume` | bool | `false` | Volume normalisation |
+| `playback/savePosition` | bool | `false` | Save video position |
+| `playback/saveSession` | bool | `false` | Save/restore session |
+| `playback/equalizerEnabled` | bool | `false` | Equalizer toggle |
+| `playback/visualization` | string | `"off"` | Audio visualisation mode |
+| `playback/stereoInput` | string | `"off"` | Stereo upmix input |
+| `playback/stereoOutput` | string | `"arcd"` | Stereo downmix layout |
+| `playback/toneMapping` | string | `"auto"` | HDR tone mapping |
+| `playback/targetPeak` | int | `203` | HDR peak brightness |
+
+### Audio
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `playback/audioLanguages` | string | *(empty)* | Preferred audio languages |
+
+### Subtitles
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `subtitles/font` | string | `"Adwaita Sans SemiBold"` | Subtitle font family |
+| `subtitles/scale` | double | `1.0` | Subtitle scale (0.1–3.0) |
+| `subtitles/color` | string | `"#ebebeb"` | Subtitle text colour |
+| `subtitles/background` | bool | `false` | Subtitle background |
+| `subtitles/backgroundColor` | string | `"#97000000"` | Subtitle background colour |
+| `subtitles/languages` | string | *(empty)* | Preferred subtitle languages |
+
+### Advanced
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `updates/autoCheck` | bool | `true` | Auto-update check |
+| `input/keyBindings` | string | *(defaults)* | Serialised key bindings JSON |
+
+## Key Bindings Format
+
+Key bindings are serialised as a JSON string stored in the `input/keyBindings` setting. The format is an object mapping normalized key sequence strings to action identifiers:
+
+<Callout type="info">
+  The Shortcuts dialog (`Ctrl+/`) is the recommended way to modify key bindings. Manual editing of the JSON string is error-prone and not officially supported.
+</Callout>
+
+## mpv.conf Support
+
+CineWindows loads the user's `mpv.conf` from `%APPDATA%/mpv/mpv.conf` at runtime via the `MpvConfig` loader. Since libmpv defaults to `config=no` and MpvQt initialises mpv immediately, the config is applied after startup using mpv's `include` option.
+
+Only runtime-settable options in `mpv.conf` will apply. Options that must be set before mpv initialisation (e.g. `vo`, `ao`, `gpu-context`) are ignored when loaded via `include`.
+
+## input.conf Support
+
+CineWindows reads `%APPDATA%/mpv/input.conf` and registers each binding using mpv's `keybind` command. These bindings take priority over the application defaults for keys that are forwarded into libmpv.
+
+The `MpvConfig` class exposes `isOverridden(qtSequence)` and `commandFor(qtSequence)` to QML so the Shortcuts settings panel can display collision warnings when a key is also bound in `input.conf`.
+
+## Session Persistence
+
+Session state (playlist items, current index, playback position) is saved to `session.json` in the config directory when the user selects `Save Session and Close` (`Shift+Q`). If `saveSession` is enabled, the session is restored automatically on the next launch.

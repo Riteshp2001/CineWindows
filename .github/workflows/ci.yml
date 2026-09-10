@@ -1,0 +1,312 @@
+# CineWindows - Video Player
+# Copyright (c) 2026 Ritesh Pandit
+#
+# CineWindows Community License
+#
+# This source code is made available for personal, non-commercial
+# use only. Organizations may not use, copy, modify, or distribute
+# this code without written permission from Ritesh Pandit.
+#
+# See the LICENSE.md file for full license terms.
+#
+# Project: CineWindows
+# Author:  Ritesh Pandit
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.8.3
+
+jobs:
+  website:
+    name: Website
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: website/package.json
+          cache: true
+          cache_dependency_path: website/pnpm-lock.yaml
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+      - name: Install website
+        working-directory: website
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: website
+        run: pnpm run lint
+      - name: Build
+        working-directory: website
+        run: pnpm run build
+
+  companion:
+    name: Companion remote
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+          cache-dependency-path: resources/remote/package-lock.json
+      - name: Install
+        run: npm ci --prefix resources/remote
+      - name: Audit
+        run: npm audit --prefix resources/remote --audit-level=moderate
+      - name: Lint
+        run: npm run --prefix resources/remote lint
+      - name: Build
+        run: npm run --prefix resources/remote build
+      - name: Verify embedded bundle
+        run: git diff --exit-code -- resources/remote/dist
+
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install MSYS2 media dependencies
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-x86_64-binutils
+            mingw-w64-x86_64-extra-cmake-modules
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-vulkan-headers
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_mingw
+          cache: true
+          tools: >-
+            tools_cmake,qt.tools.cmake
+            tools_ninja,qt.tools.ninja
+            tools_mingw1310,qt.tools.win64_mingw1310
+
+      - name: Cache native media dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            .deps/libmpv-static
+            .deps/mpvqt-install
+          key: native-media-${{ runner.os }}-${{ env.QT_VERSION }}-v1.2.0-${{ hashFiles('scripts/setup/bootstrap_libmpv_windows.ps1', 'scripts/setup/bootstrap_mpvqt_windows.ps1') }}
+
+      - name: Bootstrap standalone libmpv
+        shell: pwsh
+        run: |
+          if (-not (Test-Path ".deps\libmpv-static\bin\libmpv-2.dll")) {
+            & scripts\setup\bootstrap_libmpv_windows.ps1
+          }
+
+      - name: Bootstrap MpvQt
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR
+          if (-not $qtRoot -and $env:Qt6_DIR) {
+            $qtRoot = Split-Path (Split-Path (Split-Path $env:Qt6_DIR))
+          }
+          if (-not $qtRoot) {
+            throw "Qt root was not exported by install-qt-action."
+          }
+          $qtCompilerBin = Join-Path $env:IQTA_TOOLS "mingw1310_64\bin"
+          $msysPrefix = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
+          if (-not (Test-Path ".deps\mpvqt-install\lib\cmake\MpvQt\MpvQtConfig.cmake")) {
+            & scripts\setup\bootstrap_mpvqt_windows.ps1 `
+              -QtRoot $qtRoot `
+              -QtCompilerBin $qtCompilerBin `
+              -MsysPrefix $msysPrefix `
+              -StaticLibmpvPrefix "$PWD\.deps\libmpv-static" `
+              -SkipMsysPackageInstall
+          }
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR
+          if (-not $qtRoot -and $env:Qt6_DIR) {
+            $qtRoot = Split-Path (Split-Path (Split-Path $env:Qt6_DIR))
+          }
+          $qtCompilerBin = Join-Path $env:IQTA_TOOLS "mingw1310_64\bin"
+          $qtNinjaBin = Join-Path $env:IQTA_TOOLS "Ninja"
+          $msysPrefix = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
+          $env:PATH = "$qtRoot\bin;$qtCompilerBin;$qtNinjaBin;$msysPrefix\bin;$env:PATH"
+          cmake --preset release `
+            -DCINEWINDOWS_MPVQT_PREFIX="$PWD\.deps\mpvqt-install" `
+            -DCINEWINDOWS_LIBMPV_PREFIX="$PWD\.deps\libmpv-static" `
+            -DCINEWINDOWS_LIBMPV_RUNTIME="$PWD\.deps\libmpv-static\bin\libmpv-2.dll"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build --preset release
+
+      - name: QML lint
+        shell: pwsh
+        run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Release translations
+        shell: pwsh
+        run: cmake --build --preset release --target release_translations
+
+  linux:
+    name: Linux build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            libmpv-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libxkbcommon-dev \
+            libdbus-1-dev \
+            pkg-config
+
+      - name: Install ECM 6.15.0 (MpvQt dependency)
+        run: |
+          git clone --depth 1 --branch v6.15.0 \
+            https://invent.kde.org/frameworks/extra-cmake-modules.git /tmp/ecm
+          cd /tmp/ecm
+          cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
+          sudo cmake --install build
+
+      - name: Set up Python for aqtinstall compatibility
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          cache: true
+          setup-python: false
+          modules: >-
+            qtshadertools
+            qt5compat
+            qtmultimedia
+            qtimageformats
+            qtquick3d
+            qtquicktimeline
+            qtlottie
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: QML lint
+        run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Release translations
+        run: cmake --build --preset release --target release_translations
+
+  macos:
+    name: macOS ${{ matrix.arch }} build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Set up Python for aqtinstall compatibility
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          cache: true
+          setup-python: false
+          modules: >-
+            qtshadertools
+            qt5compat
+            qtmultimedia
+            qtimageformats
+            qtquick3d
+            qtquicktimeline
+            qtlottie
+
+      - name: Install system dependencies
+        run: brew install extra-cmake-modules librsvg mpv ninja pkg-config create-dmg
+
+      - name: Generate application icon
+        run: bash scripts/generate/generate_icns.sh
+
+      - name: Configure
+        run: |
+          export PKG_CONFIG_PATH="$(brew --prefix mpv)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          cmake --preset release \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$(brew --prefix mpv);$(brew --prefix extra-cmake-modules)" \
+            -DCINEWINDOWS_MACOS_ARCHITECTURES="${{ matrix.arch }}"
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: QML lint
+        run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Release translations
+        run: cmake --build --preset release --target release_translations
+
+      - name: Package and verify
+        run: bash scripts/package/deploy_macos.sh "build/release" "packaging/macos/artifacts" "${{ matrix.arch }}"

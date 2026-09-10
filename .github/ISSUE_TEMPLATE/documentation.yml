@@ -1,0 +1,46 @@
+name: Documentation report
+description: Report missing, incorrect, or unclear CineWindows documentation.
+title: "[Docs]: "
+labels:
+  - documentation
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for helping improve CineWindows documentation.
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      description: Link to the page or provide the file path and section.
+      placeholder: README.md, website docs URL, or file path
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Explain what is missing, incorrect, outdated, or unclear.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Suggested improvement
+      description: Describe the correction or wording you expected.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Relevant platform
+      options:
+        - All platforms
+        - Windows
+        - Linux
+        - macOS
+        - Website
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same documentation problem.
+          required: true

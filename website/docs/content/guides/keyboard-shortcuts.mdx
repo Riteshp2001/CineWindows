@@ -1,0 +1,198 @@
+---
+title: Keyboard Shortcuts
+description: Complete keyboard shortcuts reference
+---
+
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+
+All shortcuts are remappable in **Preferences > Shortcuts** (`Ctrl+,` then select Shortcuts). The `KeyBindings` singleton maintains the canonical list of every action with its category, human-readable title, default key sequence, and user overrides.
+
+<Callout type="tip">
+  The shortcut editor supports conflict detection — binding a key already in use will warn you before overwriting. Reset individual shortcuts or restore all defaults from the same dialog.
+</Callout>
+
+## Statistics Overlays
+
+Statistics pages display real-time playback diagnostics. Activate with `F1`–`F5` for persistent stats, `I` for a temporary overlay, or `Shift+I` for a persistent overlay.
+
+| Key | Page | Content |
+|-----|------|---------|
+| `F1` | Default | Frame rate, bitrate, resolution, codec info |
+| `F2` | Frame Timings | Decode, render, and present timing histograms |
+| `F3` | Cache | Network cache status, buffer fill, demuxer stats |
+| `F4` | Key Bindings | Active key-to-command mappings |
+| `F5` | Tracks | Active video, audio, and subtitle track details |
+
+<Accordion>
+<AccordionItem title="General">
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+O` | Open Files |
+| `Ctrl+N` | New Window |
+| `Ctrl+I` | Open Folder |
+| `Ctrl+U` | Open URL |
+| `Ctrl+Shift+O` | Add Files |
+| `Ctrl+Shift+I` | Add Folder |
+| `Ctrl+Shift+U` | Add URL to Playlist |
+| `Ctrl+P` | Playlist |
+| `Ctrl+,` | Preferences |
+| `Ctrl+/` | Shortcuts |
+| `Ctrl+Shift+S` | Subtitle Menu |
+| `Ctrl+A` | Audio Menu |
+| `Ctrl+C` | Chapters Menu |
+| `Shift+Q` | Save Session and Close |
+| `Ctrl+W` | Close Window |
+| `Q` | Close Window |
+| `Ctrl+Q` | Quit |
+
+</AccordionItem>
+<AccordionItem title="Playback">
+
+| Shortcut | Action |
+|----------|--------|
+| `Space` | Play / Pause |
+| `K` | Play / Pause |
+| `P` | Play / Pause |
+| `[` | Decrease Speed |
+| `]` | Increase Speed |
+| `{` | Halve Speed |
+| `}` | Double Speed |
+| `Backspace` | Reset Speed |
+| `Shift+Backspace` | Undo Previous Seek |
+| `Ctrl+Shift+Backspace` | Mark Position for Undo Seek |
+| `Shift+L` | Loop File |
+| `L` | Set / Clear A-B Loop |
+
+</AccordionItem>
+<AccordionItem title="Navigation">
+
+| Shortcut | Action |
+|----------|--------|
+| `Right` | Seek 5s Forward |
+| `Left` | Seek 5s Backward |
+| `Up` | Seek 1m Forward |
+| `Down` | Seek 1m Backward |
+| `Shift+Right` | Seek 1s Forward (Exact) |
+| `Shift+Left` | Seek 1s Backward (Exact) |
+| `Shift+Up` | Seek 5s Forward (Exact) |
+| `Shift+Down` | Seek 5s Backward (Exact) |
+| `Home` | Seek to Start |
+| `Shift+PgUp` | Seek 10m Forward |
+| `Shift+PgDown` | Seek 10m Backward |
+| `PgDown` | Previous Chapter |
+| `PgUp` | Next Chapter |
+| `Ctrl+Left` | Previous Subtitle Line |
+| `Ctrl+Right` | Next Subtitle Line |
+| `Ctrl+Shift+Left` | Sync to Previous Subtitle |
+| `Ctrl+Shift+Right` | Sync to Next Subtitle |
+| `,` | Previous Frame |
+| `.` | Next Frame |
+| `<` | Previous Playlist Item |
+| `>` | Next Playlist Item |
+| `Enter` | Next Playlist Item |
+| `Shift+Home` | First Playlist Item |
+| `Shift+End` | Last Playlist Item |
+
+</AccordionItem>
+<AccordionItem title="Speed">
+
+| Shortcut | Action |
+|----------|--------|
+| `[` | Decrease Speed |
+| `]` | Increase Speed |
+| `{` | Halve Speed |
+| `}` | Double Speed |
+| `Backspace` | Reset Speed to 1.0x |
+
+Playback speed is applied via `CineMpvItem::setSpeed()` and updates the OSD. The current speed is displayed in the control bar and persisted per-session.
+
+</AccordionItem>
+<AccordionItem title="Video (Display)">
+
+| Shortcut | Action |
+|----------|--------|
+| `F` | Fullscreen |
+| `Alt++` | Zoom In |
+| `Alt+-` | Zoom Out |
+| `Alt+Backspace` | Reset Zoom and Pan |
+| `Shift+A` | Cycle Aspect Ratio |
+| `B` | Toggle Debanding |
+| `D` | Toggle Deinterlace |
+| `W` | Decrease Panscan |
+| `Shift+W` | Increase Panscan |
+| `E` | Increase Panscan |
+| `1` | Decrease Contrast |
+| `2` | Increase Contrast |
+| `3` | Decrease Brightness |
+| `4` | Increase Brightness |
+| `5` | Decrease Gamma |
+| `6` | Increase Gamma |
+| `7` | Decrease Saturation |
+| `8` | Increase Saturation |
+
+</AccordionItem>
+<AccordionItem title="Audio">
+
+| Shortcut | Action |
+|----------|--------|
+| `0` | Volume Increase |
+| `9` | Volume Decrease |
+| `*` | Volume Increase |
+| `/` | Volume Decrease |
+| `M` | Mute / Unmute |
+| `#` | Next Audio Track |
+| `Ctrl+Shift+A` | Previous Audio Track |
+| `Ctrl+-` | Decrease Audio Delay |
+| `Ctrl++` | Increase Audio Delay |
+
+Volume range is 0–200. Audio delay compensates for desynchronized audio tracks and is adjustable in 0.1s increments.
+
+</AccordionItem>
+<AccordionItem title="Subtitles">
+
+| Shortcut | Action |
+|----------|--------|
+| `V` | Show / Hide Subtitles |
+| `Alt+V` | Show / Hide Secondary Subtitles |
+| `Shift+V` | Cycle ASS Video Data |
+| `U` | Toggle ASS Style Override |
+| `J` | Next Subtitle Track |
+| `Shift+J` | Previous Subtitle Track |
+| `Alt+Z` | Next Secondary Subtitle |
+| `Ctrl+Z` | Previous Secondary Subtitle |
+| `Z` | Decrease Subtitle Delay |
+| `Shift+Z` | Increase Subtitle Delay |
+| `X` | Increase Subtitle Delay |
+| `R` | Move Subtitles Up |
+| `Shift+R` | Move Subtitles Down |
+| `T` | Move Subtitles Down |
+| `Shift+F` | Decrease Subtitle Scale |
+| `Shift+G` | Increase Subtitle Scale |
+
+</AccordionItem>
+<AccordionItem title="Miscellaneous">
+
+| Shortcut | Action |
+|----------|--------|
+| `S` | Screenshot (with subtitles) |
+| `Shift+S` | Screenshot (without subtitles) |
+| `Ctrl+S` | Screenshot Window |
+| `Alt+S` | Screenshot Every Frame |
+| `Shift+O` | Toggle OSD Level |
+| `O` | Show Progress |
+| `Shift+P` | Show Progress |
+| `I` | Statistics (Temporary) |
+| `Shift+I` | Statistics Overlay (Persistent) |
+| `?` | mpv Key Bindings Page |
+| `` ` `` | Debug Console |
+
+</AccordionItem>
+</Accordion>
+
+<Callout type="info">
+  Keyboard input is routed through `InputRouter`, which translates Qt key events into mpv key names. The router handles modifier keys, keypad keys, function keys, and symbolic characters — including correct letter casing (mpv expects lowercase for unshifted letters and uppercase for Shift+letter combinations).
+</Callout>

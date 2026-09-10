@@ -1,0 +1,29 @@
+/*
+ * CineWindows - Video Player
+ * Copyright (c) 2026 Ritesh Pandit
+ *
+ * CineWindows Community License
+ *
+ * This source code is made available for personal, non-commercial
+ * use only. Organizations may not use, copy, modify, or distribute
+ * this code without written permission from Ritesh Pandit.
+ *
+ * See the LICENSE.md file for full license terms.
+ *
+ * Project: CineWindows
+ * Author:  Ritesh Pandit
+ * Last modified: 2026-09-10
+ * Modified by: Ritesh Pandit
+ */
+
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+
+import App from "./App"
+import "./index.css"
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

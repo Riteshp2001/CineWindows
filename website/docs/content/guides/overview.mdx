@@ -1,0 +1,53 @@
+---
+title: Overview
+description: CineWindows overview
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+
+CineWindows is a modern media player for Windows built on the Qt 6.8+ framework. It combines a native C++20 core with a fluid QML user interface and the powerful mpv playback engine to deliver high-performance video and audio playback with a refined desktop experience.
+
+<Badge variant="accent">Version 1.0</Badge>
+<Badge variant="default">Windows 10</Badge>
+<Badge variant="default">Windows 11</Badge>
+
+## Features
+
+<CardGroup>
+<Card title="mpv Playback Engine" icon="play" description="Hardware-accelerated playback via libmpv with DXVA2 and D3D11VA decoding for smooth performance across all media formats." />
+
+<Card title="Universal Format Support" icon="file" description="Play virtually any media file: MP4, MKV, AVI, MOV, WebM, FLV, WMV, MP3, FLAC, AAC, OGG, WAV, and hundreds more codecs via FFmpeg." />
+
+<Card title="Hardware Acceleration" icon="cpu" description="Leverages DXVA2 and D3D11VA on compatible GPUs for efficient video decoding, reducing CPU usage and enabling high-resolution playback." />
+
+<Card title="Video Filters & Correction" icon="sliders" description="Real-time adjustments for contrast, brightness, gamma, saturation, and hue. Plus deinterlacing, debanding, and zoom/pan controls." />
+
+<Card title="Subtitle System" icon="subtitles" description="Render SRT, ASS, SSA, and WebVTT subtitles. Load embedded subtitle tracks, set font/size/color/shadow/position, and search OpenSubtitles." />
+
+<Card title="Playlist Management" icon="list" description="Full M3U and M3U8 playlist support with drag-and-drop reordering, track selection, and automatic session save and restore." />
+
+<Card title="A-B Loop" icon="repeat" description="Set loop points between any two timestamps within a video for focused review of specific scenes or segments." />
+
+<Card title="Frame Stepping" icon="fast-forward" description="Advance or reverse frame by frame with precision keyboard controls, ideal for detailed scene analysis and screencapture." />
+
+<Card title="Chapters & Navigation" icon="bookmark" description="Skip between chapter markers in supported MKV and MP4 files. Fine-grained seeking with thumbnail previews via the seek bar." />
+
+<Card title="Audio & Track Control" icon="music" description="Switch between multiple audio tracks, adjust sync offsets, and cycle between stereo, 5.1, and 7.1 channel layouts." />
+
+<Card title="Screenshot Capture" icon="camera" description="Capture the current frame with a single shortcut. Saves to disk in high-quality PNG or JPEG format." />
+
+<Card title="Picture-in-Picture" icon="pip" description="Pop out the video into a compact always-on-top window while you browse or work in other applications." />
+</CardGroup>
+
+## Platform Support
+
+CineWindows targets Windows 10 (build 1809+) and Windows 11. It uses Qt 6.8's platform abstractions for native title bar integration, high-DPI scaling, and Windows 11 Snap Layout compatibility. The installer is available as a portable ZIP or NSIS installer.
+
+<Callout type="tip">
+  CineWindows automatically detects your system DPI and scales the interface accordingly. For multi-monitor setups with mixed scaling factors, each window adjusts independently.
+</Callout>

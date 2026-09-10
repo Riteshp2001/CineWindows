@@ -1,0 +1,163 @@
+---
+title: Remote Control
+description: LAN companion web app
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Step from "blume/components/content/Step.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Accordion from "blume/components/content/Accordion.astro";
+import AccordionItem from "blume/components/content/AccordionItem.astro";
+import Badge from "blume/components/content/Badge.astro";
+
+CineWindows includes an embedded HTTP server that serves a companion web app for remote control from any device on your local network. Navigate your media library, control playback, and see what is playing — all from your phone, tablet, or another computer.
+
+## How It Works
+
+The `RemoteControlService` starts a `QTcpServer` listening on a configurable port (default **8080**). It serves a React single-page application built with a modern component architecture, compiled into three assets:
+
+- `companion.html` — the SPA shell
+- `companion.js` — application bundle (React, TypeScript)
+- `companion.css` — theme and layout styles
+
+All assets are embedded as Qt resources (`:/cinewindows/remote/*`) and served from memory — no filesystem access required.
+
+<Badge variant="default">Single-page app</Badge>
+<Badge variant="default">~50 KB total</Badge>
+
+## QR Code Pairing
+
+When the remote control server is active, CineWindows generates a pairing code and displays it alongside a QR code in the **Remote Control** dialog. The QR encodes the full URL including the pairing token:
+
+```
+http://192.168.x.x:8080/?token=123456
+```
+
+Scanning the QR code with any device on the same network opens the companion app with the token pre-authorized. The pairing code is regenerated each time the dialog is opened for security.
+
+## Device Discovery
+
+On the local network, any device that can reach the host IP can access the remote control. The `localAddress()` method selects the first non-loopback IPv4 address on the system. The server binds to `QHostAddress::AnyIPv4`, making it accessible to all network interfaces.
+
+## Features
+
+<CardGroup>
+<Card title="Now Playing" icon="play" description="Full-screen now-playing view showing media title, elapsed time, duration, progress bar, and volume level. Updates in real time via polling the /api/state endpoint." />
+<Card title="Playback Control" icon="control" description="Play, pause, skip next/previous, stop, mute, volume up/down, and seek to any position. Actions are sent as JSON POST requests to /api/command." />
+<Card title="Folder Browsing" icon="folder" description="Browse the local filesystem from the companion app — list drives at root, navigate directories, and see only media files. Powered by /api/browse which uses QDir and MediaUtils." />
+<Card title="Direct URL Playback" icon="link" description="Type or paste a URL (HTTP/HTTPS media link) to play it on CineWindows. The server validates the URL format before forwarding the open command to PlaybackController." />
+<Card title="Open Folder Playback" icon="folder-open" description="Open all media files in a folder with one tap. The server uses MediaUtils::listMediaFiles() to discover playable files and sends them as a playlist." />
+<Card title="Connection Status" icon="wifi" description="The remote control dialog shows the server status (listening/stopped), the active URL with pairing token, and any connection errors. Toggle the server on and off." />
+</CardGroup>
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Serves the companion SPA (HTML) |
+| `/companion.js` | GET | JavaScript application bundle |
+| `/companion.css` | GET | Stylesheet |
+| `/api/state` | GET | Current playback state as JSON |
+| `/api/browse?path=` | GET | Directory listing as JSON |
+| `/api/command` | POST | Execute a playback command |
+
+### State Response
+
+```json
+{
+  "title": "Big Buck Bunny",
+  "path": "C:\\Videos\\bbb.mp4",
+  "position": 125.3,
+  "duration": 596.0,
+  "paused": false,
+  "idle": false,
+  "muted": false,
+  "volume": 100,
+  "playlistPosition": 0,
+  "playlistCount": 5
+}
+```
+
+### Command Actions
+
+| Action | Value | Effect |
+|--------|-------|--------|
+| `toggle` | — | Toggle play/pause |
+| `play` | — | Start playback |
+| `pause` | — | Pause playback |
+| `next` | — | Next playlist item |
+| `previous` | — | Previous playlist item |
+| `stop` | — | Stop playback |
+| `mute` | — | Toggle mute |
+| `seek` | time (seconds) | Seek to absolute position |
+| `seekRelative` | offset (seconds) | Seek relative to current position |
+| `volume` | 0–200 | Set volume level |
+| `open` | URL or file path | Open and play media |
+| `openFolder` | directory path | Play all media in directory |
+
+## Security
+
+The remote control operates **on your local network only**. The server binds to all local interfaces but does not expose itself to the internet. The pairing token acts as a session key — any client that knows the token can control the player, but the token is never transmitted over the internet and changes each session.
+
+| Measure | Detail |
+|---------|--------|
+| Network scope | LAN only (no NAT traversal) |
+| Authentication | 6-digit pairing code in URL token |
+| Token refresh | New token on every dialog open |
+| Transport | Unencrypted HTTP (local network only) |
+| Headers | `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` |
+
+<Callout type="warning">
+  For security reasons, the remote control server is disabled by default. Enable it explicitly from **Preferences > Remote Control** or the Remote Control dialog.
+</Callout>
+
+## Setup Steps
+
+<Steps>
+<Step>
+### Enable the Remote Control Server
+
+Open **Media > Remote Control** from the menu bar. Toggle the server switch to **On**. CineWindows starts listening on the default port (8080). The dialog displays the server URL and a QR code.
+</Step>
+<Step>
+### Connect From Another Device
+
+On your phone, tablet, or another computer, open a web browser and scan the QR code — or manually type the displayed URL. The URL includes the pairing token so you are authenticated automatically.
+</Step>
+<Step>
+### Control Playback
+
+The companion app loads and immediately fetches the current playback state. Use the on-screen buttons to play, pause, seek, adjust volume, and browse for media. Playback commands are sent via HTTP POST and execute instantly.
+</Step>
+<Step>
+### Browse and Open Media
+
+Switch to the **Browse** tab in the companion app to navigate your filesystem. Tap a media file to start playback, or tap a folder to play all media in it. Use the **URL** tab to paste a streaming link.
+</Step>
+<Step>
+### Disconnect When Done
+
+Close the browser tab or toggle the server off in the Remote Control dialog. The server stops listening and the pairing code is invalidated. No connection state is persisted.
+</Step>
+</Steps>
+
+<Accordion>
+<AccordionItem title="Companion Web App Details">
+The remote control web app is a responsive web application that loads in any browser on your phone, tablet, or secondary device:
+
+- **Now Playing**: Shows media title, current time position, progress bar, play/pause, seek, volume, and track selection
+- **Folder Browser**: Browse your local media drives and directories to select and play files remotely
+- **URL Launcher**: Paste video and stream URLs to open and play them instantly on CineWindows
+
+The web companion communicates directly with CineWindows's HTTP REST API over your local network.
+</AccordionItem>
+<AccordionItem title="Troubleshooting">
+**Cannot connect** — Ensure both devices are on the same network. Check the firewall — the port may need to be allowed. Verify the IP address shown in the Remote Control dialog is reachable from your device.
+
+**Connection drops** — The server stays active as long as the dialog is enabled. If the connection drops, refresh the browser page. The pairing token remains valid until the server is toggled off.
+
+**Port conflict** — If port 8080 is in use, change the port in **Preferences > Remote Control**. The server respects the configured port and will report a binding error if the port is unavailable.
+</AccordionItem>
+</Accordion>

@@ -1,0 +1,156 @@
+---
+title: Playback
+description: Playback controls, filters, and features
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+
+CineWindows uses **libmpv** under the hood — a fork of MPlayer/mplayer2 — for all playback operations. The engine is initialized in the C++ backend and exposed to QML through property bindings and signal handlers.
+
+<Badge variant="accent">libmpv</Badge>
+<Badge variant="accent">FFmpeg</Badge>
+<Badge variant="accent">DXVA2</Badge>
+<Badge variant="accent">D3D11VA</Badge>
+
+## Supported Formats
+
+| Category | Formats |
+|---|---|
+| Video containers | MP4, MKV, AVI, MOV, WebM, FLV, WMV, TS, MTS, MPEG-PS, OGV, 3GP, DivX |
+| Video codecs | H.264/AVC, H.265/HEVC, VP9, AV1, MPEG-4, MPEG-2, VC-1, VP8, Motion JPEG |
+| Audio containers | MP3, FLAC, AAC, OGG, WAV, M4A, WMA, Opus, AIFF, DSD |
+| Audio codecs | AAC, MP3, FLAC, Vorbis, Opus, PCM, DTS, AC3/E-AC3, TrueHD, WMA |
+| Subtitles | SRT, ASS, SSA, WebVTT, PGS (embedded), VobSub (embedded), MOV text |
+| Playlists | M3U, M3U8 |
+| Streaming | HTTP, HTTPS, HLS, RTMP, RTSP, UDP, YouTube-DL (via ytdl-hook) |
+
+## Playback Controls
+
+<CardGroup>
+<Card title="Play / Pause" icon="play" description="Toggle with Space or the control bar button. The engine pauses instantly and resumes from the exact frame. Audio playback continues seamlessly." />
+
+<Card title="Seeking" icon="fast-forward" description="Left/Right arrows seek ±5 seconds. Ctrl+Left/Right seeks ±30 seconds. Shift+Left/Right seeks ±1 minute. The seek bar supports click-to-seek and drag-to-scrub with thumbnail previews for H.264 and H.265 files." />
+
+<Card title="Speed Control" icon="activity" description="Cycle presets with [ (0.5×) and ] (2.0×). Fine-tune with Ctrl+[ (−0.1) and Ctrl+] (+0.1). The current speed is shown on the OSD. tempo-scaled audio preserves pitch." />
+
+<Card title="Frame Stepping" icon="skip-forward" description="Advance one frame with Period (.) and reverse one frame with Comma (,). Useful for detailed scene analysis or finding the exact frame for a screenshot." />
+
+<Card title="A-B Loop" icon="repeat" description="Press Ctrl+S to set point A (loop start). Press Ctrl+S again to set point B (loop end). The section between A and B repeats continuously. Press Ctrl+Z to clear the loop." />
+
+<Card title="Chapter Navigation" icon="bookmark" description="Skip between chapters with Page Up (previous) and Page Down (next). Chapters are parsed from MKV and MP4 container metadata. The chapter list is shown in the Media Hub sidebar." />
+</CardGroup>
+
+### Seek Precision
+
+| Method | Increment |
+|---|---|
+| Left / Right Arrow | 5 seconds |
+| Ctrl + Left / Ctrl + Right | 30 seconds |
+| Shift + Left / Shift + Right | 1 minute |
+| Seek bar click | Precise to frame |
+| Seek bar drag | Precise to frame |
+| Ctrl + G (Go to) | Enter exact time (HH:MM:SS) |
+
+## Video Filters
+
+CineWindows exposes mpv's video filter pipeline through the **Settings > Video** panel and keyboard shortcuts. All adjustments are applied in real time with immediate visual feedback on the video area.
+
+### Filter Controls
+
+| Filter | Default | Range | Shortcut |
+|---|---|---|---|
+| Contrast | 0 | −100 to +100 | 1 / Shift+1 |
+| Brightness | 0 | −100 to +100 | 2 / Shift+2 |
+| Gamma | 0 | −100 to +100 | 3 / Shift+3 |
+| Saturation | 0 | −100 to +100 | 4 / Shift+4 |
+| Hue | 0 | −180 to +180 | 5 / Shift+5 |
+
+Each filter resets to its default value when you press the corresponding number key without Shift (e.g., pressing **1** resets contrast to 0).
+
+### Advanced Filters
+
+- **Deinterlace** — toggle with **D**. Applies the yadif video filter for interlaced content. Best used with 25/29.97 fps interlaced video from TV broadcasts or DVDs.
+- **Deband** — toggle with **B**. Reduces banding artifacts in gradient-heavy scenes (sky, shadows, fog). Uses mpv's `deband` filter with optimized defaults.
+
+<Callout type="tip">
+  Filter adjustments are per-session and reset when CineWindows restarts. To make them permanent, configure the desired values in Settings > Video and enable **Apply on startup**.
+</Callout>
+
+## Video Adjustments
+
+### Zoom and Pan
+
+| Shortcut | Action |
+|---|---|
+| **F** | Cycle zoom modes: Fit to Window → Fill Window → 1:1 → Fit to Width |
+| **Ctrl + Mouse Wheel** | Zoom in / out |
+| **Mouse Drag (middle button)** | Pan the zoomed frame |
+| **Shift + F** | Reset zoom and pan to default |
+
+### Aspect Ratio
+
+| Shortcut | Action |
+|---|---|
+| **A** | Cycle aspect ratios: Auto → 16:9 → 4:3 → 2.35:1 → 1.85:1 → 1:1 |
+| **Shift + A** | Reset to Auto (source aspect ratio) |
+
+The aspect ratio setting scales the video within the window while preserving the chosen proportion. Black bars are added as needed.
+
+## Audio Controls
+
+| Control | Action |
+|---|---|
+| **Up / Down** | Volume ±5% |
+| **M** | Mute / unmute |
+| **Ctrl + Up / Ctrl + Down** | Audio delay ±50ms |
+| **J** | Cycle audio track (if multiple available) |
+
+Audio tracks are detected from the container and listed in **Audio > Track** menu. The active track is shown on the OSD when changed. CineWindows supports multi-channel audio up to 7.1 and will downmix to stereo if your output device lacks sufficient channels.
+
+## Hardware Acceleration
+
+Hardware decoding is enabled by default and automatically selects the best available backend:
+
+| Backend | API | GPU Requirement |
+|---|---|---|
+| **D3D11VA** | Direct3D 11 Video API | GPU with Direct3D 11 Feature Level 11.0 or higher |
+| **DXVA2** | DirectX Video Acceleration 2 | GPU with DXVA2 support (most GPUs from 2010 onward) |
+| **None** | Software decoding (FFmpeg) | CPU-based, no GPU required |
+
+D3D11VA is preferred when available because it offers better driver stability, lower peak memory usage, and proper support for 10-bit and HDR content. CineWindows falls back to DXVA2 on systems without D3D11VA support.
+
+<Callout type="warning">
+  Hardware acceleration may cause visual artifacts with some high-bitrate 4K H.265 files on older GPUs. If you encounter artifacts, switch to software decoding in Settings > Video > Hardware Decoder > None.
+</Callout>
+
+## Screenshots
+
+| Shortcut | Action |
+|---|---|
+| **S** | Save screenshot (PNG) to the screenshots folder |
+| **Ctrl + S** (when no A-B loop active) | Save screenshot (PNG) |
+
+Screenshots are saved to `Pictures\CineWindows\Screenshots` by default. The output format, quality, and destination folder can be changed in **Settings > Video > Screenshots**. Screenshots capture the exact decoded frame without HUD elements or overlays.
+
+## OSD Indicators
+
+The on-screen display briefly shows the following notifications:
+
+- Seek direction and delta ("Forward 0:05")
+- Playback speed when not 1.0× ("1.5×")
+- Audio track change ("Audio: English 5.1")
+- Subtitle track change ("Subtitles: English (ASS)")
+- Filter value change ("Contrast: +15")
+- Chapter jump ("Chapter 3: Opening Credits")
+- Loop state ("Loop A → B set" / "Loop cleared")
+
+All OSD notifications respect the OSD visibility setting in **Settings > General > OSD**, where you can disable them entirely or extend the display duration.
+
+<Callout type="tip">
+  You can mute all OSD notifications by pressing **Ctrl + O** (while playing) — this cycles through OSD modes: On → On (reduced) → Off. "Reduced" mode shows only seek and speed indicators.
+</Callout>

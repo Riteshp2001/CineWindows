@@ -1,0 +1,187 @@
+---
+title: Subtitles
+description: Subtitle support and customization
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Step from "blume/components/content/Step.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+CineWindows supports multiple subtitle formats with extensive customization options. Subtitles can be loaded from external files, extracted from embedded tracks, or downloaded directly from OpenSubtitles.
+
+<Badge variant="accent">SRT</Badge>
+<Badge variant="accent">ASS</Badge>
+<Badge variant="accent">SSA</Badge>
+<Badge variant="accent">WebVTT</Badge>
+<Badge variant="accent">OpenSubtitles</Badge>
+
+## Supported Formats
+
+| Format | Extension | Features |
+|---|---|---|
+| SubRip | `.srt` | Time-coded text, basic formatting |
+| Advanced SubStation Alpha | `.ass` | Rich styling, positioning, animations, karaoke |
+| SubStation Alpha | `.ssa` | Predecessor to ASS, same feature set |
+| WebVTT | `.vtt` | Web standard, cue settings, vertical text |
+| Embedded PGS | — | Blu-ray bitmap subtitles (inside MKV/MP4) |
+| Embedded VobSub | — | DVD bitmap subtitles (inside MKV) |
+| MOV text | — | QuickTime text tracks |
+
+<Callout type="info">
+  ASS and SSA subtitles contain embedded style definitions for font, size, color, border, shadow, and position. When an ASS/SSA subtitle is loaded, CineWindows respects the file's own styles by default. You can override them by disabling **Use file styles** in the subtitle settings.
+</Callout>
+
+## Loading Subtitles
+
+### Auto-Loading
+
+CineWindows automatically searches for external subtitle files when a media file is opened. The search looks for files in the same directory as the media with matching base names:
+
+- `Movie.mp4` → `Movie.srt`, `Movie.ass`, `Movie.ssa`, `Movie.vtt`
+- `Episode_S01E01.mkv` → `Episode_S01E01.en.srt`, `Episode_S01E01.eng.ass`
+
+Language tags in the filename (`.en.`, `.eng.`, `.fr.`, `.de.`, etc.) are parsed and used to label the subtitle track in the selection menu. The language tag must appear before the format extension — for example, `Movie.eng.srt` is recognized, but `Movie.srt.eng` is not.
+
+<Callout type="tip">
+  Name external subtitle files with a language tag for automatic labeling: `Movie.eng.srt`, `Movie.fra.ass`, `Movie.deu.vtt`. Use ISO 639-1 (en, fr, de) or ISO 639-2 (eng, fra, deu) codes.
+</Callout>
+
+### Manual Loading
+
+<Steps>
+<Step title="Open the subtitle menu">
+  Click the subtitle icon (CC) on the Control Bar, or press **U** to open the subtitle track selection menu.
+</Step>
+<Step title="Select Load External">
+  Choose **Load External Subtitle** from the bottom of the menu. A file dialog opens filtered to supported subtitle formats.
+</Step>
+<Step title="Browse and select">
+  Navigate to the subtitle file, select it, and click **Open**. The subtitle renders immediately on the video.
+</Step>
+</Steps>
+
+Multiple external subtitles can be loaded simultaneously. Each appears as a separate track in the subtitle menu and can be toggled independently.
+
+### Embedded Tracks
+
+MKV and MP4 files often contain embedded subtitle streams. CineWindows lists all embedded subtitle tracks in the subtitle menu alongside external files. Embedded tracks are identified by language, track name, and format type (e.g., "English (PGS)", "French (ASS)").
+
+To select an embedded track:
+
+1. Press **U** or click the subtitle icon
+2. Choose the desired track from the list
+3. The track is activated immediately and any previously selected subtitle is replaced
+
+## OpenSubtitles Download
+
+CineWindows integrates with the OpenSubtitles.com API to download subtitles directly within the application.
+
+### Prerequisites
+
+- An active internet connection
+- The media file should have a filename matching its title for best search results
+
+### How to Download
+
+<Steps>
+<Step title="Open the subtitle search">
+  Press **Ctrl + D** or select **Download Subtitles** from the subtitle menu. The subtitle browser panel opens in the Media Hub sidebar.
+</Step>
+<Step title="Search for subtitles">
+  CineWindows automatically sends the media filename to OpenSubtitles. You can also type a custom query. Select your preferred language from the dropdown.
+</Step>
+<Step title="Choose a result">
+  Results are sorted by download count and rating. Each result shows the language, format (SRT or ASS), uploader, and rating. Click a result to view details.
+</Step>
+<Step title="Download and apply">
+  Click the **Download** button. The subtitle file is saved to a `subtitles` folder next to the media file and loaded automatically.
+</Step>
+</Steps>
+
+<Callout type="warning">
+  OpenSubtitles download requires an internet connection. If the download fails due to network issues, CineWindows shows a toast notification and falls back to locally available subtitles. Requests are rate-limited — rapid successive searches may be temporarily queued.
+</Callout>
+
+## Subtitle Customization
+
+All customization options are available in **Settings > Subtitles**. Changes apply immediately and are previewed on the current video.
+
+### Font Settings
+
+| Setting | Default | Options |
+|---|---|---|
+| Font Family | System default | All installed system fonts |
+| Font Size | 24 pt | 12 – 72 pt |
+| Font Color | White | Custom color picker with opacity |
+| Bold | Off | On / Off |
+| Italic | Off | On / Off |
+
+### Appearance
+
+| Setting | Default | Options |
+|---|---|---|
+| Border Style | Outline | None, Outline, Box Background, Shadow |
+| Border Width | 2 px | 0 – 8 px |
+| Box Opacity | 50% | 0% – 100% (only when Border Style is Box Background) |
+| Shadow Offset | 2 px | 0 – 8 px |
+| Shadow Color | Black | Custom color picker |
+
+### Positioning
+
+| Setting | Default | Options |
+|---|---|---|
+| Vertical Position | Bottom (90%) | 10% – 95% of screen height |
+| Horizontal Alignment | Center | Left, Center, Right |
+| Bottom Margin | 16 px | 0 – 100 px |
+
+### Timing
+
+| Setting | Default | Range |
+|---|---|---|
+| Subtitle Delay | 0 s | −30 to +30 seconds (in 100ms increments) |
+
+<Callout type="tip">
+  Use subtitle delay to sync subtitles that are ahead or behind the audio. Positive values delay the subtitles; negative values show them earlier. The OSD shows the current delay value when adjusted.
+</Callout>
+
+## Secondary Subtitles
+
+CineWindows supports displaying two subtitle tracks simultaneously — useful for language learners, accessibility needs, or comparing translations.
+
+### Enabling Secondary Subtitles
+
+1. Open **Settings > Subtitles**
+2. Toggle **Secondary Subtitles** to On
+3. Load your primary subtitle track (e.g., English)
+4. Load a secondary track from the subtitle menu — it appears under **Secondary Subtitle**
+5. Position the secondary subtitles at the **Top** in the settings to separate them visually
+
+### Use Cases
+
+- **Language learning**: Native language at bottom, target language at top
+- **Accessibility**: Simplified captions at bottom, full description at top
+- **Comparison**: Two different translations side by side
+
+<Callout type="tip">
+  For language learning, assign different colors to primary and secondary subtitles so you can quickly distinguish them. Use white for the target language and yellow for your native language.
+</Callout>
+
+## Customization Presets
+
+| Preset | Font | Size | Color | Border | Shadow | Position |
+|---|---|---|---|---|---|---|
+| **Clean White on Black** | Arial | 24 | White | Outline, 2px | — | Bottom |
+| **Minimal** | Segoe UI | 20 | White | Outline, 1px | — | Bottom |
+| **High Contrast** | Arial | 28 | Yellow | Box, 50% | — | Bottom |
+| **Soft Shadow** | System | 26 | White | — | 3px | Bottom |
+| **Top Aligned** | Arial | 22 | White | Outline, 2px | — | Top, 85% |
+| **Language Learning** | Segoe UI | 22 | White / Yellow | Outline | — | Bottom + Top |
+
+<Callout type="info">
+  Presets are conceptual starting points. Manually configure each setting in the subtitle preferences to achieve the exact look you want. Changes are previewed in real time on the video.
+</Callout>

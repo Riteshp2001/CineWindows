@@ -1,0 +1,108 @@
+# CineWindows - Video Player
+# Copyright (c) 2026 Ritesh Pandit
+#
+# CineWindows Community License
+#
+# This source code is made available for personal, non-commercial
+# use only. Organizations may not use, copy, modify, or distribute
+# this code without written permission from Ritesh Pandit.
+#
+# See the LICENSE.md file for full license terms.
+#
+# Project: CineWindows
+# Author:  Ritesh Pandit
+build*/
+bin/
+out/
+/lib/
+appdir/
+contribs/
+
+# Dependencies
+.deps/
+website/node_modules/
+website/dist/
+website/docs/node_modules/
+docs/node_modules/
+docs/dist/
+docs/.blume/
+docs/.blume-verify/
+docs/.astro/
+resources/remote/node_modules/
+resources/remote/*.tsbuildinfo
+
+# Packaging
+packaging/windows/stage/
+packaging/windows/artifacts/
+packaging/windows/*-setup.exe
+packaging/windows/*.zip
+packaging/linux/artifacts/
+packaging/macos/artifacts/
+packaging/macos/CineWindows.icns
+
+# Qt / QML
+qrc_resources.cpp
+qmlcache_loader.cpp
+qml_*qml.cpp
+.qmlls.ini
+moc_*.cpp
+*.moc
+*qmltypes
+*_qmltyperegistrations.cpp
+*.aotstats
+
+# IDE / Editor
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.creator
+*.creator.user
+*.files
+*.includes
+*.config
+*.kdev4
+
+# Compiled / Runtime
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.obj
+*.o
+*.exp
+*.pdb
+*.ilk
+*.manifest
+*.stackdump
+
+# OS-Specific
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# Development Stash
+stash/
+agent-skills/
+.superpowers/
+*.patch
+*.diff
+
+# Miscellaneous
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+
+.vercel
+.env*
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/

@@ -1,0 +1,125 @@
+---
+title: Media Hub
+description: Browse, library, favorites, history management
+---
+
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+
+The Media Hub is the central browsing and library interface for all your media. Access it from the sidebar — it combines a file browser, an indexed media library, favorites, and playback history into a single panel.
+
+<CardGroup>
+<Card title="Home" icon="home" description="Dashboard view showing recent items, quick-access folders, trending favorites, and a resumption prompt for the last-played file. Updates in real time as you watch and favorite content." />
+<Card title="Browse" icon="folder" description="Filesystem tree powered by FileBrowserModel. Navigate drives, directories, and media files with thumbnails, sorting by name/date/size, and drag-and-drop support." />
+<Card title="Library" icon="library" description="SQLite-indexed view of all media under registered library roots. Auto-scans on startup and watches for file changes. Search by title or filename." />
+<Card title="Favorites" icon="star" description="Starred items persist across sessions. Toggle with the heart icon or context menu. Filterable by media type (video / audio / playlist / folder)." />
+<Card title="Recent" icon="clock" description="Last 100 played items sorted by most recent. Shows resume progress, completion status, and play count. Click to resume from where you left off." />
+<Card title="History" icon="history" description="Full playback history with per-visit timestamps, watch duration, completion status, and end reason (eof / replaced / stopped). Grouped by day/week/month." />
+</CardGroup>
+
+## File Browser
+
+The `FileBrowserModel` provides a virtual filesystem tree that lists drives at the root level and navigates into directories recursively. Only media files (determined by `MediaUtils::isMediaFile()`) and directories are shown — non-media files are filtered out.
+
+### Features
+
+- Drive enumeration on Windows (`A:\`, `C:\`, etc.) as root items
+- Directory traversal with `QDirIterator` for efficient large-directory listing
+- Column sorting: name, file type, size, date modified
+- Drag-and-drop support for adding to playlist or opening in player
+- Context menu with **Play**, **Add to Playlist**, **Favorite**, and **Show in Explorer**
+
+## Media Library
+
+The library is backed by a SQLite database managed through `LibraryDatabase` and `MediaLibraryService`. It tracks every file that has been played or indexed.
+
+### Database Schema
+
+The library consists of four core tables:
+
+| Table | Purpose |
+|-------|---------|
+| `media_items` | Master table: locator, title, duration, position, play count, timestamps, thumbnail path, missing flag |
+| `library_roots` | Registered folder roots for scanning |
+| `library_entries` | Many-to-many join between roots and media items |
+| `playback_visits` | Per-session playback records: opened at, position, watched duration, completed status, end reason |
+
+### Scanning
+
+When you add a library root, `MediaLibraryService` launches a background scan on a worker thread via `QtConcurrent::run`. It walks all subdirectories using `QDirIterator` with `Subdirectories` flag, identifies media files, and inserts them into the database. Scanning is non-blocking — the UI remains responsive throughout.
+
+<Badge variant="default">Incremental</Badge> Only new and modified files are processed on subsequent scans.
+<Badge variant="default">Missing detection</Badge> Files that no longer exist on disk are flagged with `missing=1` but their metadata is preserved.
+
+### Statistics
+
+The library tracks aggregate statistics:
+
+- **Unique media**: Count of distinct files played at least once
+- **Total play count**: Sum of all playback sessions
+- **Watched time**: Cumulative milliseconds across all visits
+- **Completions**: Number of sessions where playback reached at least 92% of duration
+
+## Favorites
+
+Toggle favorites from the Media Hub, context menu, or via the `toggleFavorite()` method. Favorites are stored in a dedicated `favorites` table keyed by `locator_key` (a normalized, case-insensitive path key).
+
+### Sorting & Filtering
+
+- Sort by date added (newest first), title, or media type
+- Filter by kind: video, audio, playlist, folder, or URL
+- Search within favorites by title or filename
+
+## History & Recent
+
+**Recent** shows the last 100 played items ordered by `last_played_at_ms` descending. Each entry displays the resume progress bar, duration, and completion badge.
+
+**History** provides a complete chronological log of every playback session:
+
+### Grouping
+
+History entries are grouped by time period for easier navigation:
+
+| Group | Range |
+|-------|-------|
+| Today | Current calendar day |
+| Yesterday | Previous calendar day |
+| This Week | Current week (Monday–Sunday) |
+| This Month | Current month |
+| Older | Everything before the current month |
+
+### Sorting & Filtering
+
+- Sort by played date, title, or duration
+- Filter by completion status (completed / partial)
+- Filter by media type
+
+### Actions
+
+- **Play** — open the file at the position it was last watched
+- **Remove from history** — deletes the visit record
+- **Clear All** — removes all playback history and resets play counts
+- **Add to Favorites** — mark as favorite directly from history
+
+## Thumbnail Service
+
+The `MediaThumbnailService` generates video thumbnails asynchronously using `ffmpeg`.
+
+### How It Works
+
+1. A thumbnail is requested with `requestThumbnail(path)`
+2. The service checks a SHA-256 keyed cache in `PathUtils::thumbnailCacheDir()`
+3. On cache miss, an `ffmpeg` process captures frame at 5 seconds, scaled to 480px wide
+4. Up to `MaxWorkers` (4) concurrent processes run; remaining requests queue
+5. On completion, the `thumbnailReady(path, url)` signal fires
+6. Failed thumbnails emit `thumbnailFailed(path)` — the UI shows a placeholder
+
+The cache can be cleared from **Preferences > Advanced > Clear Thumbnail Cache**.
+
+<Callout type="info">
+  Thumbnails are stored as JPEG files named by SHA-256 hash of the file path, size, and modification time. This ensures cache entries invalidate automatically when the source file changes.
+</Callout>

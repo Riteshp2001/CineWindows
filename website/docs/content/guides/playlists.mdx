@@ -1,0 +1,138 @@
+---
+title: Playlists
+description: M3U/M3U8 playlist management
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Step from "blume/components/content/Step.astro";
+import Steps from "blume/components/content/Steps.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+M3U and M3U8 playlists are fully supported in CineWindows. Playlists can be loaded from files, built interactively in the Media Hub, or restored from the previous session automatically.
+
+<Badge variant="accent">M3U</Badge>
+<Badge variant="accent">M3U8</Badge>
+<Badge variant="accent">UTF-8</Badge>
+<Badge variant="success">Session save</Badge>
+
+## Playlist Drawer
+
+The playlist is displayed in the **Media Hub** sidebar under the Playlist tab. Toggle the sidebar with **Ctrl + H** and select the third tab (playlist icon) to reveal the current playlist.
+
+### Components
+
+- **Track list** — each entry shows the file name, duration, and an indicator for the currently playing track
+- **Drag handle** — six-dot icon on the left of each track for reordering
+- **Context menu** — right-click any track for Remove, Remove All, Save Playlist, and Copy Path
+- **Header** — shows total track count and total duration at the top
+- **Drop zone** — drag files from Explorer or from other applications onto the playlist to append them
+
+<Callout type="tip">
+  Double-click any track in the playlist to start playing it immediately. The playing track is highlighted with the accent color.
+</Callout>
+
+## Working with M3U Playlists
+
+### Open an M3U File
+
+<Steps>
+<Step title="Open the file">
+  Press **Ctrl + O** and select an `.m3u` or `.m3u8` file, or drag the M3U file onto the CineWindows window. The playlist loads and playback begins from the first entry.
+</Step>
+<Step title="Navigate tracks">
+  Use **N** (next) and **P** (previous) to move between tracks. The current track is highlighted in the playlist. Tracks play sequentially by default.
+</Step>
+<Step title="Change playback order">
+  Click the shuffle button in the Control Bar (or press **Ctrl + R**) to toggle between sequential and shuffle modes. Repeat mode cycles the entire playlist.
+</Step>
+</Steps>
+
+### Create and Save a Playlist
+
+<Steps>
+<Step title="Add files">
+  Drag files from File Explorer onto the CineWindows window, or use **Ctrl + O** to add individual files. Multiple files opened at once are automatically collected into a playlist.
+</Step>
+<Step title="Rearrange tracks">
+  Click and drag the handle icon on any track to reorder it within the list. A visual separator shows the insertion point as you drag.
+</Step>
+<Step title="Save the playlist">
+  Click the **Save** button in the playlist header or press **Ctrl + S** (while the playlist tab is active). Choose a location and filename — CineWindows writes an M3U8 file with UTF-8 encoding and absolute or relative paths.
+</Step>
+</Steps>
+
+<Callout type="info">
+  Saved playlists use relative paths when the media files are in the same directory tree as the playlist file. Files in different drives are stored with absolute paths.
+</Callout>
+
+## Drag-and-Drop Reordering
+
+The playlist supports full drag-and-drop reordering:
+
+1. Hover over the drag handle (six dots) on the left side of a track
+2. Click and hold to begin dragging — the cursor changes to a grab indicator
+3. Drag up or down — a colored insertion line shows where the track will land
+4. Release to place the track in the new position
+
+Reorder operations are instantaneous and do not require saving. Undo is not currently supported, but you can reload the last saved playlist to revert changes.
+
+## Track Selection
+
+CineWindows respects the `#EXTINF` extended M3U metadata. When an M3U file includes `#EXTINF` tags, CineWindows parses the track title and duration and displays them in the playlist. Files without `#EXTINF` tags show the file name and retrieve duration from the media headers.
+
+| M3U Tag | Parsed Value | Display |
+|---|---|---|
+| `#EXTINF:123,Title Here` | Duration (123s), Title | Track name + duration |
+| `#EXTINF:-1,Title` | Stream (no duration), Title | Track name, "Stream" badge |
+| No `#EXTINF` | — | Filename + detected duration |
+
+<Callout type="warning">
+  CineWindows uses UTF-8 encoding for M3U8 files. M3U files with non-UTF-8 encodings (e.g., Windows-1252) may display incorrectly. Convert legacy M3U files to UTF-8 in a text editor if you encounter garbled text.
+</Callout>
+
+## Session Save and Restore
+
+CineWindows automatically saves the current playlist and playback position when you close the application. On the next launch, the playlist is restored and you are prompted to resume from where you left off.
+
+### Behavior
+
+- **Session file** — stored as `session.m3u8` in the CineWindows data directory
+- **Resume prompt** — a dialog appears on launch asking whether to resume the previous session
+- **Dismiss** — selecting **No** clears the session and starts with an empty playlist
+- **Auto-save timer** — the playlist state is persisted every 60 seconds during active playback
+
+<Callout type="tip">
+  The resume prompt can be disabled in **Settings > Playlist > Resume Session**. When disabled, the previous playlist is always restored and playback resumes automatically from the last position.
+</Callout>
+
+## Playback Modes
+
+| Mode | Description | Shortcut |
+|---|---|---|
+| Sequential | Play tracks in order, stop at end | Default |
+| Repeat All | Loop the entire playlist | Ctrl + R |
+| Repeat One | Repeat the current track | Ctrl + R (cycle) |
+| Shuffle | Play tracks in random order | Ctrl + R (cycle) |
+
+<Callout type="info">
+  The current playback mode is shown in the playlist header and on the Control Bar. Repeat modes display a small badge (1 for repeat one, ∞ for repeat all). Shuffle shows a shuffle icon.
+</Callout>
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| **N** | Next track |
+| **P** | Previous track |
+| **Ctrl + N** | Next playlist (if multiple loaded) |
+| **Ctrl + R** | Cycle playback mode |
+| **Delete** | Remove selected track from playlist |
+| **Ctrl + Delete** | Clear entire playlist |
+| **Ctrl + S** | Save current playlist |
+| **Ctrl + H** | Toggle Media Hub (playlist visibility) |
+
+<Callout type="tip">
+  Drag a folder from Explorer directly onto CineWindows to load all supported media files from that folder into a new playlist. Subdirectories are not included — only direct children.
+</Callout>

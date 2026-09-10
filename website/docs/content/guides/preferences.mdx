@@ -1,0 +1,90 @@
+---
+title: Preferences
+description: All configuration options available in CineWindows
+---
+
+import Callout from "blume/components/content/Callout.astro";
+import Badge from "blume/components/content/Badge.astro";
+import Tabs from "blume/components/content/Tabs.astro";
+import Tab from "blume/components/content/Tab.astro";
+import Card from "blume/components/content/Card.astro";
+import CardGroup from "blume/components/content/CardGroup.astro";
+
+CineWindows stores all user preferences in a `QSettings`-backed `SettingsManager` singleton exposed to QML. Changes are persisted immediately on write and survive application restarts.
+
+<Badge variant="default">Persisted via QSettings</Badge>
+<Badge variant="default">QML Singleton</Badge>
+
+<Tabs>
+<Tab title="General">
+
+| Setting | Key | Type | Default | Description |
+|---------|-----|------|---------|-------------|
+| Open New Window | `ui/openNewWindow` | bool | `true` | Open media in a new window instead of the current one |
+| Thumbnail Preview | `ui/thumbnailPreview` | bool | `true` | Show thumbnail previews in the seek bar and chapter list |
+| Show Remaining Time | `ui/showRemaining` | bool | `false` | Display remaining (`-MM:SS`) instead of elapsed time |
+| Theme Mode | `ui/themeMode` | string | `"dark"` | Application palette: `"dark"` or `"light"` |
+| Accent Color | `ui/accentColor` | string | `"#10c7d1"` | User-selected accent colour in hex ARGB |
+| Reduce Motion | `ui/reduceMotion` | bool | `false` | Disable non-essential transitions and animations |
+| UI Language | `ui/locale` | string | *(system)* | Application locale code (e.g. `"en-US"`, `"de-DE"`) |
+| Left Click Action | `input/leftClick` | int | `0` | Action on single left-click (`0`: Play/Pause, `1`: Focus/Play/Pause, `2`: Disabled) |
+| Right Click Action | `input/rightClick` | int | `1` | Action on single right-click (`0`: Play/Pause, `1`: Window Menu, `2`: Disabled) |
+| Window Size | `ui/windowSize` | QSize | *(auto)* | Saved window size in logical pixels |
+
+</Tab>
+<Tab title="Playback">
+
+| Setting | Key | Type | Default | Description |
+|---------|-----|------|---------|-------------|
+| Volume | `playback/volume` | int | `100` | Audio volume level (`0`–`200`) |
+| Muted | `playback/muted` | bool | `false` | Whether audio output is muted |
+| Hardware Decoding | `playback/hwdec` | string | `"auto-safe"` | GPU decoding backend (`"auto-safe"`, `"no"`, `"vaapi"`, `"cuda"`, etc.) |
+| Normalize Volume | `playback/normalizeVolume` | bool | `false` | Apply volume normalisation (RG / EBU R128) |
+| Save Video Position | `playback/savePosition` | bool | `false` | Remember the last playback position per file |
+| Save Session | `playback/saveSession` | bool | `false` | Restore the previous playlist session on startup |
+| Equalizer Enabled | `playback/equalizerEnabled` | bool | `false` | Enable 10-band graphic equalizer |
+| Equalizer Bands | `playback/equalizerBands` | list | `[0]*10` | Gain per band in dB |
+| Visualization | `playback/visualization` | string | `"off"` | Audio visualization mode |
+| Stereo Input | `playback/stereoInput` | string | `"off"` | Stereo upmix input mode |
+| Stereo Output | `playback/stereoOutput` | string | `"arcd"` | Stereo downmix channel layout |
+| Tone Mapping | `playback/toneMapping` | string | `"auto"` | HDR tone mapping algorithm |
+| Target Peak | `playback/targetPeak` | int | `203` | HDR target peak brightness (nits) |
+
+</Tab>
+<Tab title="Audio">
+
+| Setting | Key | Type | Default | Description |
+|---------|-----|------|---------|-------------|
+| Preferred Languages | `playback/audioLanguages` | string | *(empty)* | Comma-separated language codes (e.g. `"en,ja,hi"`) |
+
+</Tab>
+<Tab title="Subtitles">
+
+| Setting | Key | Type | Default | Description |
+|---------|-----|------|---------|-------------|
+| Subtitle Font | `subtitles/font` | string | `"Adwaita Sans SemiBold"` | Font family for subtitle text |
+| Subtitle Scale | `subtitles/scale` | double | `1.0` | Relative scale factor (`0.1`–`3.0`) |
+| Subtitle Color | `subtitles/color` | string | `"#ebebeb"` | Text colour in hex ARGB |
+| Subtitle Background | `subtitles/background` | bool | `false` | Draw background box behind text |
+| Subtitle Background Color | `subtitles/backgroundColor` | string | `"#97000000"` | Background colour in hex ARGB |
+| Preferred Languages | `subtitles/languages` | string | *(empty)* | Comma-separated language codes (e.g. `"en,es,pt"`) |
+
+</Tab>
+<Tab title="Advanced">
+
+| Setting | Key | Type | Default | Description |
+|---------|-----|------|---------|-------------|
+| Auto Update | `updates/autoCheck` | bool | `true` | Check for updates automatically on startup |
+| Key Bindings | `input/keyBindings` | string | *(defaults)* | Serialised keyboard shortcut configuration |
+| Initial Window Size | `ui/initialSize` | QSize | *(auto)* | Initial window dimensions on first launch |
+
+</Tab>
+</Tabs>
+
+## Persistence
+
+Preferences are stored via `QSettings` using the organisation name `gyrolet` and application name `CineWindows`.
+
+<Callout type="tip">
+  The configuration directory can be opened directly from Preferences or by calling `SettingsManager.openConfigDirectory()` from QML. The `resetPlaybackSettings()` method restores all playback-related preferences to their factory defaults.
+</Callout>
