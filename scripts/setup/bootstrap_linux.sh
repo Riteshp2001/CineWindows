@@ -36,6 +36,7 @@ sudo apt install -y \
   libgl1-mesa-dev \
   libglu1-mesa-dev \
   libxkbcommon-dev \
+  libxcb1-dev \
   libdbus-1-dev \
   pkg-config
 

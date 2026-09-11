@@ -39,6 +39,9 @@ mkdir -p "${ARTIFACT_DIR}"
 LICENSE_DIR="${APP_PATH}/Contents/Resources/licenses/CineWindows"
 mkdir -p "${LICENSE_DIR}"
 cp LICENSE.md THIRD_PARTY_NOTICES.md "${LICENSE_DIR}/"
+mkdir -p "${APP_PATH}/Contents/Resources/licenses/Qt-Advanced-Docking-System"
+cp third_party/Qt-Advanced-Docking-System/LICENSE "${APP_PATH}/Contents/Resources/licenses/Qt-Advanced-Docking-System/"
+cp third_party/Qt-Advanced-Docking-System/gnu-lgpl-v2.1.md "${APP_PATH}/Contents/Resources/licenses/Qt-Advanced-Docking-System/"
 
 if ! command -v macdeployqt >/dev/null 2>&1; then
     echo "ERROR: macdeployqt was not found in PATH. Use the same Qt installation that built CineWindows."
@@ -102,6 +105,7 @@ echo "==> Running macdeployqt with QML import scanning..."
 macdeployqt "${APP_PATH}" \
     -qmldir="$(pwd)/qml" \
     -qmlimport="${QT_PREFIX}/qml" \
+    -libpath="${BUILD_DIR}/x64/lib" \
     -always-overwrite \
     -verbose=2
 
@@ -149,6 +153,10 @@ fi
 FRAMEWORKS_DIR="${APP_PATH}/Contents/Frameworks"
 MAIN_BINARY="${APP_PATH}/Contents/MacOS/${APP_NAME}"
 MPV_BUNDLED="${FRAMEWORKS_DIR}/libmpv.2.dylib"
+if ! find "$FRAMEWORKS_DIR" -type f -name 'libqtadvanceddocking-qt6*.dylib' -print -quit | grep -q .; then
+    echo "ERROR: Qt Advanced Docking System was not bundled into Contents/Frameworks."
+    exit 1
+fi
 
 # macdeployqt follows CineWindows -> MpvQt -> libmpv and deploys the observed
 # dylib dependency graph. Treat a missing bundled libmpv as a hard packaging

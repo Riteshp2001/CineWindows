@@ -169,14 +169,7 @@ Item {
 
     /// Recalculates thumbnail dimensions based on video aspect ratio
     function updateThumbnailSize() {
-        var aspect = 16 / 9;                                                         // Fallback aspect ratio
-        var params = player ? player.mpvOption("video-out-params") : null;            // Video output params from mpv
-        if (params) {
-            var videoW = Number(params["dw"] || params["w"] || params["dwidth"] || 0);   // Native video width in pixels
-            var videoH = Number(params["dh"] || params["h"] || params["dheight"] || 0);  // Native video height in pixels
-            if (videoW > 0 && videoH > 0)
-                aspect = videoW / videoH;
-        }
+        var aspect = player && player.videoAspectRatio > 0 ? player.videoAspectRatio : 16 / 9;
 
         var width = _thumbMaxWidth;                              // Calculated thumbnail width constrained by max
         var height = Math.round(width / aspect);                 // Calculated thumbnail height matching aspect
@@ -288,8 +281,9 @@ Item {
         /// Shows the thumbnail when the thumbnailer finishes loading the requested frame
         /// @param time Time in seconds of the thumbnail that finished loading
         function onThumbnailReady(time) {
-            if (Math.floor(time) === Math.floor(root.hoverTime))
-                root.thumbnailVisible = true;
+            var target = root.player ? Math.min(root.hoverTime, Math.max(0, root.player.duration - 0.05)) : root.hoverTime;
+            root.thumbnailVisible = SettingsManager.thumbnailPreview && progressHover.hovered
+                && !progress.pressed && Math.floor(time) === Math.floor(target);
         }
     }
 
@@ -628,7 +622,7 @@ Item {
             width: root._thumbWidth
             height: root._thumbHeight
             radius: 8
-            color: "#101014"
+            color: Theme.videoBackground
             border.color: Theme.popoverBorder
             border.width: 1
             clip: true
@@ -637,6 +631,7 @@ Item {
                 id: thumbnailer
                 anchors.fill: parent
                 player: root.player
+                onThumbnailCleared: root.thumbnailVisible = false
             }
         }
 

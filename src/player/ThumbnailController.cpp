@@ -19,6 +19,8 @@
 #include "player/ThumbnailController.h"
 
 #include "player/CineMpvItem.h"
+#include "app/LoggingCategories.h"
+#include "utils/MediaUtils.h"
 
 #include <QColor>
 #include <QCoreApplication>
@@ -39,15 +41,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace {
 constexpr int kSeekPeriodMs = 30;
 constexpr int kPollIntervalMs = 16;
-constexpr int kMaxPollAttempts = 80;
+constexpr int kMaxPollAttempts = 320;
 constexpr int kExactSeekDelayTicks = 5;
 constexpr int kBytesPerPixel = 4;
 
-constexpr uint64_t kTimePosReplyId = 1001;
 constexpr uint64_t kReplyScreenshot = 1002;
 constexpr uint64_t kReplySeek = 1003;
 
@@ -70,6 +72,10 @@ ThumbnailController::ThumbnailController(QQuickItem* parent)
 
     m_pollTimer.setInterval(kPollIntervalMs);
     connect(&m_pollTimer, &QTimer::timeout, this, &ThumbnailController::pollOutput);
+    m_frameCache.setMaxCost(8 * 1024 * 1024);
+    m_idleTimer.setSingleShot(true);
+    m_idleTimer.setInterval(60000);
+    connect(&m_idleTimer, &QTimer::timeout, this, &ThumbnailController::destroyWorker);
 }
 
 /**
@@ -101,7 +107,22 @@ void ThumbnailController::setPlayer(CineMpvItem* player)
         return;
     }
 
+    if (m_player)
+        disconnect(m_player, nullptr, this, nullptr);
+    clear();
+    destroyWorker();
     m_player = player;
+    if (m_player)
+    {
+        connect(m_player, &CineMpvItem::fileStarted, this, [this] {
+            clear();
+            destroyWorker();
+        });
+        connect(m_player, &CineMpvItem::videoGeometryChanged, this, [this] {
+            clear();
+            destroyWorker();
+        });
+    }
     Q_EMIT playerChanged();
 }
 
@@ -116,20 +137,25 @@ void ThumbnailController::setPlayer(CineMpvItem* player)
  */
 void ThumbnailController::request(const QString& path, double time, int posX, int posY, int width, int height)
 {
-    if (!m_player || path.trimmed().isEmpty() || width <= 0 || height <= 0)
+    if (!m_player || path.trimmed().isEmpty() || width <= 0 || height <= 0 || !std::isfinite(time)
+        || m_player->videoWidth() <= 0 || time > static_cast<double>(std::numeric_limits<int>::max() - 1))
     {
         clear();
         return;
     }
 
-    const int second = static_cast<int>(std::floor(std::max(0.0, time)));
+    time = std::max(0.0, time);
+    if (m_player->duration() > 0)
+        time = std::min(time, std::max(0.0, m_player->duration() - 0.05));
+    const int second = static_cast<int>(std::floor(time));
 
     // Calculate physical pixels for High-DPI support
     const double dpr = (m_player && m_player->window()) ? m_player->window()->devicePixelRatio() : 1.0;
     const int physicalX = static_cast<int>(std::round(posX * dpr));
     const int physicalY = static_cast<int>(std::round(posY * dpr));
     const QSize physicalSize(static_cast<int>(std::round(width * dpr)), static_cast<int>(std::round(height * dpr)));
-    const QSize sourceSize = physicalSize;
+    const QSize sourceSize = physicalSize.width() > 512 || physicalSize.height() > 512
+        ? physicalSize.scaled(QSize(512, 512), Qt::KeepAspectRatio) : physicalSize;
 
     const bool workerShapeChanged = m_path != path || m_workerSize != sourceSize;
 
@@ -140,6 +166,8 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
     m_posY = physicalY;
     m_size = physicalSize;
     m_sourceSize = sourceSize;
+    m_active = true;
+    m_idleTimer.stop();
 
     THUMBNAIL_LOG << "ThumbnailController::request path:" << path << "time:" << time << "second:" << second;
 
@@ -156,19 +184,20 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
         // Cache vid/rotate once when file changes instead of querying sync on every seek
         m_cachedVid = -1;
         m_cachedRotate = 0;
+        m_sourcePath = path;
         if (m_player)
         {
             QVariant vidVar = m_player->mpvOption(QStringLiteral("vid"));
             if (vidVar.isValid())
                 m_cachedVid = vidVar.toInt();
-            QVariant rotateVar = m_player->mpvOption(QStringLiteral("video-params/rotate"));
+            QVariant rotateVar = m_player->mpvOption(QStringLiteral("video-rotate"));
             if (rotateVar.isValid())
                 m_cachedRotate = rotateVar.toInt();
-            else
+            if (!MediaUtils::isLocalPath(path))
             {
-                rotateVar = m_player->mpvOption(QStringLiteral("video-rotate"));
-                if (rotateVar.isValid())
-                    m_cachedRotate = rotateVar.toInt();
+                const QString resolved = m_player->mpvOption(QStringLiteral("stream-open-filename")).toString();
+                if (!resolved.isEmpty())
+                    m_sourcePath = resolved;
             }
         }
     }
@@ -180,15 +209,15 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
     else if (!workerShapeChanged)
     {
         // Check frame cache for this second before scheduling a seek
-        auto it = m_frameCache.constFind(m_second);
-        if (it != m_frameCache.constEnd() && !it->isNull())
+        const QImage* cached = m_frameCache.object(m_second);
+        if (cached && !cached->isNull())
         {
-            m_currentImage = it.value();
+            m_currentImage = *cached;
             m_haveFrame = true;
-            m_captureSecond = m_second;
-            m_captureTime = m_time;
             m_lastRequestedSecond = m_second;
-            Q_EMIT thumbnailReady(m_captureTime);
+            m_pendingSeek = false;
+            m_seekPeriodTimer.stop();
+            Q_EMIT thumbnailReady(m_time);
             update();
             return;
         }
@@ -213,13 +242,17 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
 void ThumbnailController::clear()
 {
     THUMBNAIL_LOG << "ThumbnailController::clear";
+    m_active = false;
+    m_pendingSeek = false;
     m_seekPeriodTimer.stop();
-    m_pollTimer.stop();
+    if (!m_inFlight)
+        m_pollTimer.stop();
     m_haveFrame = false;
-    m_captureSecond = -1;
     m_lastRequestedSecond = -1;
     m_currentImage = QImage();
-    m_frameCache.clear();
+    Q_EMIT thumbnailCleared();
+    if (m_mpv)
+        m_idleTimer.start();
     update();
 }
 
@@ -236,11 +269,12 @@ void ThumbnailController::paint(QPainter* painter)
     QPainterPath path;
     path.addRoundedRect(boundingRect(), 8, 8);
     painter->setClipPath(path);
-    painter->fillPath(path, QColor(QStringLiteral("#101014")));
-
     if (!m_currentImage.isNull())
     {
-        painter->drawImage(boundingRect(), m_currentImage);
+        painter->setRenderHint(QPainter::SmoothPixmapTransform);
+        const QSizeF imageSize = m_currentImage.size().scaled(boundingRect().size().toSize(), Qt::KeepAspectRatio);
+        const QRectF target(QPointF((width() - imageSize.width()) / 2, (height() - imageSize.height()) / 2), imageSize);
+        painter->drawImage(target, m_currentImage);
     }
 
     painter->restore();
@@ -307,52 +341,56 @@ bool ThumbnailController::ensureWorker()
     setOption(m_mpv, "load-osd-console", "no");
     setOption(m_mpv, "load-auto-profiles", "no");
 
-    // Encoding formats to force video filter/decoding chain under vo=null
-    setOption(m_mpv, "ovc", "rawvideo");
-    setOption(m_mpv, "of", "image2");
-    setOption(m_mpv, "ofopts", "update=1");
-
     // Dummy video/audio outputs
     setOption(m_mpv, "vo", "null");
     setOption(m_mpv, "ao", "null");
 
     // Sync active video track from player
-    if (m_player)
+    if (m_cachedVid > 0)
+        setOption(m_mpv, "vid", QByteArray::number(m_cachedVid).constData());
+    setOption(m_mpv, "video-rotate", QByteArray::number(m_cachedRotate).constData());
+    if (m_player && !MediaUtils::isLocalPath(m_path))
     {
-        QVariant vidVar = m_player->mpvOption(QStringLiteral("vid"));
-        if (vidVar.isValid())
+        for (const char* option : {"user-agent", "referrer"})
         {
-            setOption(m_mpv, "vid", vidVar.toString().toUtf8().constData());
+            const QByteArray value = m_player->mpvOption(QString::fromLatin1(option)).toString().toUtf8();
+            if (!value.isEmpty())
+                setOption(m_mpv, option, value.constData());
         }
-
-        // Sync rotation
-        QVariant rotateVar = m_player->mpvOption(QStringLiteral("video-params/rotate"));
-        int rotate = 0;
-        if (rotateVar.isValid())
+        const QStringList headers = m_player->mpvOption(QStringLiteral("http-header-fields")).toStringList();
+        QList<QByteArray> encodedHeaders;
+        QList<mpv_node> values;
+        for (const QString& header : headers)
+            encodedHeaders.append(header.toUtf8());
+        for (QByteArray& header : encodedHeaders)
         {
-            rotate = rotateVar.toInt();
+            mpv_node value{};
+            value.format = MPV_FORMAT_STRING;
+            value.u.string = header.data();
+            values.append(value);
         }
-        else
+        if (!values.isEmpty())
         {
-            rotateVar = m_player->mpvOption(QStringLiteral("video-rotate"));
-            if (rotateVar.isValid())
-            {
-                rotate = rotateVar.toInt();
-            }
+            mpv_node_list list{};
+            list.num = static_cast<int>(values.size());
+            list.values = values.data();
+            mpv_node node{};
+            node.format = MPV_FORMAT_NODE_ARRAY;
+            node.u.list = &list;
+            mpv_set_option(m_mpv, "http-header-fields", MPV_FORMAT_NODE, &node);
         }
-        setOption(m_mpv, "video-rotate", QByteArray::number(rotate).constData());
     }
 
     const QByteArray vf = vfString().toUtf8();
     setOption(m_mpv, "vf", vf.constData());
 
-    if (mpv_initialize(m_mpv) < 0)
+    const int initialized = mpv_initialize(m_mpv);
+    if (initialized < 0)
     {
+        qCWarning(cinePlayerLog) << "Thumbnail worker initialization failed:" << mpv_error_string(initialized);
         destroyWorker();
         return false;
     }
-
-    mpv_observe_property(m_mpv, kTimePosReplyId, "time-pos", MPV_FORMAT_DOUBLE);
 
     return true;
 }
@@ -363,37 +401,45 @@ bool ThumbnailController::ensureWorker()
  */
 void ThumbnailController::performSeek(bool fast)
 {
-    if (m_path.isEmpty() || !ensureWorker())
+    if (!m_active || m_path.isEmpty())
+        return;
+    if (m_inFlight)
     {
+        m_pendingSeek = true;
+        m_pendingFastSeek = fast;
+        return;
+    }
+    if (!ensureWorker())
+    {
+        m_seekPeriodTimer.stop();
         return;
     }
 
-    m_haveFrame = false;
     m_captureSecond = m_second;
     m_captureTime = m_time;
+    m_captureExact = !fast;
+    m_inFlight = true;
+    m_frameAvailable = false;
+    m_screenshotPending = false;
     m_pollAttempts = 0;
 
     THUMBNAIL_LOG << "ThumbnailController::performSeek time:" << m_time;
 
     // Use cached vid/rotate - these are populated once in request() when the file changes.
     // Avoids blocking synchronous mpvOption calls on every seek during hover.
-    if (m_cachedVid >= 0)
-    {
-        setOption(m_mpv, "vid", QByteArray::number(m_cachedVid).constData());
-    }
-    setOption(m_mpv, "video-rotate", QByteArray::number(m_cachedRotate).constData());
+    mpv_set_property_string(m_mpv, "hr-seek", fast ? "no" : "yes");
 
-    setOption(m_mpv, "hr-seek", fast ? "no" : "yes");
-
-    const QByteArray path = m_path.toUtf8();
-    const QByteArray start = QStringLiteral("start=%1").arg(m_time, 0, 'f', 3).toUtf8();
+    const QByteArray path = m_sourcePath.toUtf8();
+    const QByteArray start = QString::number(m_time, 'f', 3).toUtf8();
 
     if (m_loadedPath != m_path)
     {
-        const char* cmd[] = {"loadfile", path.constData(), "replace", "-1", start.constData(), nullptr};
+        mpv_set_property_string(m_mpv, "start", start.constData());
+        const char* cmd[] = {"loadfile", path.constData(), "replace", nullptr};
         if (mpv_command_async(m_mpv, kReplySeek, cmd) < 0)
         {
             m_pollTimer.stop();
+            m_inFlight = false;
             return;
         }
         m_loadedPath = m_path;
@@ -406,6 +452,7 @@ void ThumbnailController::performSeek(bool fast)
         if (mpv_command_async(m_mpv, kReplySeek, cmd) < 0)
         {
             m_pollTimer.stop();
+            m_inFlight = false;
             return;
         }
     }
@@ -448,10 +495,36 @@ void ThumbnailController::pollOutput()
 {
     drainEvents();
 
-    if (++m_pollAttempts > kMaxPollAttempts)
+    if (m_inFlight && m_frameAvailable && !m_screenshotPending)
+        requestScreenshot();
+
+    if (m_inFlight && ++m_pollAttempts > kMaxPollAttempts)
     {
-        THUMBNAIL_LOG << "ThumbnailController::pollOutput max poll attempts reached!";
-        m_pollTimer.stop();
+        qCWarning(cinePlayerLog) << "Thumbnail capture timed out";
+        clear();
+        destroyWorker();
+    }
+}
+
+void ThumbnailController::requestScreenshot()
+{
+    if (!m_mpv || !m_inFlight || m_screenshotPending)
+        return;
+    const char* command[] = {"screenshot-raw", "video", nullptr};
+    m_screenshotPending = mpv_command_async(m_mpv, kReplyScreenshot, command) >= 0;
+}
+
+void ThumbnailController::finishCapture()
+{
+    m_inFlight = false;
+    m_frameAvailable = false;
+    m_screenshotPending = false;
+    m_pollTimer.stop();
+    if (m_pendingSeek && m_active)
+    {
+        const bool fast = m_pendingFastSeek;
+        m_pendingSeek = false;
+        QTimer::singleShot(0, this, [this, fast] { performSeek(fast); });
     }
 }
 
@@ -477,30 +550,24 @@ void ThumbnailController::drainEvents()
 
         switch (event->event_id)
         {
-            case MPV_EVENT_PROPERTY_CHANGE:
+            case MPV_EVENT_PLAYBACK_RESTART:
             {
-                mpv_event_property* prop = static_cast<mpv_event_property*>(event->data);
-                if (prop && strcmp(prop->name, "time-pos") == 0)
-                {
-                    THUMBNAIL_LOG << "Property time-pos change, format:" << prop->format;
-                    if (prop->format == MPV_FORMAT_DOUBLE && prop->data)
-                    {
-                        double position = *static_cast<double*>(prop->data);
-                        THUMBNAIL_LOG << "time-pos double value:" << position;
-                        if (m_mpv)
-                        {
-                            const char* cmd[] = {"screenshot-raw", nullptr};
-                            mpv_command_async(m_mpv, kReplyScreenshot, cmd);
-                        }
-                    }
-                }
+                m_frameAvailable = m_inFlight;
+                requestScreenshot();
                 break;
             }
             case MPV_EVENT_COMMAND_REPLY:
             {
                 THUMBNAIL_LOG << "Command reply userdata:" << event->reply_userdata << "error:" << event->error;
-                if (event->reply_userdata == kReplyScreenshot)
+                if (event->reply_userdata == kReplySeek && event->error < 0)
                 {
+                    qCWarning(cinePlayerLog) << "Thumbnail seek failed:" << mpv_error_string(event->error);
+                    m_loadedPath.clear();
+                    finishCapture();
+                }
+                else if (event->reply_userdata == kReplyScreenshot && m_inFlight)
+                {
+                    m_screenshotPending = false;
                     mpv_event_command* cmd_event = static_cast<mpv_event_command*>(event->data);
                     if (event->error >= 0 && cmd_event && cmd_event->result.format == MPV_FORMAT_NODE_MAP)
                     {
@@ -508,6 +575,7 @@ void ThumbnailController::drainEvents()
                         int w = 0, h = 0, stride = 0;
                         char* format = nullptr;
                         void* data = nullptr;
+                        size_t dataSize = 0;
 
                         for (int i = 0; i < map->num; ++i)
                         {
@@ -529,55 +597,68 @@ void ThumbnailController::drainEvents()
                             {
                                 format = value.u.string;
                             }
-                            else if (strcmp(key, "data") == 0 && value.format == MPV_FORMAT_BYTE_ARRAY)
+                            else if (strcmp(key, "data") == 0 && value.format == MPV_FORMAT_BYTE_ARRAY && value.u.ba)
                             {
                                 data = value.u.ba->data;
+                                dataSize = value.u.ba->size;
                             }
                         }
 
                         QImage::Format qtFormat = QImage::Format_Invalid;
-                        if (strcmp(format, "bgra") == 0 || strcmp(format, "bgr0") == 0)
+                        if (format && (strcmp(format, "bgra") == 0 || strcmp(format, "bgr0") == 0))
                         {
                             qtFormat = QImage::Format_RGB32;
                         }
-                        else if (strcmp(format, "rgba") == 0 || strcmp(format, "rgb0") == 0)
+                        else if (format && strcmp(format, "rgba") == 0)
                         {
                             qtFormat = QImage::Format_RGBA8888;
+                        }
+                        else if (format && strcmp(format, "rgb0") == 0)
+                        {
+                            qtFormat = QImage::Format_RGBX8888;
                         }
 
                         THUMBNAIL_LOG << "Screenshot result: w:" << w << "h:" << h << "format:" << format
                                       << "stride:" << stride << "data:" << (data != nullptr)
                                       << "mapped format:" << qtFormat;
 
-                        if (w > 0 && h > 0 && stride > 0 && data && qtFormat != QImage::Format_Invalid)
+                        if (w > 0 && w <= 1024 && h > 0 && h <= 1024 && stride >= w * kBytesPerPixel && stride <= 16384
+                            && data && qtFormat != QImage::Format_Invalid
+                            && static_cast<size_t>(stride) * static_cast<size_t>(h) <= dataSize)
                         {
-                            m_currentImage = QImage(reinterpret_cast<uchar*>(data), w, h, stride, qtFormat).copy();
-                            m_haveFrame = true;
-                            m_frameSize = QSize(w, h);
-                            m_lastRequestedSecond = m_captureSecond;
-                            m_pollTimer.stop();
-
-                            // Cache frame by second for fast re-hover
-                            if (m_frameCache.size() >= kMaxFrameCacheSize)
+                            QImage image = QImage(reinterpret_cast<uchar*>(data), w, h, stride, qtFormat).copy();
+                            if (image.isNull())
+                                break;
+                            if (qtFormat == QImage::Format_RGB32)
                             {
-                                m_frameCache.erase(m_frameCache.begin());
+                                for (int row = 0; row < image.height(); ++row)
+                                {
+                                    auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(row));
+                                    for (int column = 0; column < image.width(); ++column)
+                                        pixels[column] |= 0xff000000u;
+                                }
                             }
-                            m_frameCache.insert(m_captureSecond, m_currentImage);
-
-                            Q_EMIT thumbnailReady(m_captureTime);
-                            update();
+                            if (m_captureExact)
+                                m_frameCache.insert(m_captureSecond, new QImage(image), static_cast<int>(image.sizeInBytes()));
+                            if (m_active && m_captureSecond == m_second)
+                            {
+                                m_currentImage = image;
+                                m_haveFrame = true;
+                                m_frameSize = QSize(w, h);
+                                m_lastRequestedSecond = m_captureSecond;
+                                Q_EMIT thumbnailReady(m_captureTime);
+                                update();
+                            }
+                            finishCapture();
                         }
-                    }
-                    if (cmd_event)
-                    {
-                        mpv_free_node_contents(&cmd_event->result);
                     }
                 }
                 break;
             }
             case MPV_EVENT_END_FILE:
             case MPV_EVENT_SHUTDOWN:
-                m_pollTimer.stop();
+                m_loadedPath.clear();
+                finishCapture();
                 break;
             default:
                 break;
@@ -590,6 +671,16 @@ void ThumbnailController::drainEvents()
  */
 void ThumbnailController::destroyWorker()
 {
+    m_seekPeriodTimer.stop();
+    m_pollTimer.stop();
+    m_idleTimer.stop();
+    m_inFlight = false;
+    m_screenshotPending = false;
+    m_frameAvailable = false;
+    m_pendingSeek = false;
+    m_loadedPath.clear();
+    m_workerSize = QSize();
+    m_frameCache.clear();
     if (!m_mpv)
     {
         return;
@@ -607,7 +698,7 @@ QString ThumbnailController::vfString() const
 {
     return QStringLiteral(
                "scale=w=%1:h=%2:force_original_aspect_ratio=decrease,"
-               "pad=w=%1:h=%2:x=-1:y=-1,format=bgra")
+               "pad=w=%1:h=%2:x=-1:y=-1,setsar=1,format=bgra")
         .arg(m_sourceSize.width())
         .arg(m_sourceSize.height());
 }

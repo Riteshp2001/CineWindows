@@ -84,8 +84,10 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
     Quick
     QuickControls2
     QuickDialogs2
+    QuickWidgets
     Sql
     Svg
+    Widgets
     LinguistTools
 )
 
@@ -98,6 +100,15 @@ set(QTLOGGER_NO_THREAD OFF CACHE BOOL "Enable QtLogger thread-safe logging suppo
 set(QTLOGGER_NETWORK OFF CACHE BOOL "Disable QtLogger remote logging sinks" FORCE)
 set(QTLOGGER_JOURNAL OFF CACHE BOOL "Disable the optional systemd journal sink" FORCE)
 add_subdirectory(third_party/qtlogger/src/qtlogger EXCLUDE_FROM_ALL)
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/Qt-Advanced-Docking-System/CMakeLists.txt")
+    message(FATAL_ERROR "Qt Advanced Docking System is missing. Run: git submodule update --init --recursive")
+endif()
+block(SCOPE_FOR VARIABLES)
+    set(BUILD_EXAMPLES OFF)
+    set(BUILD_STATIC OFF)
+    add_subdirectory(third_party/Qt-Advanced-Docking-System EXCLUDE_FROM_ALL)
+endblock()
 
 if(EXISTS "${CINEWINDOWS_MPVQT_PREFIX}/lib/cmake/MpvQt")
     list(PREPEND CMAKE_PREFIX_PATH "${CINEWINDOWS_MPVQT_PREFIX}")
@@ -249,6 +260,7 @@ set(CINEWINDOWS_QML_FILES
     qml/utils/TimeUtils.qml
     qml/window/ResizeHandles.qml
     qml/window/WindowSurface.qml
+    qml/workspace/DockedVideo.qml
 )
 
 set_source_files_properties(qml/style/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -290,6 +302,7 @@ set(CINEWINDOWS_SOURCES
     src/utils/MediaUtils.cpp src/utils/MediaUtils.h
     src/utils/PathUtils.cpp src/utils/PathUtils.h
     src/window/WindowCornerPreference.cpp src/window/WindowCornerPreference.h
+    src/workspace/WorkspaceController.cpp src/workspace/WorkspaceController.h
     third_party/QR-Code-generator/cpp/qrcodegen.cpp third_party/QR-Code-generator/cpp/qrcodegen.hpp
 )
 
@@ -348,6 +361,7 @@ target_include_directories(CineWindows PRIVATE
 )
 
 target_link_libraries(CineWindows PRIVATE
+    ads::qtadvanceddocking-qt6
     qtlogger::qtlogger
     Qt6::Concurrent
     Qt6::Core
@@ -357,8 +371,10 @@ target_link_libraries(CineWindows PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::QuickDialogs2
+    Qt6::QuickWidgets
     Qt6::Sql
     Qt6::Svg
+    Qt6::Widgets
     MpvQt::MpvQt
     ${Libmpv_LIBRARIES}
 )
@@ -368,6 +384,7 @@ if(WIN32)
 endif()
 
 target_compile_definitions(CineWindows PRIVATE
+    APP_ID="${CINEWINDOWS_APP_ID}"
     APP_DISPLAY_NAME="${CINEWINDOWS_DISPLAY_NAME}"
     APP_VERSION="${PROJECT_VERSION}"
     QT_NO_KEYWORDS
@@ -471,6 +488,11 @@ if(APPLE)
 endif()
 
 if(WIN32)
+    add_custom_command(TARGET CineWindows POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:qtadvanceddocking-qt6>"
+            "$<TARGET_FILE_DIR:CineWindows>"
+    )
     if(EXISTS "${CINEWINDOWS_MPVQT_PREFIX}/bin/libMpvQt.dll")
         add_custom_command(TARGET CineWindows POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -495,6 +517,10 @@ install(TARGETS CineWindows
 )
 
 if(UNIX AND NOT APPLE)
+    set_property(TARGET CineWindows APPEND PROPERTY INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+    install(TARGETS qtadvanceddocking-qt6
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
     install(FILES packaging/linux/CineWindows.desktop
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
         RENAME ${CINEWINDOWS_APP_ID}.desktop
@@ -502,6 +528,14 @@ if(UNIX AND NOT APPLE)
     install(FILES resources/icons/apps/CineWindows.svg
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
         RENAME ${CINEWINDOWS_APP_ID}.svg
+    )
+    install(FILES resources/icons/apps/CineWindows.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
+        RENAME ${CINEWINDOWS_APP_ID}.png
+    )
+    install(FILES third_party/Qt-Advanced-Docking-System/LICENSE
+        third_party/Qt-Advanced-Docking-System/gnu-lgpl-v2.1.md
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses/${CINEWINDOWS_APP_ID}/Qt-Advanced-Docking-System
     )
     install(FILES packaging/linux/${CINEWINDOWS_APP_ID}.metainfo.xml
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo

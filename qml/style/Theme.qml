@@ -201,7 +201,11 @@ QtObject {
     /// Control scrim gradient end
     readonly property color controlScrimEnd: "#33000000"
     /// Floating playback control surface
+    readonly property color videoBackground: "#000000"
     readonly property color controlSurface: "#b814161b"
+    readonly property color controlHover: "#28ffffff"
+    readonly property color controlPressed: "#40ffffff"
+    readonly property color closePressed: "#cc5555"
     /// Floating playback control border
     readonly property color controlSurfaceBorder: "#30ffffff"
     /// Primary playback action background

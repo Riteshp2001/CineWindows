@@ -5,6 +5,8 @@ CineWindows is built on substantial open-source work. The project especially ack
 - [Qt](https://www.qt.io/) for the cross-platform application and QML frameworks.
 - [mpv](https://mpv.io/) and [FFmpeg](https://ffmpeg.org/) for media playback and decoding.
 - [MpvQt](https://invent.kde.org/multimedia/mpvqt) for Qt integration with libmpv.
+- [Qt Advanced Docking System](https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System) by Uwe Kindler and contributors for docking.
+- [Thumbfast](https://github.com/po5/thumbfast) by po5 and contributors for its documented on-demand thumbnail performance approach. CineWindows uses a native libmpv controller rather than distributing the Lua script.
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) for supported online-media extraction.
 - [QtLogger](https://github.com/yamixst/qtlogger) by Mikhail Yatsenko for the
   thread-safe Qt logging pipeline, console output, and rotating file support.

@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include <QHash>
+#include <QCache>
 #include <QImage>
+#include <QPointer>
 #include <QQuickPaintedItem>
 #include <QSize>
 #include <QString>
@@ -125,11 +126,12 @@ Q_SIGNALS:
 
     /**
      * @brief Emitted when a thumbnail frame has been successfully captured.
-     * @param time The exact timestamp (in seconds) of the captured frame, as reported by mpv.
+    * @param time The requested timeline timestamp in seconds.
      * @usecase QML can use this to synchronise overlay positioning or display timing.
      * @thread Emitted on the Qt main thread from the poll timer callback.
      */
     void thumbnailReady(double time);
+    void thumbnailCleared();
 
 private:
     /** @brief Starts the seek period timer which paces repeated seek requests. */
@@ -165,6 +167,8 @@ private:
      * @usecase Called during clear() and before re-initialisation to keep the queue from growing unbounded.
      */
     void drainEvents();
+    void requestScreenshot();
+    void finishCapture();
 
     /**
      * @brief Creates and starts the background mpv worker process if it does not already exist.
@@ -188,11 +192,13 @@ private:
      */
     QString vfString() const;
 
-    CineMpvItem* m_player{nullptr}; /**< Attached player instance receiving overlay commands. */
+    QPointer<CineMpvItem> m_player;
     mpv_handle* m_mpv{nullptr};     /**< Opaque handle to the background mpv worker instance. */
     QTimer m_seekPeriodTimer;       /**< Debounce timer that paces seek requests during scrubbing. */
     QTimer m_pollTimer;             /**< Timer that periodically polls the worker for a rendered frame. */
+    QTimer m_idleTimer;
     QString m_path;                 /**< Media path requested by the most recent call to request(). */
+    QString m_sourcePath;
     QString m_loadedPath;           /**< Media path that is currently loaded in the mpv worker. */
     double m_time{0.0};             /**< Target timestamp (seconds) for the current thumbnail request. */
     double m_captureTime{0.0};      /**< Actual timestamp (seconds) of the captured frame from mpv. */
@@ -212,7 +218,12 @@ private:
     QImage m_currentImage;          /**< Cached thumbnail frame data, drawn by paint(). */
     int m_cachedVid{-1};            /**< Cached video track ID to avoid sync mpvOption queries. */
     int m_cachedRotate{0};          /**< Cached rotation angle to avoid sync mpvOption queries. */
-    QHash<int, QImage> m_frameCache; /**< Frame cache keyed by second for fast re-hover. */
-
-    static constexpr int kMaxFrameCacheSize = 24;
+    QCache<int, QImage> m_frameCache;
+    bool m_active{false};
+    bool m_inFlight{false};
+    bool m_frameAvailable{false};
+    bool m_screenshotPending{false};
+    bool m_pendingSeek{false};
+    bool m_pendingFastSeek{true};
+    bool m_captureExact{false};
 };

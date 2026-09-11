@@ -29,6 +29,16 @@ This file records third-party source material retained by CineWindows for refere
 
 Material Web is provided under the Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
 
+## Qt Advanced Docking System
+
+- Project: Qt Advanced Docking System
+- Creator: Uwe Kindler and contributors
+- Repository: https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System
+- Version: 5.1.1
+- Pinned revision: `023ce95934fecfd4cf5c672c9c404fabe0f54923`
+- License: LGPL-2.1-or-later
+- CineWindows status: dynamically linked library for the dockable Video Workspace. Upstream license files are retained with the dependency and distributed packages.
+
 ## QtLogger
 
 - Project: QtLogger

@@ -4,6 +4,7 @@
         <file alias="remote/companion.js">remote/dist/companion.js</file>
         <file alias="remote/companion.css">remote/dist/companion.css</file>
         <file alias="icons/apps/CineWindows.svg">icons/apps/CineWindows.svg</file>
+        <file alias="icons/apps/CineWindows.png">icons/apps/CineWindows.png</file>
         <file alias="icons/actions/cine-applications-multimedia-symbolic.svg">icons/actions/cine-applications-multimedia-symbolic.svg</file>
         <file alias="icons/actions/cine-applications-multimedia-symbolic-filled.svg">icons/actions/cine-applications-multimedia-symbolic-filled.svg</file>
         <file alias="icons/actions/cine-audio-off-symbolic.svg">icons/actions/cine-audio-off-symbolic.svg</file>

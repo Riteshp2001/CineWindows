@@ -201,6 +201,33 @@ cmake --build --preset debug
 cmake --preset release -DMpvQt_DIR=C:\path\to\MpvQt\lib\cmake\MpvQt
 ```
 
+### Video Workspace And Media Input
+
+Open **Video Workspace** from the application menu, or launch
+`CineWindows --workspace "first video.mkv" "second video.mp4"`.
+Each video has independent playback, seeking, audio, subtitles, and speed.
+ADS supports split panes, tabs, and floating windows. Layout presets bring
+floating videos back into the workspace; extra videos become tabs when a
+split would leave insufficient room. Closing a pane releases its player.
+Additional videos start muted. Play All, Pause All, Mute All, and Listen to
+Focused Video control the group. These are bulk commands, not frame-accurate
+synchronization. Capacity depends on decoder, CPU, GPU, and memory resources.
+Remember/Restore Layout applies to the current set of open videos, not a saved
+playback session. Wayland compositors control top-level window placement.
+
+**Open Media** and **Add Media** accept file browsing or pasted paths and URLs,
+including multiple entries separated by newlines and quoted local paths.
+The player, media picker, and workspace share colors from `qml/style/Theme.qml`.
+Timeline previews use an in-process, silent libmpv worker, an 8 MiB per-preview
+LRU cache, coalesced keyframe seeks, and an exact preview after the pointer
+settles. Workers are released after a minute of inactivity. Previews do not
+require standalone mpv, Thumbfast Lua, or another Lua runtime.
+
+Linux desktop integration uses the installed `com.gyrolet.CineWindows.desktop`
+entry and matching raster/scalable icons. Use the AppImage, Flatpak, or CMake
+installation for desktop integration; the raw CI executable alone does not
+install a desktop entry. `--cli` and `--ipc-server` remain single-player modes.
+
 ### Diagnostic Logs
 
 All Qt, QML, player, library, and service diagnostics are routed through the
