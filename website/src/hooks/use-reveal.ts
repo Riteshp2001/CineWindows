@@ -49,24 +49,45 @@ function applyStagger(element: HTMLElement) {
 export function useReveals(dep: unknown) {
   useEffect(() => {
     if (typeof window === "undefined") return
-    const elements = Array.from(
-      document.querySelectorAll<HTMLElement>(".reveal"),
-    )
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      elements.forEach((element) => {
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches
+    const observedElements = new Set<HTMLElement>()
+    const observer = reducedMotion ? null : getRevealObserver()
+
+    function observeElement(element: HTMLElement) {
+      if (observedElements.has(element)) return
+      observedElements.add(element)
+      if (reducedMotion) {
         element.classList.add("is-visible")
         element.style.removeProperty("--reveal-delay")
-      })
-      return
-    }
-    const observer = getRevealObserver()
-    elements.forEach((element) => {
+        return
+      }
       applyStagger(element)
-      observer.observe(element)
+      observer?.observe(element)
+    }
+
+    function observeReveals(root: ParentNode) {
+      if (root instanceof HTMLElement && root.matches(".reveal")) {
+        observeElement(root)
+      }
+      root.querySelectorAll<HTMLElement>(".reveal").forEach(observeElement)
+    }
+
+    observeReveals(document)
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof HTMLElement) observeReveals(node)
+        })
+      })
     })
+    mutationObserver.observe(document.body, { childList: true, subtree: true })
+
     return () => {
-      elements.forEach((element) => {
-        observer.unobserve(element)
+      mutationObserver.disconnect()
+      observedElements.forEach((element) => {
+        observer?.unobserve(element)
         element.classList.remove("is-visible")
       })
     }
