@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
 
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("CineWindows"));
-    app.setApplicationDisplayName(QStringLiteral("CineWindows"));
+    app.setApplicationDisplayName(QStringLiteral(APP_DISPLAY_NAME));
     app.setApplicationVersion(QStringLiteral(APP_VERSION));
     app.setOrganizationName(QStringLiteral("gyrolet"));
     app.setOrganizationDomain(QStringLiteral("io.github.gyrolet"));

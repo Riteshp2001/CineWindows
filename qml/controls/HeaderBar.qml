@@ -315,7 +315,9 @@ Item {
         x: Math.round(Math.max(availableLeft,
             Math.min((root.width - width) / 2, availableRight - width)))
         y: Math.round((root.height - height) / 2)
-        text: root.player && root.player.mediaTitle.length > 0 ? root.player.mediaTitle : qsTr("CineWindows")
+        text: root.player && root.player.mediaTitle.length > 0
+            ? root.player.mediaTitle
+            : Qt.application.displayName
         color: Theme.text
         font.bold: true
         font.pixelSize: root.metrics.fontBody

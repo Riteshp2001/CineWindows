@@ -19,6 +19,7 @@ cmake_minimum_required(VERSION 3.25)
 project(CineWindows VERSION 0.0.1 LANGUAGES CXX)
 
 set(CINEWINDOWS_APP_ID "com.gyrolet.CineWindows")
+set(CINEWINDOWS_DISPLAY_NAME "CineWindows" CACHE STRING "Application display name")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -353,6 +354,7 @@ if(WIN32)
 endif()
 
 target_compile_definitions(CineWindows PRIVATE
+    APP_DISPLAY_NAME="${CINEWINDOWS_DISPLAY_NAME}"
     APP_VERSION="${PROJECT_VERSION}"
     QT_NO_KEYWORDS
     $<$<CONFIG:Release>:QT_NO_DEBUG_OUTPUT>

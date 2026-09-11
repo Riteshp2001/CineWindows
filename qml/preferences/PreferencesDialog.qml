@@ -1322,7 +1322,7 @@ ResponsivePopup {
                 }
                 Sep {}
                 ActionRow {
-                    title: qsTr("CineWindows")
+                    title: Qt.application.displayName
                     subtitle: qsTr("Version %1").arg(Qt.application.version)
 
                     CineButton {

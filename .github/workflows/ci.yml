@@ -166,6 +166,7 @@ jobs:
           $msysPrefix = "${{ steps.msys2.outputs.msys2-location }}\mingw64"
           $env:PATH = "$qtRoot\bin;$qtCompilerBin;$qtNinjaBin;$msysPrefix\bin;$env:PATH"
           cmake --preset release `
+            -DCINEWINDOWS_DISPLAY_NAME="CineWindows Beta" `
             -DCINEWINDOWS_MPVQT_PREFIX="$PWD\.deps\mpvqt-install" `
             -DCINEWINDOWS_LIBMPV_PREFIX="$PWD\.deps\libmpv-static" `
             -DCINEWINDOWS_LIBMPV_RUNTIME="$PWD\.deps\libmpv-static\bin\libmpv-2.dll"
@@ -174,13 +175,6 @@ jobs:
         shell: pwsh
         run: cmake --build --preset release
 
-      - name: Upload Windows executables
-        uses: actions/upload-artifact@v7
-        with:
-          name: CineWindows-windows-build
-          path: build/release/*.exe
-          if-no-files-found: error
-
       - name: QML lint
         shell: pwsh
         run: cmake --build --preset release --target CineWindows_qmllint
@@ -188,6 +182,13 @@ jobs:
       - name: Release translations
         shell: pwsh
         run: cmake --build --preset release --target release_translations
+
+      - name: Upload Windows executables
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-windows-executables
+          path: build/release/**/*.exe
+          if-no-files-found: error
 
   linux:
     name: Linux build
@@ -241,7 +242,7 @@ jobs:
             qtlottie
 
       - name: Configure
-        run: cmake --preset release
+        run: cmake --preset release -DCINEWINDOWS_DISPLAY_NAME="CineWindows Beta"
 
       - name: Build
         run: cmake --build --preset release
@@ -251,6 +252,13 @@ jobs:
 
       - name: Release translations
         run: cmake --build --preset release --target release_translations
+
+      - name: Upload Linux executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-linux-executable
+          path: build/release/bin/CineWindows
+          if-no-files-found: error
 
   flatpak:
     name: Linux Flatpak
@@ -265,12 +273,18 @@ jobs:
         with:
           submodules: true
 
+      - name: Apply Beta branding
+        run: >-
+          sed -i '/CINEWINDOWS_ENABLE_IPO=OFF/a\      - -DCINEWINDOWS_DISPLAY_NAME=CineWindows Beta'
+          packaging/flatpak/com.gyrolet.CineWindows.yml
+
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
+          bundle: CineWindows-x86_64.flatpak
           manifest-path: packaging/flatpak/com.gyrolet.CineWindows.yml
-          build-bundle: false
-          upload-artifact: false
+          artifact-name: CineWindows-flatpak
+          upload-artifact: true
 
   macos:
     name: macOS ${{ matrix.arch }} build
@@ -324,6 +338,7 @@ jobs:
           export PKG_CONFIG_PATH="$(brew --prefix mpv)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
           cmake --preset release \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR;$(brew --prefix mpv);$(brew --prefix extra-cmake-modules)" \
+            -DCINEWINDOWS_DISPLAY_NAME="CineWindows Beta" \
             -DCINEWINDOWS_MACOS_ARCHITECTURES="${{ matrix.arch }}"
 
       - name: Build
@@ -337,3 +352,10 @@ jobs:
 
       - name: Package and verify
         run: bash scripts/package/deploy_macos.sh "build/release" "packaging/macos/artifacts" "${{ matrix.arch }}"
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: CineWindows-macos-${{ matrix.arch }}
+          path: packaging/macos/artifacts/*.dmg
+          if-no-files-found: error

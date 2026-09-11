@@ -84,7 +84,7 @@ Controls.ResponsivePopup {
                     spacing: 4
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("CineWindows")
+                        text: Qt.application.displayName
                         color: Theme.text
                         font.pixelSize: 26
                         font.bold: true

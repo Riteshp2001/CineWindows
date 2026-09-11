@@ -48,7 +48,9 @@ ApplicationWindow {
     minimumHeight: compactMode > 0 ? 180 : Math.min(560, defaultHeight)
     visible: true
     color: "transparent"
-    title: player.mediaTitle.length > 0 ? player.mediaTitle : qsTr("CineWindows")
+    title: player.mediaTitle.length > 0
+        ? player.mediaTitle + " - " + Qt.application.displayName
+        : Qt.application.displayName
     flags: Qt.Window | Qt.FramelessWindowHint | (compactMode === 2 ? Qt.WindowStaysOnTopHint : 0)
 
     property int normalWidth: initialWidth ///< Saved width of windowed geometry for restore after fullscreen/maximize
