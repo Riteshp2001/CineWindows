@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="resources/icons/app/cinewindows.png" alt="CineWindows Logo" width="96"/>
+<img src="resources/icons/apps/CineWindows.svg" alt="CineWindows Logo" width="96"/>
 
 # CineWindows
 
