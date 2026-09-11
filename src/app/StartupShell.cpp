@@ -30,15 +30,18 @@
  * @brief Creates a centered, frameless splash window sized to half the screen.
  * @param app Application instance used to query primary screen geometry.
  */
-StartupShell::StartupShell(const QGuiApplication& app)
+StartupShell::StartupShell(const QGuiApplication& app, QScreen* screen)
     : m_backingStore(this)
 {
     setTitle(QStringLiteral("CineWindows"));
     setFlags(Qt::Window | Qt::FramelessWindowHint);
     setSurfaceType(QSurface::RasterSurface);
 
-    const QRect available =
-        app.primaryScreen() ? app.primaryScreen()->geometry() : QRect(0, 0, 1120, 630);
+    QScreen* selectedScreen = screen ? screen : app.primaryScreen();
+    if (selectedScreen)
+        setScreen(selectedScreen);
+    const QRect available = selectedScreen
+        ? selectedScreen->availableGeometry() : QRect(0, 0, 1200, 800);
     const QSize shellSize(std::max(1, (available.width() + 1) / 2),
                           std::max(1, (available.height() * 3 + 2) / 5));
     resize(shellSize);

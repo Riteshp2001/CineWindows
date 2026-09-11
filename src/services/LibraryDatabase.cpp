@@ -94,10 +94,10 @@ bool initialize(QSqlDatabase& database, QString* error)
 {
     QSqlQuery query(database);
     // Enable foreign keys, WAL mode, NORMAL sync, and a busy timeout.
-    if (!exec(query, QStringLiteral("PRAGMA foreign_keys = ON"), error)
+    if (!exec(query, QStringLiteral("PRAGMA busy_timeout = 5000"), error)
+        || !exec(query, QStringLiteral("PRAGMA foreign_keys = ON"), error)
         || !exec(query, QStringLiteral("PRAGMA journal_mode = WAL"), error)
-        || !exec(query, QStringLiteral("PRAGMA synchronous = NORMAL"), error)
-        || !exec(query, QStringLiteral("PRAGMA busy_timeout = 5000"), error))
+        || !exec(query, QStringLiteral("PRAGMA synchronous = NORMAL"), error))
         return false;
 
     int schemaVersion = 0;
@@ -110,14 +110,23 @@ bool initialize(QSqlDatabase& database, QString* error)
         return false;
     }
     schemaVersion = query.value(0).toInt();
+    query.finish();
+    if (schemaVersion >= 2)
+        return true;
 
-    if (!database.transaction())
-    {
-        const QString message = database.lastError().text();
-        qCWarning(cineLibraryLog).noquote() << "Could not start the schema transaction:" << message;
-        if (error)
-            *error = message;
+    if (!exec(query, QStringLiteral("BEGIN IMMEDIATE"), error))
         return false;
+    if (!exec(query, QStringLiteral("PRAGMA user_version"), error) || !query.next())
+    {
+        database.rollback();
+        return false;
+    }
+    schemaVersion = query.value(0).toInt();
+    query.finish();
+    if (schemaVersion >= 2)
+    {
+        database.rollback();
+        return true;
     }
 
     // Core schema: metadata, media items, playback visits, favourites, library roots/entries, saved sessions.

@@ -21,6 +21,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import "../controls"
 import CineWindows
 
@@ -29,6 +30,7 @@ ResponsivePopup {
     // Update service for checking/downloading updates
     property var updateService
     property var metadataService
+    property var diagnostics
 
     parent: Overlay.overlay
     metrics: ViewportMetrics {
@@ -41,6 +43,18 @@ ResponsivePopup {
     preferredHeight: 660
     padding: 0
     focus: true
+
+    FileDialog {
+        id: exportLogsDialog
+        title: qsTr("Export Diagnostic Report")
+        fileMode: FileDialog.SaveFile
+        nameFilters: [qsTr("Text reports (*.txt)")]
+        defaultSuffix: "txt"
+        onAccepted: {
+            if (root.diagnostics)
+                root.diagnostics.exportLogs(selectedFile);
+        }
+    }
 
     background: Rectangle {
         radius: 16
@@ -1476,7 +1490,7 @@ ResponsivePopup {
                 Sep {}
                 ActionRow {
                     title: qsTr("Open Configuration Folder")
-                    subtitle: qsTr("Access player logs and config files")
+                    subtitle: qsTr("Access mpv configuration files")
                     CineButton {
                         id: openCfgBtn
                         anchors.verticalCenter: parent.verticalCenter
@@ -1484,6 +1498,64 @@ ResponsivePopup {
                         btnText: qsTr("Open")
                         // Open config directory in file manager
                         onClicked: SettingsManager.openConfigDirectory()
+                    }
+                }
+            }
+
+            Text {
+                text: qsTr("Diagnostics")
+                color: Theme.text
+                font.pixelSize: 13
+                font.bold: true
+                leftPadding: 12
+            }
+
+            GroupCard {
+                ActionRow {
+                    objectName: "exportLogsRow"
+                    title: qsTr("Export Logs")
+                    subtitle: qsTr("System information and current player log. Local file paths may remain; review before sharing.")
+                    CineButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        styleVariant: "text"
+                        btnText: qsTr("Export...")
+                        enabled: !!root.diagnostics
+                        onClicked: {
+                            exportLogsDialog.selectedFile = root.diagnostics.suggestedExportUrl();
+                            exportLogsDialog.open();
+                        }
+                    }
+                }
+                Sep {}
+                ActionRow {
+                    objectName: "openLogsFolderRow"
+                    title: qsTr("Logs Folder")
+                    CineButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: "cine-folder-symbolic"
+                        sizeRole: CineButton.StandardSize
+                        btnTooltip: qsTr("Open Logs Folder")
+                        enabled: !!root.diagnostics
+                        onClicked: root.diagnostics.openLogsFolder()
+                    }
+                }
+                Item {
+                    width: parent.width
+                    visible: !!root.diagnostics && root.diagnostics.statusMessage.length > 0
+                    height: visible ? diagnosticsStatus.implicitHeight + 24 : 0
+                    Text {
+                        id: diagnosticsStatus
+                        objectName: "diagnosticsStatus"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.diagnostics ? root.diagnostics.statusMessage : ""
+                        color: Theme.mutedText
+                        font.pixelSize: Theme.fontSizeCaption
+                        wrapMode: Text.Wrap
+                        textFormat: Text.PlainText
                     }
                 }
             }

@@ -205,10 +205,25 @@ cmake --preset release -DMpvQt_DIR=C:\path\to\MpvQt\lib\cmake\MpvQt
 
 All Qt, QML, player, library, and service diagnostics are routed through the
 pinned QtLogger backend. CineWindows writes `cinewindows.log` under the
-platform application-data directory, keeps up to five 5 MiB files, and
-compresses rotated files. Console builds also receive colored stderr output.
+platform application-data directory. Concurrent instances use separate reusable
+slots (`cinewindows-2.log`, `cinewindows-3.log`, and so on) without waiting for
+another player's log file. Each slot keeps up to five 5 MiB files and compresses
+rotated files. Startup records include elapsed times and the selected monitor.
+Console builds also receive colored stderr output.
 Set `CINEWINDOWS_DATA_DIR` to place application data and logs under a custom root.
 No HTTP logging sink is enabled.
+
+System diagnostics include the OS/kernel, CPU architecture and core count, RAM,
+Qt version, OpenGL vendor/renderer/version, and monitor geometry, scaling, DPI,
+and refresh rates. Hostnames, device serial numbers, machine IDs, and environment
+variables are not collected in the system snapshot.
+
+In **Preferences > Diagnostics**, **Export Logs** saves a UTF-8 text report with
+the current system snapshot and this player's active log. **Logs Folder** opens
+the directory containing active and rotated logs for all instances. Exported
+reports redact URL credentials, query strings, and common token fields, but may
+still contain local file paths or other personal information. Review reports
+before sharing them. Exporting does not upload anything.
 
 ---
 

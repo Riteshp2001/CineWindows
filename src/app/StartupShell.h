@@ -22,6 +22,7 @@
 #include <QWindow>
 
 class QGuiApplication;
+class QScreen;
 
 class StartupShell final : public QWindow
 {
@@ -30,7 +31,7 @@ public:
      * @brief Constructs a centered, frameless splash window.
      * @param app Reference to the QGuiApplication for screen geometry.
      */
-    explicit StartupShell(const QGuiApplication& app);
+    explicit StartupShell(const QGuiApplication& app, QScreen* screen = nullptr);
 
     /** @brief Paints the splash screen content (gradient, logo, title). */
     void render();

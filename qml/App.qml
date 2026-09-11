@@ -28,25 +28,26 @@ import CineWindows
 
 ApplicationWindow {
     id: window
-    readonly property bool hasSavedSize: SettingsManager.initialSize.width >= 400 && SettingsManager.initialSize.height >= 300 &&
-                                         (SettingsManager.initialSize.width / SettingsManager.initialSize.height) >= 1.2 &&
-                                         (SettingsManager.initialSize.width / SettingsManager.initialSize.height) <= 2.4
+    property rect startupScreenGeometry: Qt.rect(0, 0, 1200, 800)
+    property var diagnostics
+    readonly property bool hasSavedSize: SettingsManager.initialSize.width >= 320
+        && SettingsManager.initialSize.height >= 240
     readonly property int defaultWidth: 1200
     readonly property int defaultHeight: 800
     readonly property int initialWidth: Math.min(
         hasSavedSize ? SettingsManager.initialSize.width : defaultWidth,
-        Math.max(1, Screen.desktopAvailableWidth))
+        Math.max(1, startupScreenGeometry.width))
     readonly property int initialHeight: Math.min(
         hasSavedSize ? SettingsManager.initialSize.height : defaultHeight,
-        Math.max(1, Screen.desktopAvailableHeight))
+        Math.max(1, startupScreenGeometry.height))
 
     width: initialWidth
     height: initialHeight
-    x: Screen.virtualX + Math.round((Screen.desktopAvailableWidth - initialWidth) / 2)
-    y: Screen.virtualY + Math.round((Screen.desktopAvailableHeight - initialHeight) / 2)
+    x: startupScreenGeometry.x + Math.round((startupScreenGeometry.width - initialWidth) / 2)
+    y: startupScreenGeometry.y + Math.round((startupScreenGeometry.height - initialHeight) / 2)
     minimumWidth: 320
     minimumHeight: compactMode > 0 ? 180 : 240
-    visible: true
+    visible: false
     readonly property bool clientSideDecorated: windowChrome.clientSideDecorationsRecommended
     color: clientSideDecorated
         || (Qt.platform.os === "windows" && SettingsManager.systemBackdrop)
@@ -61,8 +62,8 @@ ApplicationWindow {
 
     property int normalWidth: initialWidth ///< Saved width of windowed geometry for restore after fullscreen/maximize
     property int normalHeight: initialHeight ///< Saved height of windowed geometry for restore after fullscreen/maximize
-    property int normalX: Screen.virtualX + Math.round((Screen.width - normalWidth) / 2) ///< Saved X position of windowed geometry for restore after fullscreen/maximize
-    property int normalY: Screen.virtualY + Math.round((Screen.height - normalHeight) / 2) ///< Saved Y position of windowed geometry for restore after fullscreen/maximize
+    property int normalX: x
+    property int normalY: y
     property bool deferredStartupStarted: false ///< Prevents first-frame startup work from running more than once
     property bool sessionRestoreAttempted: false ///< Prevents an early close from replacing a session before it was restored
     property var startupPaths: [] ///< Files or URLs supplied by the desktop shell or command line
@@ -105,6 +106,11 @@ ApplicationWindow {
             && !window.clientSideDecorated
             && window.compactMode === 0
             && !window.isFullscreen
+        onAvailableGeometryChanged: {
+            if (window.visible && window.visibility === Window.Windowed
+                    && !window.stateTransitioning && !minimizeAnimation.running)
+                Qt.callLater(window.ensureWindowGeometryVisible);
+        }
     }
 
     onWidthChanged: {
@@ -134,8 +140,7 @@ ApplicationWindow {
 
     /// Returns the current screen area not reserved by taskbars or system UI.
     function availableScreenGeometry() {
-        return Qt.rect(Screen.virtualX, Screen.virtualY,
-                       Screen.desktopAvailableWidth, Screen.desktopAvailableHeight);
+        return window.visible ? windowChrome.availableGeometry : startupScreenGeometry;
     }
 
     /// Clamps a window rectangle so its complete surface remains reachable.
@@ -153,6 +158,11 @@ ApplicationWindow {
     }
 
     function ensureWindowGeometryVisible() {
+        if (window.stateTransitioning || minimizeAnimation.running
+            || window.visibility === Window.Maximized
+            || window.visibility === Window.FullScreen
+            || window.visibility === Window.Minimized)
+            return;
         const corrected = correctedWindowGeometry(
             window.x, window.y, window.width, window.height,
             availableScreenGeometry());
@@ -255,7 +265,7 @@ ApplicationWindow {
             target: window
             property: "y"
             to: window.visibility === Window.Windowed
-                ? Screen.virtualY + Screen.desktopAvailableHeight
+                ? window.availableScreenGeometry().y + window.availableScreenGeometry().height
                 : window.y
             duration: Theme.motionNormal
             easing.type: Easing.InCubic
@@ -1302,15 +1312,22 @@ ApplicationWindow {
         }
     }
 
-    /// Runs non-visual startup work after the first frame is on screen.
     function runDeferredStartup() {
-        mediaLibrary.initialize();
-        tmdbMetadata.refresh();
+        if (deferredStartupStarted)
+            return;
+        deferredStartupStarted = true;
         sessionRestoreAttempted = true;
         if (startupPaths.length > 0)
             controller.openPaths(startupPaths, true);
         else if (SettingsManager.saveSession && sessionManager.restore(playlistModel))
             controller.playIndexAt(Math.max(0, sessionManager.restoredIndex()), sessionManager.restoredPosition());
+        Qt.callLater(initializeLibraryServices);
+    }
+
+    function initializeLibraryServices() {
+        mediaLibrary.initialize();
+        if (tmdbMetadata.enabled)
+            tmdbMetadata.refresh();
         if (SettingsManager.autoUpdate)
             appUpdateService.checkForUpdates(Qt.application.version);
     }
@@ -1319,16 +1336,10 @@ ApplicationWindow {
     Component.onCompleted: {
         ensureWindowGeometryVisible();
         controller.applySettings();
+        Qt.callLater(runDeferredStartup);
         Qt.callLater(function () {
             ignoreVolumeOsd = false;
         });
-    }
-
-    onFrameSwapped: {
-        if (!deferredStartupStarted) {
-            deferredStartupStarted = true;
-            Qt.callLater(runDeferredStartup);
-        }
     }
 
     /// Saves window geometry, session state, and watch-later config on close.
@@ -1353,8 +1364,10 @@ ApplicationWindow {
             cursorHidden = false;
         if (!player.idle)
             showChrome(2200);
-        if (visibility === Window.Windowed)
+        if (visibility === Window.Windowed) {
+            Qt.callLater(ensureWindowGeometryVisible);
             Qt.callLater(fitWindowToVideo);
+        }
     }
 
     /// Hides the chrome after the auto-hide delay expires.
@@ -1407,7 +1420,6 @@ ApplicationWindow {
         CineMpvItem {
             id: player
             anchors.fill: rootContainer
-            visible: !window.mediaHubVisible
             focus: true
             Keys.onShortcutOverride: function (event) {
                 if (window.consoleInputActive) {
@@ -1927,6 +1939,7 @@ ApplicationWindow {
                 PreferencesDialog {
                     updateService: appUpdateService
                     metadataService: tmdbMetadata
+                    diagnostics: window.diagnostics
                 }
             }
         }

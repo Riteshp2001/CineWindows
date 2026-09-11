@@ -28,14 +28,18 @@ extern "C" {
 #include <QDir>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QCursor>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QLocale>
+#include <QPointer>
 #include <QQmlApplicationEngine>
 #include <QQmlEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QScreen>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
@@ -182,6 +186,8 @@ static void prepareWindowsConsole()
  */
 int main(int argc, char* argv[])
 {
+    QElapsedTimer startupTimer;
+    startupTimer.start();
     const bool consoleRequested = hasArg(argc, argv, QStringLiteral("--cli"))
         || hasArg(argc, argv, QStringLiteral("--help")) || hasArg(argc, argv, QStringLiteral("-h"))
         || hasArg(argc, argv, QStringLiteral("--version")) || hasArg(argc, argv, QStringLiteral("-v"));
@@ -219,7 +225,8 @@ int main(int argc, char* argv[])
     app.setWindowIcon(QIcon(QStringLiteral(":/cinewindows/icons/apps/CineWindows.svg")));
     ApplicationLog applicationLog;
     qCInfo(cineAppLog).noquote() << app.applicationDisplayName() << app.applicationVersion()
-                                 << "starting with Qt" << qVersion();
+                                 << "starting with Qt" << qVersion()
+                                 << "after" << startupTimer.elapsed() << "ms";
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
@@ -262,7 +269,10 @@ int main(int argc, char* argv[])
     QQuickStyle::setStyle(QStringLiteral("Basic"));
     loadTranslator(app);
 
-    StartupShell startupShell(app);
+    QPointer<QScreen> startupScreen = QGuiApplication::screenAt(QCursor::pos());
+    if (!startupScreen)
+        startupScreen = app.primaryScreen();
+    StartupShell startupShell(app, startupScreen.data());
     startupShell.show();
     app.processEvents();
 
@@ -271,7 +281,11 @@ int main(int argc, char* argv[])
             QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toLocal8Bit());
 
     QQmlApplicationEngine engine;
-    engine.setInitialProperties({{QStringLiteral("startupPaths"), startupPaths}});
+    const QRect startupBounds = startupScreen
+        ? startupScreen->availableGeometry() : QRect(0, 0, 1200, 800);
+    engine.setInitialProperties({{QStringLiteral("startupPaths"), startupPaths},
+                                 {QStringLiteral("startupScreenGeometry"), startupBounds},
+                                 {QStringLiteral("diagnostics"), QVariant::fromValue(&applicationLog)}});
 
     // Exit application if the QML engine fails to create the root component
     QObject::connect(
@@ -281,20 +295,27 @@ int main(int argc, char* argv[])
             QCoreApplication::exit(EXIT_FAILURE);
         },
         Qt::QueuedConnection);
+    qCInfo(cineAppLog) << "Creating the main QML window after" << startupTimer.elapsed() << "ms";
     engine.loadFromModule(QStringLiteral("CineWindows"), QStringLiteral("App"));
 
-    // Manage the startup splash: hide after first frame or 3 s timeout
     if (auto* rootWindow = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0)))
     {
-        QObject::connect(rootWindow, &QQuickWindow::frameSwapped, &startupShell,
-                         &QWindow::hide, Qt::SingleShotConnection);
-        startupShell.raise();
+        applicationLog.observeWindow(rootWindow);
+        if (startupScreen)
+            rootWindow->setScreen(startupScreen.data());
+        rootWindow->show();
+        startupShell.hide();
+        rootWindow->raise();
+        rootWindow->requestActivate();
         rootWindow->update();
-        QTimer::singleShot(3000, &startupShell, &QWindow::hide);
+        qCInfo(cineAppLog) << "Main window shown on"
+                          << (rootWindow->screen() ? rootWindow->screen()->name() : QString())
+                          << rootWindow->geometry() << "after" << startupTimer.elapsed() << "ms";
     }
     else
     {
         startupShell.hide();
+        return EXIT_FAILURE;
     }
     // Start IPC server and/or CLI reader once the QML engine has created the player
     QTimer::singleShot(0, [&engine, cliMode, ipcPort]() {

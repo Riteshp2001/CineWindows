@@ -19,9 +19,11 @@
 #include "WindowCornerPreference.h"
 
 #include <QEvent>
+#include <QGuiApplication>
 #include <QPainterPath>
 #include <QPlatformSurfaceEvent>
 #include <QRegion>
+#include <QScreen>
 #include <QWindow>
 
 #ifdef Q_OS_WIN
@@ -68,6 +70,7 @@ void WindowCornerPreference::setTargetWindow(QWindow* window)
     if (m_targetWindow)
         m_targetWindow->removeEventFilter(this);
     QObject::disconnect(m_destroyedConnection);
+    QObject::disconnect(m_screenChangedConnection);
 
     m_targetWindow = window;
     if (window)
@@ -78,11 +81,41 @@ void WindowCornerPreference::setTargetWindow(QWindow* window)
             m_targetWindow = nullptr;
             setBackdropActive(false);
             Q_EMIT targetWindowChanged();
+            trackScreen(nullptr);
         });
+        m_screenChangedConnection = connect(window, &QWindow::screenChanged,
+                                             this, &WindowCornerPreference::trackScreen);
     }
 
+    trackScreen(window ? window->screen() : nullptr);
     Q_EMIT targetWindowChanged();
     applyPreference();
+}
+
+QRect WindowCornerPreference::availableGeometry() const
+{
+    QScreen* screen = m_targetWindow ? m_targetWindow->screen() : nullptr;
+    if (!screen)
+        screen = QGuiApplication::primaryScreen();
+    if (!screen)
+        return QRect(0, 0, 1200, 800);
+
+    const QRect available = screen->availableGeometry();
+    const QMargins margins = m_targetWindow ? m_targetWindow->frameMargins() : QMargins();
+    const QRect clientBounds = available.adjusted(margins.left(), margins.top(),
+                                                  -margins.right(), -margins.bottom());
+    return clientBounds.isValid() ? clientBounds : available;
+}
+
+void WindowCornerPreference::trackScreen(QScreen* screen)
+{
+    QObject::disconnect(m_screenGeometryConnection);
+    if (screen)
+    {
+        m_screenGeometryConnection = connect(screen, &QScreen::availableGeometryChanged,
+                                              this, &WindowCornerPreference::availableGeometryChanged);
+    }
+    Q_EMIT availableGeometryChanged();
 }
 
 bool WindowCornerPreference::rounded() const
@@ -202,6 +235,7 @@ bool WindowCornerPreference::eventFilter(QObject* watched, QEvent* event)
              && (event->type() == QEvent::WindowStateChange || event->type() == QEvent::Show))
     {
         applyPreference();
+        Q_EMIT availableGeometryChanged();
     }
 #ifndef Q_OS_WIN
     else if (watched == m_targetWindow && event->type() == QEvent::Resize)
@@ -219,7 +253,7 @@ bool WindowCornerPreference::eventFilter(QObject* watched, QEvent* event)
 void WindowCornerPreference::applyPreference()
 {
 #ifdef Q_OS_WIN
-    if (!m_targetWindow)
+    if (!m_targetWindow || !m_targetWindow->handle())
     {
         setBackdropActive(false);
         return;
@@ -271,7 +305,7 @@ void WindowCornerPreference::applyPreference()
     const MARGINS frameMargins = active ? MARGINS{-1, -1, -1, -1} : MARGINS{0, 0, 0, 0};
     (void)DwmExtendFrameIntoClientArea(windowHandle, &frameMargins);
     (void)RedrawWindow(windowHandle, nullptr, nullptr,
-                       RDW_INVALIDATE | RDW_FRAME | RDW_UPDATENOW);
+                       RDW_INVALIDATE | RDW_FRAME);
     setBackdropActive(active);
 #else
     setBackdropActive(false);

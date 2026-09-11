@@ -29,7 +29,9 @@ CineWindows processes media files, folders, playlists, subtitle tracks, playback
 
 ### Diagnostic logs
 
-CineWindows writes rotating diagnostic logs to its local application-data directory. Logs can include technical messages, local media paths, and URLs involved in playback or troubleshooting. They remain on your device unless you choose to share them. Older logs are compressed and removed automatically as the rotation limit is reached.
+CineWindows writes rotating diagnostic logs to its local application-data directory. Logs include technical messages and may contain local media paths and playback URLs. System snapshots record OS/kernel and application versions, CPU architecture and core count, total RAM, graphics renderer and API versions, and monitor geometry, scaling, DPI, and refresh rates. The system snapshot does not collect hostnames, device serial numbers, persistent machine identifiers, or environment variables.
+
+Preferences provides actions to open the logs folder and export a text report containing system information and the current player's log. Export redacts URL credentials, query strings, and common token fields, but local file paths and other personal information may remain. Review reports before sharing them. Logs and exported reports remain on your device unless you choose to share them; CineWindows does not upload them automatically. Older logs are compressed and removed as each instance's rotation limit is reached.
 
 ### Update checks
 

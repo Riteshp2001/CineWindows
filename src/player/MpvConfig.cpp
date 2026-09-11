@@ -31,6 +31,8 @@
 #include <QSaveFile>
 #include <QTextStream>
 
+#include <utility>
+
 namespace {
 
 /**
@@ -204,7 +206,19 @@ void MpvConfig::loadMpvConf(const QString& dir)
 
     // Strip options that are unsafe for the embedded player.
     const QString filtered = MpvConfigFilter::sanitizeMpvConf(QString::fromUtf8(source.readAll()));
-    const QString filteredPath = QDir(PathUtils::mpvConfigDir()).filePath(QStringLiteral("embedded-mpv.conf"));
+    if (!m_embeddedConfig)
+    {
+        auto config = std::make_unique<QTemporaryDir>(
+            QDir(PathUtils::mpvConfigDir()).filePath(QStringLiteral("instance-XXXXXX")));
+        if (!config->isValid())
+        {
+            qCWarning(cinePlayerLog).noquote()
+                << "Could not create an instance-specific mpv configuration:" << config->errorString();
+            return;
+        }
+        m_embeddedConfig = std::move(config);
+    }
+    const QString filteredPath = m_embeddedConfig->filePath(QStringLiteral("embedded-mpv.conf"));
     QSaveFile destination(filteredPath);
     if (!destination.open(QIODevice::WriteOnly | QIODevice::Text))
     {

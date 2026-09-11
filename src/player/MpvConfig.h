@@ -21,7 +21,10 @@
 #include <QHash>
 #include <QObject>
 #include <QString>
+#include <QTemporaryDir>
 #include <QtQml/qqmlregistration.h>
+
+#include <memory>
 
 class CineMpvItem;
 
@@ -163,6 +166,7 @@ private:
     static QString normalizeKey(const QString& token, bool mpvStyle);
 
     CineMpvItem* m_player{nullptr};      /**< Attached player instance receiving config commands. */
+    std::unique_ptr<QTemporaryDir> m_embeddedConfig;
     int m_revision{0};                   /**< Monotonically increasing revision counter, bumped each reload. */
     QHash<QString, QString> m_overrides; /**< Map of canonicalised key -> mpv command parsed from input.conf. */
 };

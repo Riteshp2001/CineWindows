@@ -21,9 +21,12 @@
 #include <QMetaObject>
 #include <QObject>
 #include <QPointer>
+#include <QRect>
 #include <QString>
 #include <QWindow>
 #include <QtQmlIntegration/qqmlintegration.h>
+
+class QScreen;
 
 /**
  * @class WindowCornerPreference
@@ -49,6 +52,7 @@ class WindowCornerPreference : public QObject
     Q_PROPERTY(bool backdropActive READ backdropActive NOTIFY backdropActiveChanged)
     Q_PROPERTY(bool clientSideDecorationsRecommended READ clientSideDecorationsRecommended CONSTANT)
     Q_PROPERTY(QString decorationStyle READ decorationStyle CONSTANT)
+    Q_PROPERTY(QRect availableGeometry READ availableGeometry NOTIFY availableGeometryChanged)
 
 public:
     /**
@@ -82,6 +86,7 @@ public:
     bool backdropActive() const;
     bool clientSideDecorationsRecommended() const;
     QString decorationStyle() const;
+    QRect availableGeometry() const;
 
 Q_SIGNALS:
     /** @brief Emitted when the target window pointer changes. */
@@ -93,6 +98,7 @@ Q_SIGNALS:
     void darkModeChanged();
     void backdropEnabledChanged();
     void backdropActiveChanged();
+    void availableGeometryChanged();
 
 protected:
     /**
@@ -107,9 +113,12 @@ private:
     /** @brief Applies native backdrop, corner, and client-side mask preferences. */
     void applyPreference();
     void setBackdropActive(bool active);
+    void trackScreen(QScreen* screen);
 
     QPointer<QWindow> m_targetWindow;             ///< The tracked native window.
     QMetaObject::Connection m_destroyedConnection; ///< Connection to the window's destroyed signal.
+    QMetaObject::Connection m_screenChangedConnection;
+    QMetaObject::Connection m_screenGeometryConnection;
     bool m_rounded = true;                        ///< Whether rounded corners are currently enabled.
     int m_cornerRadius{12};
     bool m_clientSideDecorated{false};
