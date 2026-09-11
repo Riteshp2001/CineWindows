@@ -1,8 +1,15 @@
+<div align="center">
+
+<img src="resources/icons/app/cinewindows.png" alt="CineWindows Logo" width="96"/>
+
 # CineWindows
 
-[Website](https://cinewindows.vercel.app) | [GitHub repository](https://github.com/Riteshp2001/CineWindows) | [Releases](https://github.com/Riteshp2001/CineWindows/releases)
-
 **A modern, high-performance desktop media player built with Qt 6, QML, C++20, and libmpv.**
+
+[![Website](https://img.shields.io/badge/Website-cinewindows.vercel.app-blue?style=flat-square&logo=vercel)](https://cinewindows.vercel.app)
+[![GitHub Releases](https://img.shields.io/github/v/release/Riteshp2001/CineWindows?style=flat-square&logo=github&label=Release)](https://github.com/Riteshp2001/CineWindows/releases)
+[![License](https://img.shields.io/badge/License-Community%20(Non--commercial)-orange?style=flat-square)](LICENSE.md)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)](https://github.com/Riteshp2001/CineWindows/releases)
 
 CineWindows delivers a polished, native viewing experience with hardware-accelerated video playback, extensive format support via FFmpeg, and deep integration with the mpv ecosystem — all wrapped in a sleek, frameless dark-theme UI.
 
@@ -10,11 +17,34 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 >
 > **Copyright © 2026 Ritesh Pandit. All rights reserved.**
 
+</div>
+
 ---
 
-## Features
+## ✨ Screenshots
 
-### Core Playback
+<div align="center">
+
+| Home / Media Hub | Fullscreen Playback |
+|:---:|:---:|
+| <img src="screenshots/cw1.png" alt="CineWindows Home Screen" width="480"/> | <img src="screenshots/cw2.png" alt="CineWindows Fullscreen Playback" width="480"/> |
+
+| Playback with Controls | Adjustment Settings Panel |
+|:---:|:---:|
+| <img src="screenshots/cw3.png" alt="CineWindows Playback Controls" width="480"/> | <img src="screenshots/cw4.png" alt="CineWindows Adjustment Panel" width="480"/> |
+
+<img src="screenshots/cw5.png" alt="CineWindows Playing Video" width="720"/>
+
+*CineWindows — distraction-free, high-fidelity playback on every platform.*
+
+</div>
+
+---
+
+## 🚀 Features
+
+### 🎬 Core Playback
+
 | Feature | Status |
 |---------|--------|
 | Video playback (all FFmpeg formats) | ✅ |
@@ -28,7 +58,8 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 | Frame stepping | ✅ |
 | Subtitle support (SRT, ASS, SSA, VTT, etc.) | ✅ Auto-load + manual |
 
-### Control & Integration
+### 🎛️ Control & Integration
+
 | Feature | Description |
 |---------|-------------|
 | 🖥️ **JSON-RPC IPC Server** | Opt-in TCP server on `127.0.0.1` speaking the mpv JSON IPC protocol. Start it with `--ipc-server=<port>`. |
@@ -39,29 +70,22 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 | 📸 **Screenshots** | With subs, without subs, window capture, or every frame. |
 | 📋 **Drag & Drop** | Drop media files, folders, or subtitle tracks directly onto the window. |
 
-### User Interface
+### 🖌️ User Interface
+
 - **Frameless dark-themed window** with custom title bar and resize handles
 - **On-screen display (OSD)** for volume, seek position, notifications
 - **Media Hub home** with quick access to files, folders, URLs, and recent playback
 - **Playlist drawer** with drag-to-reorder, shuffle, save/load
 - **Preferences dialog** for all playback, subtitle, and UI settings
 - **Multi-language support** (50+ translations via Qt Linguist)
-- **Media Hub** with filesystem browsing, library indexing, favorites, recents, thumbnails, History, and local watch statistics
+- **Media Hub** with filesystem browsing, library indexing, favorites, recents, thumbnails, history, and local watch statistics
 - **Light/dark palettes**, custom accent color, and reduced-motion support
 - **Advanced playback** with equalizer presets, audio visualization, 3D conversion, HDR tone mapping, PiP, and mini-player modes
 - **Optional integrations** for YouTube search, OpenSubtitles, DLNA casting, and a paired LAN companion remote
 
 ---
 
-## Screenshots
-
-| Distraction-free playback | Full playback controls |
-|---|---|
-| <img src="website/public/player-clean.png" alt="CineWindows playing video with the interface hidden" width="720"> | <img src="website/public/player-controls.png" alt="CineWindows playback window with transport controls visible" width="720"> |
-
----
-
-## Stack
+## 🛠️ Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -75,7 +99,7 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 
 ---
 
-## Project Layout
+## 📁 Project Layout
 
 ```text
 CineWindows/
@@ -103,12 +127,13 @@ CineWindows/
 │   └── package/          Deployment and package verification scripts
 ├── packaging/            Platform packaging metadata and artifact locations
 ├── resources/            Runtime, icon, remote, and platform resources
+├── screenshots/          App screenshots for README and documentation
 └── docs/                 Engineering plans and documentation index
 ```
 
 ---
 
-## Build
+## 🔧 Build
 
 ### Prerequisites
 
@@ -119,16 +144,16 @@ CineWindows/
 - **libmpv** development files (headers + import library)
 - **MpvQt 1.2.0** (KDE wrapper library)
 
-### Supported Builds
+### Supported Platforms
 
-| Platform | Architecture | CI | Release package |
-|----------|--------------|----|-----------------|
-| Windows | x86_64 (MinGW) | Yes | Installer and portable ZIP |
-| Linux | x86_64 | Yes | AppImage and Flatpak bundle |
-| macOS | arm64 | Yes | DMG |
-| macOS | x86_64 | Yes | DMG |
+| Platform | Architecture | CI | Release Package |
+|----------|--------------|-----|-----------------|
+| Windows | x86_64 (MinGW) | ✅ | Installer and portable ZIP |
+| Linux | x86_64 | ✅ | AppImage and Flatpak bundle |
+| macOS | arm64 | ✅ | DMG |
+| macOS | x86_64 | ✅ | DMG |
 
-Other architectures are not currently packaged or claimed as supported.
+> Other architectures are not currently packaged or claimed as supported.
 
 Initialize the pinned source dependencies after cloning:
 
@@ -138,7 +163,7 @@ git submodule update --init --recursive
 
 ### Quick Start
 
-#### Windows
+#### 🪟 Windows
 
 ```powershell
 # 1. Bootstrap standalone libmpv and MpvQt
@@ -153,7 +178,7 @@ cmake --build --preset release
 .\build\release\bin\CineWindows.exe
 ```
 
-#### Linux (Debian/Ubuntu)
+#### 🐧 Linux (Debian/Ubuntu)
 
 ```bash
 # 1. Install system dependencies
@@ -167,7 +192,7 @@ cmake --build --preset release
 ./build/release/CineWindows
 ```
 
-#### macOS
+#### 🍎 macOS
 
 ```bash
 # 1. Install system dependencies
@@ -201,35 +226,19 @@ cmake --build --preset debug
 cmake --preset release -DMpvQt_DIR=C:\path\to\MpvQt\lib\cmake\MpvQt
 ```
 
-### Diagnostic Logs
+### 🔍 Diagnostic Logs
 
-All Qt, QML, player, library, and service diagnostics are routed through the
-pinned QtLogger backend. CineWindows writes `cinewindows.log` under the
-platform application-data directory. Concurrent instances use separate reusable
-slots (`cinewindows-2.log`, `cinewindows-3.log`, and so on) without waiting for
-another player's log file. Each slot keeps up to five 5 MiB files and compresses
-rotated files. Startup records include elapsed times and the selected monitor.
-Console builds also receive colored stderr output.
-Set `CINEWINDOWS_DATA_DIR` to place application data and logs under a custom root.
-No HTTP logging sink is enabled.
+All Qt, QML, player, library, and service diagnostics are routed through the pinned QtLogger backend. CineWindows writes `cinewindows.log` under the platform application-data directory. Concurrent instances use separate reusable slots (`cinewindows-2.log`, `cinewindows-3.log`, etc.) without waiting for another player's log file. Each slot keeps up to five 5 MiB files and compresses rotated files.
 
-System diagnostics include the OS/kernel, CPU architecture and core count, RAM,
-Qt version, OpenGL vendor/renderer/version, and monitor geometry, scaling, DPI,
-and refresh rates. Hostnames, device serial numbers, machine IDs, and environment
-variables are not collected in the system snapshot.
+Set `CINEWINDOWS_DATA_DIR` to place application data and logs under a custom root. No HTTP logging sink is enabled.
 
-In **Preferences > Diagnostics**, **Export Logs** saves a UTF-8 text report with
-the current system snapshot and this player's active log. **Logs Folder** opens
-the directory containing active and rotated logs for all instances. Exported
-reports redact URL credentials, query strings, and common token fields, but may
-still contain local file paths or other personal information. Review reports
-before sharing them. Exporting does not upload anything.
+In **Preferences › Diagnostics**, **Export Logs** saves a UTF-8 text report with the current system snapshot. **Logs Folder** opens the directory containing active and rotated logs for all instances. Exported reports redact URL credentials, query strings, and common token fields — review before sharing.
 
 ---
 
-## Packaging
+## 📦 Packaging
 
-### Windows
+### 🪟 Windows
 
 ```powershell
 & scripts\setup\bootstrap_libmpv_windows.ps1
@@ -237,48 +246,43 @@ before sharing them. Exporting does not upload anything.
 & scripts\package\deploy_windows.ps1 -Configuration Release
 ```
 
-Stages `CineWindows.exe`, runs `windeployqt`, copies standalone libmpv/FFmpeg/yt-dlp binaries, verifies all PE imports and tool startup. Produces:
+Produces:
 - 📦 Portable ZIP → `packaging/windows/artifacts/`
 - 📀 NSIS Installer → `packaging/windows/artifacts/` (when `makensis` is available)
 
-### Linux (AppImage)
+### 🐧 Linux (AppImage)
 
 ```bash
 bash scripts/package/deploy_linux.sh "build/release" "packaging/linux/artifacts"
 ```
 
-Uses `linuxdeploy` + `linuxdeploy-plugin-qt` to bundle dependencies into a portable AppImage. Produces:
+Produces:
 - 📦 `CineWindows-x86_64.AppImage` → `packaging/linux/artifacts/`
 
-### Linux (Flatpak)
+### 🐧 Linux (Flatpak)
 
 ```bash
 bash scripts/package/deploy_flatpak.sh
 ```
 
-Builds pinned libmpv, MpvQt, and yt-dlp dependencies inside the KDE Flatpak
-runtime, validates the installed application layout, and produces:
+Produces:
 - `CineWindows-x86_64.flatpak` → `packaging/flatpak/artifacts/`
 
-### macOS (DMG)
+### 🍎 macOS (DMG)
 
 ```bash
 bash scripts/generate/generate_icns.sh
 bash scripts/package/deploy_macos.sh "build/release" "packaging/macos/artifacts" "$(uname -m)"
 ```
 
-Uses `macdeployqt` to bundle Qt frameworks into the `.app` bundle, then `create-dmg` to produce an architecture-specific disk image. Produces:
-- `CineWindows-arm64.dmg` or `CineWindows-x86_64.dmg` in `packaging/macos/artifacts/`
-
-Packaged distributions include [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). RinUI remains pinned under `third_party/RinUI` as attributed source reference only and is not a runtime dependency.
+Produces:
+- `CineWindows-arm64.dmg` or `CineWindows-x86_64.dmg` → `packaging/macos/artifacts/`
 
 ---
 
-## IPC Protocol
+## 🌐 IPC Protocol
 
 CineWindows implements the **mpv JSON IPC protocol** over opt-in TCP on `127.0.0.1`. Start it with `--ipc-server=32321`.
-
-### Examples
 
 ```bash
 # Get current playback position
@@ -298,56 +302,64 @@ Responses and events are newline-delimited JSON. Property changes are automatica
 
 ---
 
-## Keyboard Shortcuts
+## ⌨️ Keyboard Shortcuts
 
-All shortcuts are **fully remappable** via `Preferences → Shortcuts` or by editing the key bindings directly. Defaults include:
+All shortcuts are **fully remappable** via `Preferences → Shortcuts` or by editing key bindings directly.
 
 | Category | Shortcuts |
 |----------|-----------|
-| **Playback** | Space (play/pause), S (screenshot) |
-| **Seek** | Left/Right (5s), Shift+Left/Right (60s), Ctrl+Left/Right (600s) |
-| **Volume** | Up/Down, 9/0 |
-| **Speed** | [ / ] (0.1x steps), { / } (0.5x steps) |
-| **Subtitles** | V (toggle), J (cycle), G/H (delay), R/T (position) |
-| **Video** | Z (zoom), A (aspect ratio), D (deband), Ctrl+Z (pan/zoom reset) |
-| **Playlist** | N/P (next/previous), Del (remove), F1 (toggle drawer) |
-| **Window** | F11 (fullscreen), Ctrl+Q (quit), Ctrl+W (close) |
-| **Stats** | I (stats page), Shift+1-5 (direct page), Ctrl+I (overlay) |
+| **Playback** | `Space` (play/pause), `S` (screenshot) |
+| **Seek** | `←` / `→` (5s), `Shift+←/→` (60s), `Ctrl+←/→` (600s) |
+| **Volume** | `↑` / `↓`, `9` / `0` |
+| **Speed** | `[` / `]` (0.1x steps), `{` / `}` (0.5x steps) |
+| **Subtitles** | `V` (toggle), `J` (cycle), `G`/`H` (delay), `R`/`T` (position) |
+| **Video** | `Z` (zoom), `A` (aspect ratio), `D` (deband), `Ctrl+Z` (pan/zoom reset) |
+| **Playlist** | `N`/`P` (next/previous), `Del` (remove), `F1` (toggle drawer) |
+| **Window** | `F11` (fullscreen), `Ctrl+Q` (quit), `Ctrl+W` (close) |
+| **Stats** | `I` (stats page), `Shift+1-5` (direct page), `Ctrl+I` (overlay) |
 
 ---
 
-## CI/CD
+## ⚙️ CI/CD
 
 | Workflow | Platform | Trigger | Artifacts |
-|----------|----------|---------|-----------|
+|----------|----------|---------|-----------| 
 | **CI** | Windows, Linux, macOS | Push/PR to main | Native and Flatpak builds |
 | **Release** | Windows | Tag `v*` | NSIS installer + portable ZIP |
 | **Release** | Linux | Tag `v*` | AppImage + Flatpak bundle |
 | **Release** | macOS arm64 + x86_64 | Tag `v*` | Architecture-specific DMGs |
 
-### Dependencies
+### 📚 Dependencies
 
-- [mpv](https://mpv.io/) — The video player library powering playback
-- [MpvQt](https://github.com/KDE/mpvqt) — KDE Qt bindings for libmpv
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — Streaming support
-- [FFmpeg](https://ffmpeg.org/) — Media decoding
-- [RinUI](https://github.com/RinLit-233-shiroko/Rin-UI) - Pinned design and implementation reference; not used at runtime
-
----
-
-## Community and project policies
-
-- [Contributing](CONTRIBUTING.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
-- [Support](SUPPORT.md)
-- [Security Policy](SECURITY.md)
-- [Governance](GOVERNANCE.md) and [Maintainers](MAINTAINERS.md)
-- [Authors](AUTHORS.md) and [Contributors](CONTRIBUTORS.md)
-- [Citation metadata](CITATION.cff)
-- [Privacy Policy](PRIVACY.md), [License](LICENSE.md), and
-  [Third-Party Notices](THIRD_PARTY_NOTICES.md)
-- [Release history](https://github.com/Riteshp2001/CineWindows/releases)
+| Library | Purpose |
+|---------|---------|
+| [mpv](https://mpv.io/) | Video player library powering playback |
+| [MpvQt](https://github.com/KDE/mpvqt) | KDE Qt bindings for libmpv |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Streaming support |
+| [FFmpeg](https://ffmpeg.org/) | Media decoding |
+| [RinUI](https://github.com/RinLit-233-shiroko/Rin-UI) | Pinned design reference (not used at runtime) |
 
 ---
 
-*Built by [Ritesh Pandit](https://riteshdpandit.vercel.app). Source available on [GitHub](https://github.com/Riteshp2001/CineWindows).*
+## 🤝 Community & Project Policies
+
+| Document | Link |
+|----------|------|
+| Contributing Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Code of Conduct | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
+| Support | [SUPPORT.md](SUPPORT.md) |
+| Security Policy | [SECURITY.md](SECURITY.md) |
+| Governance | [GOVERNANCE.md](GOVERNANCE.md) |
+| Maintainers | [MAINTAINERS.md](MAINTAINERS.md) |
+| Authors & Contributors | [AUTHORS.md](AUTHORS.md) · [CONTRIBUTORS.md](CONTRIBUTORS.md) |
+| Citation | [CITATION.cff](CITATION.cff) |
+| Privacy & License | [PRIVACY.md](PRIVACY.md) · [LICENSE.md](LICENSE.md) · [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) |
+| Release History | [Releases](https://github.com/Riteshp2001/CineWindows/releases) |
+
+---
+
+<div align="center">
+
+*Built with ❤️ by [Ritesh Pandit](https://riteshdpandit.vercel.app) · Source available on [GitHub](https://github.com/Riteshp2001/CineWindows)*
+
+</div>
