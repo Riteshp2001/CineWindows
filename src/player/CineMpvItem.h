@@ -21,6 +21,7 @@
 #include <MpvAbstractItem>
 
 #include <QQuickItem>
+#include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
@@ -77,6 +78,7 @@ public:
      * @thread Must be called on the Qt main thread.
      */
     explicit CineMpvItem(QQuickItem* parent = nullptr);
+    ~CineMpvItem() override;
 
     /**
      * @brief Returns the title of the currently loaded media.
@@ -433,6 +435,11 @@ private:
      */
     void setupConnections();
 
+    /** @brief Creates a dedicated libmpv client that forwards internal warnings to Qt logging. */
+    void setupMpvLogging();
+    /** @brief Drains pending libmpv log events on the Qt thread. */
+    void drainMpvLogMessages();
+
     /**
      * @brief Applies initial mpv configuration options at startup.
      *
@@ -540,6 +547,10 @@ private:
     int m_playlistCount{0};
     /** @brief true once the mpv render context is fully initialised. */
     bool m_rendererReady{false};
+    /** @brief Dedicated client handle used only for libmpv log events. */
+    mpv_handle* m_logClient{nullptr};
+    /** @brief Polls the dedicated libmpv client without cross-thread callbacks. */
+    QTimer m_logDrainTimer;
     /** @brief Rotation-adjusted display width reported by mpv. */
     int m_videoWidth{0};
     /** @brief Rotation-adjusted display height reported by mpv. */

@@ -18,6 +18,7 @@
 
 #include "services/MediaThumbnailService.h"
 
+#include "app/LoggingCategories.h"
 #include "utils/PathUtils.h"
 
 #include <QCryptographicHash>
@@ -111,6 +112,7 @@ void MediaThumbnailService::startNext()
         const QString executable = PathUtils::mediaToolPath(QStringLiteral("ffmpeg"));
         if (executable.isEmpty())
         {
+            qCWarning(cineServiceLog) << "Cannot generate media thumbnails because ffmpeg is unavailable";
             m_pending.remove(job.path);
             Q_EMIT thumbnailFailed(job.path);
             continue;
@@ -137,6 +139,11 @@ void MediaThumbnailService::startNext()
                 Q_EMIT thumbnailReady(job.path, QUrl::fromLocalFile(job.output));
             else
             {
+                QString detail = QString::fromLocal8Bit(process->readAllStandardError()).trimmed();
+                if (detail.isEmpty())
+                    detail = process->errorString();
+                qCWarning(cineServiceLog).noquote()
+                    << "Thumbnail generation failed for" << job.path << detail.left(2048);
                 // Clean up partial output on failure
                 QFile::remove(job.output);
                 Q_EMIT thumbnailFailed(job.path);

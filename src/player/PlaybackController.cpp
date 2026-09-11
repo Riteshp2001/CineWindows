@@ -18,6 +18,7 @@
 
 #include "player/PlaybackController.h"
 
+#include "app/LoggingCategories.h"
 #include "app/SettingsManager.h"
 #include "models/PlaylistModel.h"
 #include "player/CineMpvItem.h"
@@ -427,6 +428,7 @@ void PlaybackController::screenshot()
     {
         // Run mpv's built-in screenshot command (uses screenshot-directory / template)
         m_player->runCommandAsync({QStringLiteral("screenshot")});
+        qCInfo(cinePlayerLog) << "Screenshot saved";
         Q_EMIT userMessage(tr("Screenshot saved"));
     }
 }

@@ -18,6 +18,8 @@
 
 #include "services/TmdbMetadataService.h"
 
+#include "app/LoggingCategories.h"
+
 #include <QDateTime>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -351,5 +353,7 @@ void TmdbMetadataService::setStatusMessage(const QString& message)
     if (m_statusMessage == message)
         return;
     m_statusMessage = message;
+    if (!m_busy || m_completed == 0 || m_completed == m_total)
+        qCInfo(cineServiceLog).noquote() << "TMDB:" << message;
     Q_EMIT statusMessageChanged();
 }

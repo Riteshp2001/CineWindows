@@ -94,7 +94,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/qtlogger/src/qtlogger/CMa
 endif()
 set(QTLOGGER_LIBRARY OFF CACHE BOOL "Build QtLogger as a static library" FORCE)
 set(QTLOGGER_DEBUG_OUTPUT OFF CACHE BOOL "Disable QtLogger internal diagnostics" FORCE)
-set(QTLOGGER_NO_THREAD OFF CACHE BOOL "Enable QtLogger asynchronous logging" FORCE)
+set(QTLOGGER_NO_THREAD OFF CACHE BOOL "Enable QtLogger thread-safe logging support" FORCE)
 set(QTLOGGER_NETWORK OFF CACHE BOOL "Disable QtLogger remote logging sinks" FORCE)
 set(QTLOGGER_JOURNAL OFF CACHE BOOL "Disable the optional systemd journal sink" FORCE)
 add_subdirectory(third_party/qtlogger/src/qtlogger EXCLUDE_FROM_ALL)
@@ -257,6 +257,7 @@ set_source_files_properties(qml/utils/TimeUtils.qml PROPERTIES QT_QML_SINGLETON_
 
 set(CINEWINDOWS_SOURCES
     src/app/ApplicationLog.cpp src/app/ApplicationLog.h
+    src/app/LoggingCategories.cpp src/app/LoggingCategories.h
     src/app/SettingsManager.cpp src/app/SettingsManager.h
     src/app/StartupShell.cpp src/app/StartupShell.h
     src/controls/QrCodeItem.cpp src/controls/QrCodeItem.h

@@ -18,6 +18,7 @@
 
 #include "player/MpvConfig.h"
 
+#include "app/LoggingCategories.h"
 #include "player/CineMpvItem.h"
 #include "player/MpvConfigFilter.h"
 #include "utils/PathUtils.h"
@@ -195,6 +196,9 @@ void MpvConfig::loadMpvConf(const QString& dir)
     QFile source(path);
     if (!source.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+        if (source.exists())
+            qCWarning(cinePlayerLog).noquote()
+                << "Could not read the user mpv configuration:" << source.errorString();
         return;
     }
 
@@ -204,12 +208,16 @@ void MpvConfig::loadMpvConf(const QString& dir)
     QSaveFile destination(filteredPath);
     if (!destination.open(QIODevice::WriteOnly | QIODevice::Text))
     {
+        qCWarning(cinePlayerLog).noquote()
+            << "Could not create the embedded mpv configuration:" << destination.errorString();
         return;
     }
 
     destination.write(filtered.toUtf8());
     if (!destination.commit())
     {
+        qCWarning(cinePlayerLog).noquote()
+            << "Could not commit the embedded mpv configuration:" << destination.errorString();
         return;
     }
 
@@ -231,6 +239,9 @@ void MpvConfig::loadInputConf(const QString& dir)
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
+        if (file.exists())
+            qCWarning(cinePlayerLog).noquote()
+                << "Could not read the user mpv input configuration:" << file.errorString();
         return;
     }
 

@@ -18,6 +18,7 @@
 
 #include "player/CineMpvItem.h"
 
+#include "app/LoggingCategories.h"
 #include "utils/MediaUtils.h"
 #include "utils/PathUtils.h"
 
@@ -49,6 +50,7 @@ CineMpvItem::CineMpvItem(QQuickItem* parent)
     observeProperty(QStringLiteral("vid"), MPV_FORMAT_NODE);
 
     setupConnections();
+    setupMpvLogging();
     configureDefaults();
 
     connect(this, &MpvAbstractItem::ready, this, [this]() {
@@ -62,20 +64,103 @@ CineMpvItem::CineMpvItem(QQuickItem* parent)
     });
 }
 
+CineMpvItem::~CineMpvItem()
+{
+    if (!m_logClient)
+        return;
+    m_logDrainTimer.stop();
+    drainMpvLogMessages();
+    mpv_destroy(m_logClient);
+    m_logClient = nullptr;
+}
+
 void CineMpvItem::setupConnections()
 {
     connect(mpvController(), &MpvController::propertyChanged, this, &CineMpvItem::onPropertyChanged,
             Qt::QueuedConnection);
     connect(mpvController(), &MpvController::fileStarted, this, [this] {
         resetVideoGeometry();
+        qCInfo(cinePlayerLog).noquote() << "Loading media" << m_currentPath;
         Q_EMIT fileStarted();
     }, Qt::QueuedConnection);
-    connect(mpvController(), &MpvController::fileLoaded, this, &CineMpvItem::fileLoaded, Qt::QueuedConnection);
-    connect(mpvController(), &MpvController::endFile, this, &CineMpvItem::endFile, Qt::QueuedConnection);
+    connect(mpvController(), &MpvController::fileLoaded, this, [this] {
+        qCInfo(cinePlayerLog).noquote() << "Media loaded" << m_currentPath;
+        Q_EMIT fileLoaded();
+    }, Qt::QueuedConnection);
+    connect(mpvController(), &MpvController::endFile, this, [this](const QString& reason) {
+        if (reason == QStringLiteral("error"))
+            qCWarning(cinePlayerLog).noquote() << "Media ended with an error" << m_currentPath;
+        else
+            qCInfo(cinePlayerLog).noquote() << "Media ended" << reason << m_currentPath;
+        Q_EMIT endFile(reason);
+    }, Qt::QueuedConnection);
     connect(mpvController(), &MpvController::videoReconfig, this, [this] {
         updateVideoGeometry();
         Q_EMIT videoReconfigured();
     }, Qt::QueuedConnection);
+}
+
+void CineMpvItem::setupMpvLogging()
+{
+    mpv_handle* core = mpvController()->mpv();
+    if (!core)
+    {
+        qCWarning(cineMpvLog) << "Cannot create the libmpv logging client without an active core";
+        return;
+    }
+
+    m_logClient = mpv_create_client(core, "cinewindows-logger");
+    if (!m_logClient)
+    {
+        qCWarning(cineMpvLog) << "Could not create the libmpv logging client";
+        return;
+    }
+
+    const int result = mpv_request_log_messages(m_logClient, "warn");
+    if (result < 0)
+    {
+        qCWarning(cineMpvLog).noquote()
+            << "Could not subscribe to libmpv logs:" << mpv_error_string(result);
+    }
+    m_logDrainTimer.setInterval(100);
+    m_logDrainTimer.setTimerType(Qt::CoarseTimer);
+    connect(&m_logDrainTimer, &QTimer::timeout, this, &CineMpvItem::drainMpvLogMessages);
+    m_logDrainTimer.start();
+}
+
+void CineMpvItem::drainMpvLogMessages()
+{
+    while (m_logClient)
+    {
+        mpv_event* event = mpv_wait_event(m_logClient, 0);
+        if (!event || event->event_id == MPV_EVENT_NONE)
+            break;
+        if (event->event_id != MPV_EVENT_LOG_MESSAGE || !event->data)
+            continue;
+
+        const auto* log = static_cast<const mpv_event_log_message*>(event->data);
+        const QString prefix = QString::fromUtf8(log->prefix ? log->prefix : "mpv");
+        const QString message = QString::fromUtf8(log->text ? log->text : "").trimmed();
+        if (message.isEmpty())
+            continue;
+
+        switch (log->log_level)
+        {
+            case MPV_LOG_LEVEL_FATAL:
+            case MPV_LOG_LEVEL_ERROR:
+                qCCritical(cineMpvLog).noquote() << prefix + QLatin1Char(':') << message;
+                break;
+            case MPV_LOG_LEVEL_WARN:
+                qCWarning(cineMpvLog).noquote() << prefix + QLatin1Char(':') << message;
+                break;
+            case MPV_LOG_LEVEL_INFO:
+                qCInfo(cineMpvLog).noquote() << prefix + QLatin1Char(':') << message;
+                break;
+            default:
+                qCDebug(cineMpvLog).noquote() << prefix + QLatin1Char(':') << message;
+                break;
+        }
+    }
 }
 
 void CineMpvItem::configureDefaults()

@@ -18,6 +18,7 @@
 
 #include "app/ApplicationLog.h"
 
+#include "app/LoggingCategories.h"
 #include "utils/PathUtils.h"
 
 #include <qtlogger/qtlogger.h>
@@ -42,13 +43,13 @@ ApplicationLog::ApplicationLog()
         | QtLogger::RotatingFileSink::RotationDaily
         | QtLogger::RotatingFileSink::Compression;
     gQtLogger.configure(m_filePath, MaximumLogFileBytes, MaximumLogFileCount,
-                        rotationOptions, true);
+                        rotationOptions, false);
     m_configured = true;
 
     if (m_filePath.isEmpty())
-        qWarning() << "Log directory is unavailable; using console logging only";
+        qCWarning(cineAppLog) << "Log directory is unavailable; using console logging only";
     else
-        qInfo().noquote() << "Logging to" << QDir::toNativeSeparators(m_filePath);
+        qCInfo(cineAppLog).noquote() << "Logging to" << QDir::toNativeSeparators(m_filePath);
 }
 
 ApplicationLog::~ApplicationLog()
@@ -56,10 +57,7 @@ ApplicationLog::~ApplicationLog()
     if (!m_configured)
         return;
 
-    qInfo() << "CineWindows shutting down";
-#ifndef QTLOGGER_NO_THREAD
-    gQtLogger.resetOwnThread();
-#endif
+    qCInfo(cineAppLog) << "CineWindows shutting down";
     gQtLogger.flush();
 }
 

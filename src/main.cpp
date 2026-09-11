@@ -47,6 +47,7 @@ extern "C" {
 #endif
 
 #include "app/ApplicationLog.h"
+#include "app/LoggingCategories.h"
 #include "app/StartupShell.h"
 #include "player/CineMpvItem.h"
 #include "player/IpcServer.h"
@@ -217,8 +218,8 @@ int main(int argc, char* argv[])
     app.setOrganizationDomain(QStringLiteral("io.github.gyrolet"));
     app.setWindowIcon(QIcon(QStringLiteral(":/cinewindows/icons/apps/CineWindows.svg")));
     ApplicationLog applicationLog;
-    qInfo().noquote() << app.applicationDisplayName() << app.applicationVersion()
-                      << "starting with Qt" << qVersion();
+    qCInfo(cineAppLog).noquote() << app.applicationDisplayName() << app.applicationVersion()
+                                 << "starting with Qt" << qVersion();
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
@@ -248,7 +249,7 @@ int main(int argc, char* argv[])
         const uint value = parser.value(ipcOption).toUInt(&ok);
         if (!ok || value == 0 || value > std::numeric_limits<quint16>::max())
         {
-            qCritical() << "--ipc-server requires a port in the range 1..65535";
+            qCCritical(cineIpcLog) << "--ipc-server requires a port in the range 1..65535";
             return EXIT_FAILURE;
         }
         ipcPort = static_cast<quint16>(value);
@@ -276,7 +277,7 @@ int main(int argc, char* argv[])
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         [] {
-            qCritical() << "QML root component creation failed";
+            qCCritical(cineAppLog) << "QML root component creation failed";
             QCoreApplication::exit(EXIT_FAILURE);
         },
         Qt::QueuedConnection);
@@ -307,7 +308,7 @@ int main(int argc, char* argv[])
         }
         if (!player)
         {
-            qCritical() << "QML root did not expose a CineMpvItem";
+            qCCritical(cineAppLog) << "QML root did not expose a CineMpvItem";
             return;
         }
 
@@ -317,14 +318,7 @@ int main(int argc, char* argv[])
             auto* ipc = new IpcServer(qApp);
             ipc->setPlayer(player);
             ipc->setPort(ipcPort);
-            if (ipc->start())
-            {
-                qDebug() << "IPC server listening on 127.0.0.1:" << ipcPort;
-            }
-            else
-            {
-                qWarning() << "IPC server failed to start on port" << ipcPort;
-            }
+            ipc->start();
         }
 
         // Launch the stdin CLI reader if --cli was given
@@ -334,11 +328,11 @@ int main(int argc, char* argv[])
             console->setPlayer(player);
             if (console->start())
             {
-                qInfo() << "CineWindows CLI ready. Send JSON IPC or raw mpv commands.";
+                qCInfo(cineIpcLog) << "CineWindows CLI ready. Send JSON IPC or raw mpv commands.";
             }
             else
             {
-                qWarning() << "CLI input reader failed to start";
+                qCWarning(cineIpcLog) << "CLI input reader failed to start";
             }
         }
     });

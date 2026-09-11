@@ -18,6 +18,7 @@
 
 #include "services/LibraryDatabase.h"
 
+#include "app/LoggingCategories.h"
 #include "utils/MediaUtils.h"
 
 #include "utils/PathUtils.h"
@@ -34,8 +35,10 @@ bool exec(QSqlQuery& query, const QString& statement, QString* error)
 {
     if (query.exec(statement))
         return true;
+    const QString message = query.lastError().text();
+    qCWarning(cineLibraryLog).noquote() << "Database statement failed:" << message;
     if (error)
-        *error = query.lastError().text();
+        *error = message;
     return false;
 }
 
@@ -43,7 +46,11 @@ bool columnExists(QSqlDatabase& database, const QString& table, const QString& c
 {
     QSqlQuery query(database);
     if (!query.exec(QStringLiteral("PRAGMA table_info(%1)").arg(table)))
+    {
+        qCWarning(cineLibraryLog).noquote()
+            << "Could not inspect the database schema:" << query.lastError().text();
         return false;
+    }
     while (query.next())
     {
         if (query.value(1).toString() == column)
@@ -70,8 +77,10 @@ QSqlDatabase open(const QString& connectionName, QString* error)
     }
     if (!database.open())
     {
+        const QString message = database.lastError().text();
+        qCWarning(cineLibraryLog).noquote() << "Could not open the media database:" << message;
         if (error)
-            *error = database.lastError().text();
+            *error = message;
         return database;
     }
     // Ensure schema is up to date; close on failure.
@@ -94,16 +103,20 @@ bool initialize(QSqlDatabase& database, QString* error)
     int schemaVersion = 0;
     if (!query.exec(QStringLiteral("PRAGMA user_version")) || !query.next())
     {
+        const QString message = query.lastError().text();
+        qCWarning(cineLibraryLog).noquote() << "Could not read the database schema version:" << message;
         if (error)
-            *error = query.lastError().text();
+            *error = message;
         return false;
     }
     schemaVersion = query.value(0).toInt();
 
     if (!database.transaction())
     {
+        const QString message = database.lastError().text();
+        qCWarning(cineLibraryLog).noquote() << "Could not start the schema transaction:" << message;
         if (error)
-            *error = database.lastError().text();
+            *error = message;
         return false;
     }
 
@@ -181,8 +194,10 @@ bool initialize(QSqlDatabase& database, QString* error)
     }
     if (!database.commit())
     {
+        const QString message = database.lastError().text();
+        qCWarning(cineLibraryLog).noquote() << "Could not commit the database schema:" << message;
         if (error)
-            *error = database.lastError().text();
+            *error = message;
         return false;
     }
     return true;

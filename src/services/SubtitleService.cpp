@@ -18,6 +18,7 @@
 
 #include "services/SubtitleService.h"
 
+#include "app/LoggingCategories.h"
 #include "player/CineMpvItem.h"
 
 #include <QDir>
@@ -292,5 +293,6 @@ void SubtitleService::setStatusMessage(const QString& message)
     if (m_statusMessage == message)
         return;
     m_statusMessage = message;
+    qCInfo(cineServiceLog).noquote() << "Subtitles:" << message;
     Q_EMIT statusMessageChanged();
 }

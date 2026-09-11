@@ -18,6 +18,7 @@
 
 #include "services/YouTubeSearchService.h"
 
+#include "app/LoggingCategories.h"
 #include "utils/PathUtils.h"
 
 #include <QJsonArray>
@@ -234,5 +235,7 @@ void YouTubeSearchService::setErrorString(const QString& error)
     if (m_errorString == error)
         return;
     m_errorString = error;
+    if (!error.isEmpty())
+        qCWarning(cineServiceLog).noquote() << "YouTube search:" << error;
     Q_EMIT errorStringChanged();
 }

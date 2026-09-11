@@ -18,6 +18,8 @@
 
 #include "services/RemoteControlService.h"
 
+#include "app/LoggingCategories.h"
+
 #include "services/RemoteControlAssets.h"
 
 #include "player/CineMpvItem.h"
@@ -550,5 +552,7 @@ void RemoteControlService::setErrorString(const QString& error)
     if (m_errorString == error)
         return;
     m_errorString = error;
+    if (!error.isEmpty())
+        qCWarning(cineServiceLog).noquote() << "Companion remote:" << error;
     Q_EMIT errorStringChanged();
 }

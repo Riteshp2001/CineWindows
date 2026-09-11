@@ -18,6 +18,7 @@
 
 #include "services/MediaLibraryService.h"
 
+#include "app/LoggingCategories.h"
 #include "player/CineMpvItem.h"
 #include "services/LibraryDatabase.h"
 #include "utils/MediaUtils.h"
@@ -31,6 +32,11 @@
 #include <QtConcurrentRun>
 
 namespace {
+void logQueryFailure(const char* operation, const QSqlQuery& query)
+{
+    qCWarning(cineLibraryLog).noquote() << operation << query.lastError().text();
+}
+
 /// Map a single media_items row (via QSqlQuery) to a QVariantMap with seconds-based duration/position.
 QVariantMap mediaMap(const QSqlQuery& query)
 {
@@ -121,9 +127,12 @@ void MediaLibraryService::initialize()
     m_database = LibraryDatabase::open(m_connectionName, &error);
     if (!m_database.isOpen())
     {
-        Q_EMIT userMessage(tr("Could not open the media library: %1").arg(error));
+        const QString message = tr("Could not open the media library: %1").arg(error);
+        qCWarning(cineLibraryLog).noquote() << message;
+        Q_EMIT userMessage(message);
         return;
     }
+    qCInfo(cineLibraryLog) << "Media library initialized";
     // Populate in-memory collections from the freshly opened database.
     refresh();
 }
@@ -136,7 +145,10 @@ QVariantList MediaLibraryService::queryCollection(const QString& statement) cons
         return result;
     QSqlQuery query(m_database);
     if (!query.exec(statement))
+    {
+        logQueryFailure("Could not query a media collection:", query);
         return result;
+    }
     // Map every result row through the shared mediaMap() helper.
     while (query.next())
         result.append(mediaMap(query));
@@ -177,6 +189,10 @@ void MediaLibraryService::refresh()
                         {QStringLiteral("watchedMs"), statisticsQuery.value(2)},
                         {QStringLiteral("completions"), statisticsQuery.value(3)}};
     }
+    else
+    {
+        logQueryFailure("Could not query media statistics:", statisticsQuery);
+    }
 
     m_history = LibraryDatabase::playbackHistory(m_database);
     updateRoots();
@@ -193,6 +209,10 @@ void MediaLibraryService::updateRoots()
     {
         while (query.next())
             roots.append(QVariantMap{{QStringLiteral("path"), query.value(0)}, {QStringLiteral("lastScan"), query.value(1)}});
+    }
+    else
+    {
+        logQueryFailure("Could not query library roots:", query);
     }
     // Only emit rootsChanged when the list actually changes (avoids spurious signal storms).
     if (roots != m_roots)
@@ -215,7 +235,11 @@ bool MediaLibraryService::addRoot(const QUrl& folder)
     query.addBindValue(LibraryDatabase::locatorKey(path));
     query.addBindValue(QDateTime::currentMSecsSinceEpoch());
     if (!query.exec())
+    {
+        logQueryFailure("Could not add a library root:", query);
         return false;
+    }
+    qCInfo(cineLibraryLog).noquote() << "Added library root" << QDir::toNativeSeparators(path);
     updateRoots();
     // Immediately scan the newly added folder.
     rescanAll();
@@ -230,7 +254,10 @@ void MediaLibraryService::removeRoot(const QString& path)
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral("DELETE FROM library_roots WHERE locator_key=?"));
     query.addBindValue(LibraryDatabase::locatorKey(path));
-    query.exec();
+    if (!query.exec())
+        logQueryFailure("Could not remove a library root:", query);
+    else
+        qCInfo(cineLibraryLog).noquote() << "Removed library root" << QDir::toNativeSeparators(path);
     // Refresh collections to remove entries that belonged only to this root.
     refresh();
 }
@@ -246,6 +273,7 @@ void MediaLibraryService::rescanAll()
     m_scannedCount = 0;
     Q_EMIT scanProgressChanged();
     setIndexing(true);
+    qCInfo(cineLibraryLog) << "Library scan started for" << rootsSnapshot.size() << "roots";
 
     auto* watcher = new QFutureWatcher<QVariantList>(this);
     connect(watcher, &QFutureWatcher<QVariantList>::finished, this, [this, watcher, generation] {
@@ -258,12 +286,20 @@ void MediaLibraryService::rescanAll()
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         if (!m_database.transaction())
         {
+            qCWarning(cineLibraryLog).noquote()
+                << "Could not start the library scan transaction:" << m_database.lastError().text();
             setIndexing(false);
             return;
         }
         // Replace library_entries entirely for a fresh snapshot.
         QSqlQuery clear(m_database);
-        clear.exec(QStringLiteral("DELETE FROM library_entries"));
+        if (!clear.exec(QStringLiteral("DELETE FROM library_entries")))
+        {
+            logQueryFailure("Could not clear stale library entries:", clear);
+            m_database.rollback();
+            setIndexing(false);
+            return;
+        }
         // Upsert each discovered file into media_items.
         QSqlQuery media(m_database);
         media.prepare(QStringLiteral(
@@ -277,6 +313,7 @@ void MediaLibraryService::rescanAll()
         rootId.prepare(QStringLiteral("SELECT root_id FROM library_roots WHERE locator_key=?"));
         QSqlQuery entry(m_database);
         entry.prepare(QStringLiteral("INSERT OR REPLACE INTO library_entries(root_id, media_id, last_seen_at_ms) VALUES(?, ?, ?)"));
+        int failedEntries = 0;
         for (const QVariant& value : files)
         {
             const QVariantMap file = value.toMap();
@@ -290,26 +327,48 @@ void MediaLibraryService::rescanAll()
             media.bindValue(5, now);
             media.bindValue(6, now);
             if (!media.exec())
+            {
+                ++failedEntries;
                 continue;
+            }
             // Retrieve the auto-generated media_id for the entry link.
             mediaId.bindValue(0, key);
             if (!mediaId.exec() || !mediaId.next())
+            {
+                ++failedEntries;
                 continue;
+            }
             rootId.bindValue(0, LibraryDatabase::locatorKey(file.value(QStringLiteral("root")).toString()));
             if (!rootId.exec() || !rootId.next())
+            {
+                ++failedEntries;
                 continue;
+            }
             entry.bindValue(0, rootId.value(0));
             entry.bindValue(1, mediaId.value(0));
             entry.bindValue(2, now);
-            entry.exec();
+            if (!entry.exec())
+                ++failedEntries;
         }
         // Mark all roots as freshly scanned.
         QSqlQuery scanned(m_database);
         scanned.prepare(QStringLiteral("UPDATE library_roots SET last_scan_at_ms=?"));
         scanned.addBindValue(now);
-        scanned.exec();
-        m_database.commit();
+        if (!scanned.exec() || !m_database.commit())
+        {
+            if (scanned.lastError().isValid())
+                logQueryFailure("Could not update library scan metadata:", scanned);
+            else
+                qCWarning(cineLibraryLog).noquote()
+                    << "Could not commit the library scan:" << m_database.lastError().text();
+            m_database.rollback();
+            setIndexing(false);
+            return;
+        }
         m_scannedCount = static_cast<int>(files.size());
+        if (failedEntries > 0)
+            qCWarning(cineLibraryLog) << "Library scan skipped" << failedEntries << "database entries";
+        qCInfo(cineLibraryLog) << "Library scan completed with" << files.size() << "media files";
         Q_EMIT scanProgressChanged();
         setIndexing(false);
         refresh();

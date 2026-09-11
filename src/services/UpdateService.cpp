@@ -18,6 +18,8 @@
 
 #include "services/UpdateService.h"
 
+#include "app/LoggingCategories.h"
+
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -399,6 +401,10 @@ void UpdateService::setStatusMessage(const QString& message)
         return;
     }
     m_statusMessage = message;
+    if (m_state == Error)
+        qCWarning(cineServiceLog).noquote() << "Updates:" << message;
+    else
+        qCInfo(cineServiceLog).noquote() << "Updates:" << message;
     Q_EMIT statusMessageChanged();
 }
 

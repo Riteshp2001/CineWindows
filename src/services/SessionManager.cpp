@@ -18,6 +18,7 @@
 
 #include "services/SessionManager.h"
 
+#include "app/LoggingCategories.h"
 #include "models/PlaylistModel.h"
 #include "services/LibraryDatabase.h"
 #include "utils/PathUtils.h"
@@ -36,6 +37,16 @@
 namespace {
 constexpr auto SessionKey = "last";
 
+void logQueryFailure(const char* operation, const QSqlQuery& query)
+{
+    qCWarning(cineLibraryLog).noquote() << operation << query.lastError().text();
+}
+
+void logDatabaseFailure(const char* operation, const QSqlDatabase& database)
+{
+    qCWarning(cineLibraryLog).noquote() << operation << database.lastError().text();
+}
+
 /** @brief Migrate a legacy JSON session file into the database. */
 bool importLegacySession(QSqlDatabase& database)
 {
@@ -45,7 +56,12 @@ bool importLegacySession(QSqlDatabase& database)
     // Check if legacy import was already performed
     QSqlQuery marker(database);
     marker.prepare(QStringLiteral("SELECT value FROM app_meta WHERE key = 'legacy_session_import_v1'"));
-    if (marker.exec() && marker.next())
+    if (!marker.exec())
+    {
+        logQueryFailure("Could not inspect the legacy session marker:", marker);
+        return false;
+    }
+    if (marker.next())
         return false;
 
     // Open the legacy session file
@@ -54,7 +70,10 @@ bool importLegacySession(QSqlDatabase& database)
         return false;
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
     if (!document.isObject())
+    {
+        qCWarning(cineLibraryLog) << "Legacy session data is not valid JSON";
         return false;
+    }
 
     // Extract playlist paths from the JSON root
     const QJsonObject root = document.object();
@@ -66,8 +85,13 @@ bool importLegacySession(QSqlDatabase& database)
         if (!path.isEmpty())
             paths.append(path);
     }
-    if (paths.isEmpty() || !database.transaction())
+    if (paths.isEmpty())
         return false;
+    if (!database.transaction())
+    {
+        logDatabaseFailure("Could not start the legacy session import:", database);
+        return false;
+    }
 
     // Clamp legacy index and position to valid ranges
     int index = root.value(QStringLiteral("currentIndex")).toInt(-1);
@@ -86,6 +110,7 @@ bool importLegacySession(QSqlDatabase& database)
     session.addBindValue(qRound64(position * 1000.0));
     if (!session.exec())
     {
+        logQueryFailure("Could not import the legacy session header:", session);
         database.rollback();
         return false;
     }
@@ -100,6 +125,7 @@ bool importLegacySession(QSqlDatabase& database)
         item.bindValue(2, paths.at(i));
         if (!item.exec())
         {
+            logQueryFailure("Could not import a legacy session item:", item);
             database.rollback();
             return false;
         }
@@ -109,10 +135,17 @@ bool importLegacySession(QSqlDatabase& database)
     if (!imported.exec(QStringLiteral("INSERT OR REPLACE INTO app_meta (key, value) "
                                       "VALUES ('legacy_session_import_v1', '1')")))
     {
+        logQueryFailure("Could not mark legacy session import complete:", imported);
         database.rollback();
         return false;
     }
-    return database.commit();
+    if (!database.commit())
+    {
+        logDatabaseFailure("Could not commit the legacy session import:", database);
+        return false;
+    }
+    qCInfo(cineLibraryLog) << "Imported the legacy saved session";
+    return true;
 }
 } // namespace
 
@@ -137,8 +170,16 @@ bool SessionManager::save(PlaylistModel* playlist, int currentIndex, double posi
     // Open the session database within a transaction
     QString error;
     QSqlDatabase database = LibraryDatabase::open(QStringLiteral("cine-session"), &error);
-    if (!database.isOpen() || !database.transaction())
+    if (!database.isOpen())
+    {
+        qCWarning(cineLibraryLog).noquote() << "Could not open the session database:" << error;
         return false;
+    }
+    if (!database.transaction())
+    {
+        logDatabaseFailure("Could not start the session save transaction:", database);
+        return false;
+    }
 
     // Sanitize inputs
     if (!std::isfinite(position) || position < 0.0)
@@ -155,6 +196,7 @@ bool SessionManager::save(PlaylistModel* playlist, int currentIndex, double posi
     session.addBindValue(qRound64(position * 1000.0));
     if (!session.exec())
     {
+        logQueryFailure("Could not save the session header:", session);
         database.rollback();
         return false;
     }
@@ -165,6 +207,7 @@ bool SessionManager::save(PlaylistModel* playlist, int currentIndex, double posi
     clear.addBindValue(QString::fromLatin1(SessionKey));
     if (!clear.exec())
     {
+        logQueryFailure("Could not replace saved session items:", clear);
         database.rollback();
         return false;
     }
@@ -179,11 +222,18 @@ bool SessionManager::save(PlaylistModel* playlist, int currentIndex, double posi
         item.bindValue(2, playlist->pathAt(i));
         if (!item.exec())
         {
+            logQueryFailure("Could not save a session item:", item);
             database.rollback();
             return false;
         }
     }
-    return database.commit();
+    if (!database.commit())
+    {
+        logDatabaseFailure("Could not commit the saved session:", database);
+        return false;
+    }
+    qCInfo(cineLibraryLog) << "Saved session with" << playlist->count() << "items";
+    return true;
 }
 
 /**
@@ -206,7 +256,10 @@ bool SessionManager::restore(PlaylistModel* playlist) const
     QString error;
     QSqlDatabase database = LibraryDatabase::open(QStringLiteral("cine-session"), &error);
     if (!database.isOpen())
+    {
+        qCWarning(cineLibraryLog).noquote() << "Could not open the session database:" << error;
         return false;
+    }
 
     importLegacySession(database);
 
@@ -214,7 +267,12 @@ bool SessionManager::restore(PlaylistModel* playlist) const
     QSqlQuery session(database);
     session.prepare(QStringLiteral("SELECT current_ordinal, position_ms FROM saved_sessions WHERE session_key = ?"));
     session.addBindValue(QString::fromLatin1(SessionKey));
-    if (!session.exec() || !session.next())
+    if (!session.exec())
+    {
+        logQueryFailure("Could not read the saved session:", session);
+        return false;
+    }
+    if (!session.next())
         return false;
 
     // Read saved playlist items in ordinal order
@@ -223,7 +281,10 @@ bool SessionManager::restore(PlaylistModel* playlist) const
     items.prepare(QStringLiteral("SELECT locator FROM saved_session_items WHERE session_key = ? ORDER BY ordinal"));
     items.addBindValue(QString::fromLatin1(SessionKey));
     if (!items.exec())
+    {
+        logQueryFailure("Could not read saved session items:", items);
         return false;
+    }
     while (items.next())
         paths.append(items.value(0).toString());
 
@@ -231,6 +292,8 @@ bool SessionManager::restore(PlaylistModel* playlist) const
     playlist->addPaths(paths, true);
     m_restoredIndex = std::clamp(session.value(0).toInt(), -1, static_cast<int>(paths.size()) - 1);
     m_restoredPosition = qMax(0.0, static_cast<double>(session.value(1).toLongLong()) / 1000.0);
+    if (!paths.isEmpty())
+        qCInfo(cineLibraryLog) << "Restored session with" << paths.size() << "items";
     return !paths.isEmpty();
 }
 

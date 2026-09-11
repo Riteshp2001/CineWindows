@@ -18,6 +18,8 @@
 
 #include "player/IpcServer.h"
 
+#include "app/LoggingCategories.h"
+
 #include "player/CineMpvItem.h"
 
 #include <MpvController>
@@ -340,9 +342,19 @@ bool IpcServer::start()
 {
     if (!m_player || m_port == 0)
     {
+        qCWarning(cineIpcLog) << "Cannot start IPC without a player and valid port";
         return false;
     }
-    return m_server->isListening() || m_server->listen(QHostAddress::LocalHost, m_port);
+    if (m_server->isListening())
+        return true;
+    if (!m_server->listen(QHostAddress::LocalHost, m_port))
+    {
+        qCWarning(cineIpcLog).noquote()
+            << "IPC listen failed on port" << m_port << m_server->errorString();
+        return false;
+    }
+    qCInfo(cineIpcLog) << "IPC server listening on 127.0.0.1:" << m_port;
+    return true;
 }
 
 /**

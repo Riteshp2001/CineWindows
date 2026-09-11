@@ -18,6 +18,8 @@
 
 #include "services/CastService.h"
 
+#include "app/LoggingCategories.h"
+
 #include <QNetworkDatagram>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -288,5 +290,6 @@ void CastService::setStatusMessage(const QString& message)
     if (m_statusMessage == message)
         return;
     m_statusMessage = message;
+    qCInfo(cineServiceLog).noquote() << "Cast:" << message;
     Q_EMIT statusMessageChanged();
 }
