@@ -10,6 +10,7 @@
 #include <QLoggingCategory>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
+#include <QQuickOpenGLUtils>
 #include <QQuickWindow>
 
 #include "mpvabstractitem.h"
@@ -84,6 +85,7 @@ void MpvRenderer::render()
     // See render_gl.h on what OpenGL environment mpv expects, and
     // other API details.
     int result = mpv_render_context_render(m_mpvResourceManager->mpvRenderContext, params);
+    QQuickOpenGLUtils::resetOpenGLState();
     if (result < 0) {
         qCWarning(MpvQt_MpvRenderer) << "mpv_render_context_render failed:" << MpvController::getError(result);
         return;
