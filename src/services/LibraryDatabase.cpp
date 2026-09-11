@@ -38,6 +38,19 @@ bool exec(QSqlQuery& query, const QString& statement, QString* error)
         *error = query.lastError().text();
     return false;
 }
+
+bool columnExists(QSqlDatabase& database, const QString& table, const QString& column)
+{
+    QSqlQuery query(database);
+    if (!query.exec(QStringLiteral("PRAGMA table_info(%1)").arg(table)))
+        return false;
+    while (query.next())
+    {
+        if (query.value(1).toString() == column)
+            return true;
+    }
+    return false;
+}
 } // namespace
 
 namespace LibraryDatabase {
@@ -78,6 +91,15 @@ bool initialize(QSqlDatabase& database, QString* error)
         || !exec(query, QStringLiteral("PRAGMA busy_timeout = 5000"), error))
         return false;
 
+    int schemaVersion = 0;
+    if (!query.exec(QStringLiteral("PRAGMA user_version")) || !query.next())
+    {
+        if (error)
+            *error = query.lastError().text();
+        return false;
+    }
+    schemaVersion = query.value(0).toInt();
+
     if (!database.transaction())
     {
         if (error)
@@ -117,13 +139,41 @@ bool initialize(QSqlDatabase& database, QString* error)
                        "session_key TEXT NOT NULL REFERENCES saved_sessions(session_key) ON DELETE CASCADE, "
                        "ordinal INTEGER NOT NULL, locator TEXT NOT NULL, PRIMARY KEY(session_key, ordinal))"),
         QStringLiteral("CREATE INDEX IF NOT EXISTS media_last_played_idx ON media_items(last_played_at_ms DESC)"),
-        QStringLiteral("CREATE INDEX IF NOT EXISTS visits_opened_idx ON playback_visits(opened_at_ms DESC)"),
-        QStringLiteral("PRAGMA user_version = 1")};
+        QStringLiteral("CREATE INDEX IF NOT EXISTS visits_opened_idx ON playback_visits(opened_at_ms DESC)")};
 
     // Execute all DDL inside a single transaction.
     for (const QString& statement : statements)
     {
         if (!exec(query, statement, error))
+        {
+            database.rollback();
+            return false;
+        }
+    }
+
+    if (schemaVersion < 2)
+    {
+        const QStringList metadataColumns = {
+            QStringLiteral("tmdb_id INTEGER"),
+            QStringLiteral("tmdb_media_type TEXT"),
+            QStringLiteral("tmdb_title TEXT"),
+            QStringLiteral("tmdb_overview TEXT"),
+            QStringLiteral("tmdb_release_year INTEGER"),
+            QStringLiteral("tmdb_rating REAL"),
+            QStringLiteral("tmdb_artwork_url TEXT"),
+            QStringLiteral("tmdb_updated_at_ms INTEGER")};
+        for (const QString& definition : metadataColumns)
+        {
+            const QString column = definition.section(QLatin1Char(' '), 0, 0);
+            if (columnExists(database, QStringLiteral("media_items"), column))
+                continue;
+            if (!exec(query, QStringLiteral("ALTER TABLE media_items ADD COLUMN %1").arg(definition), error))
+            {
+                database.rollback();
+                return false;
+            }
+        }
+        if (!exec(query, QStringLiteral("PRAGMA user_version = 2"), error))
         {
             database.rollback();
             return false;
@@ -175,9 +225,11 @@ QVariantList playbackHistory(QSqlDatabase& database)
             "FROM playback_visits v) "
             "SELECT v.visit_id, v.opened_at_ms, v.ended_at_ms, v.end_position_ms, "
             "v.cumulative_watched_ms, v.visit_count, v.end_reason, "
-            "m.media_id, m.locator, COALESCE(NULLIF(m.media_title, ''), m.display_name) AS title, "
+            "m.media_id, m.locator, COALESCE(NULLIF(m.tmdb_title, ''), NULLIF(m.media_title, ''), m.display_name) AS title, "
             "m.duration_ms, v.end_position_ms AS position_ms, v.completed, m.play_count, m.last_played_at_ms, "
-            "m.missing, m.thumbnail_path, m.source_kind AS kind, "
+            "m.missing, COALESCE(NULLIF(m.tmdb_artwork_url, ''), m.thumbnail_path) AS thumbnail_path, "
+            "m.source_kind AS kind, m.tmdb_id, m.tmdb_media_type, m.tmdb_overview, "
+            "m.tmdb_release_year, m.tmdb_rating, m.tmdb_updated_at_ms, "
             "EXISTS(SELECT 1 FROM favorites f WHERE f.locator_key=m.locator_key) AS favorite "
             "FROM ranked v JOIN media_items m ON m.media_id=v.media_id "
             "WHERE v.history_rank=1 ORDER BY v.opened_at_ms DESC, v.visit_id DESC LIMIT 500")))
@@ -202,6 +254,12 @@ QVariantList playbackHistory(QSqlDatabase& database)
             {QStringLiteral("kind"), query.value(QStringLiteral("kind")).toString()},
             {QStringLiteral("missing"), query.value(QStringLiteral("missing")).toBool()},
             {QStringLiteral("thumbnail"), MediaUtils::localOrRemoteUrl(query.value(QStringLiteral("thumbnail_path")).toString())},
+            {QStringLiteral("tmdbId"), query.value(QStringLiteral("tmdb_id"))},
+            {QStringLiteral("metadataType"), query.value(QStringLiteral("tmdb_media_type"))},
+            {QStringLiteral("overview"), query.value(QStringLiteral("tmdb_overview"))},
+            {QStringLiteral("releaseYear"), query.value(QStringLiteral("tmdb_release_year"))},
+            {QStringLiteral("rating"), query.value(QStringLiteral("tmdb_rating"))},
+            {QStringLiteral("metadataUpdatedAt"), query.value(QStringLiteral("tmdb_updated_at_ms"))},
             {QStringLiteral("visitId"), query.value(QStringLiteral("visit_id"))},
             {QStringLiteral("openedAt"), query.value(QStringLiteral("opened_at_ms"))},
             {QStringLiteral("endedAt"), query.value(QStringLiteral("ended_at_ms"))},

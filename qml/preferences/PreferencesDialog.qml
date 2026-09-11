@@ -28,6 +28,7 @@ ResponsivePopup {
     id: root
     // Update service for checking/downloading updates
     property var updateService
+    property var metadataService
 
     parent: Overlay.overlay
     metrics: ViewportMetrics {
@@ -538,6 +539,88 @@ ResponsivePopup {
                     subtitle: qsTr("Also save options like brightness, subtitle delay, etc.")
                     checked: SettingsManager.saveVideoPosition
                     onToggled: value => SettingsManager.saveVideoPosition = value
+                }
+            }
+
+            Text {
+                text: qsTr("Media Library Metadata")
+                color: Theme.text
+                font.pixelSize: 13
+                font.bold: true
+                leftPadding: 12
+            }
+
+            GroupCard {
+                SwitchRow {
+                    title: qsTr("TMDB Metadata")
+                    subtitle: qsTr("Match local movies, TV shows, and anime with artwork and details")
+                    checked: root.metadataService ? root.metadataService.enabled : false
+                    enabled: !!root.metadataService
+                    onToggled: function (value) {
+                        root.metadataService.enabled = value;
+                        if (value)
+                            root.metadataService.refresh();
+                    }
+                }
+                Sep {}
+                ActionRow {
+                    title: qsTr("TMDB API Token or Key")
+                    subtitle: qsTr("Stored locally and sent only to api.themoviedb.org")
+                    TextField {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 168
+                        enabled: !!root.metadataService
+                        echoMode: TextInput.Password
+                        placeholderText: qsTr("Required")
+                        text: root.metadataService ? root.metadataService.apiToken : ""
+                        color: Theme.text
+                        onEditingFinished: if (root.metadataService)
+                            root.metadataService.apiToken = text
+                        background: Rectangle {
+                            radius: Theme.radius
+                            color: Theme.cardStrong
+                        }
+                    }
+                }
+                Sep {}
+                ActionRow {
+                    title: qsTr("Library Matches")
+                    subtitle: root.metadataService && root.metadataService.statusMessage.length > 0
+                        ? root.metadataService.statusMessage
+                        : qsTr("Refresh cached metadata for indexed media")
+                    CineButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        styleVariant: "text"
+                        btnText: root.metadataService && root.metadataService.busy
+                            ? qsTr("Cancel") : qsTr("Refresh")
+                        enabled: !!root.metadataService
+                            && (root.metadataService.busy
+                                || (root.metadataService.enabled
+                                    && root.metadataService.apiToken.length > 0))
+                        onClicked: {
+                            if (root.metadataService.busy)
+                                root.metadataService.cancel();
+                            else
+                                root.metadataService.refresh(true);
+                        }
+                    }
+                }
+                Sep {}
+                Item {
+                    width: parent.width
+                    height: attributionText.implicitHeight + 24
+                    Text {
+                        id: attributionText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTr("This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                        color: Theme.mutedText
+                        font.pixelSize: Theme.fontSizeCaption
+                        wrapMode: Text.WordWrap
+                    }
                 }
             }
 

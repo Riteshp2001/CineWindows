@@ -36,6 +36,7 @@ Item {
     property string searchText: ""
     property string historySort: "newest"
     property string historyFilter: "all"
+    property string libraryCategory: "all"
     readonly property bool compact: metrics.widthClass === ViewportMetrics.CompactWidth
     readonly property bool shortHeight: metrics.heightClass === ViewportMetrics.ShortHeight
     readonly property int sidebarWidth: compact ? Theme.sidebarCollapsedWidth : Theme.sidebarExpandedWidth
@@ -70,13 +71,44 @@ Item {
         var source = name === "favorites" ? mediaLibrary.favorites
                    : name === "library" ? mediaLibrary.library
                    : mediaLibrary.recent;
+        if (name === "library" && libraryCategory !== "all") {
+            source = source.filter(function (item) {
+                return String(item.metadataType || "") === libraryCategory;
+            });
+        }
         var query = searchText.trim().toLowerCase();
         if (query.length === 0)
             return source;
         return source.filter(function (item) {
             return String(item.name || "").toLowerCase().indexOf(query) !== -1
-                || String(item.path || "").toLowerCase().indexOf(query) !== -1;
+                || String(item.path || "").toLowerCase().indexOf(query) !== -1
+                || String(item.overview || "").toLowerCase().indexOf(query) !== -1;
         });
+    }
+
+    function libraryCategoryLabel() {
+        if (libraryCategory === "movie")
+            return qsTr("Movies");
+        if (libraryCategory === "tv")
+            return qsTr("TV Shows");
+        if (libraryCategory === "anime")
+            return qsTr("Anime");
+        return qsTr("All");
+    }
+
+    function metadataSummary(item) {
+        const details = [];
+        if (item.metadataType === "movie")
+            details.push(qsTr("Movie"));
+        else if (item.metadataType === "tv")
+            details.push(qsTr("TV Show"));
+        else if (item.metadataType === "anime")
+            details.push(qsTr("Anime"));
+        if (Number(item.releaseYear || 0) > 0)
+            details.push(String(item.releaseYear));
+        if (Number(item.rating || 0) > 0)
+            details.push(qsTr("%1 / 10").arg(Number(item.rating).toFixed(1)));
+        return details.join(" · ");
     }
 
     function historyDateKey(openedAt) {
@@ -433,6 +465,7 @@ Item {
             readonly property bool hasSearch: root.section !== "home"
             readonly property bool narrow: width < 620
                                                    || (root.section === "history" && width < 900)
+                                                   || (root.section === "library" && width < 820)
             readonly property bool stacked: root.compact && hasSearch
             anchors.top: parent.top
             anchors.left: parent.left
@@ -461,7 +494,8 @@ Item {
                 }
 
                 Rectangle {
-                    visible: (root.section === "history" || root.section === "recent") && !toolbar.narrow
+                    visible: (root.section === "history" || root.section === "recent"
+                             || root.section === "library") && !toolbar.narrow
                     width: 1
                     height: 18
                     color: Theme.separator
@@ -528,6 +562,18 @@ Item {
                     onClicked: root.clearCurrentCollection()
                 }
 
+                CineButton {
+                    id: libraryCategoryButton
+                    objectName: "libraryCategoryButton"
+                    visible: root.section === "library" && !toolbar.narrow
+                    width: 132
+                    metrics: root.metrics
+                    styleVariant: "text"
+                    btnText: qsTr("Category: %1").arg(root.libraryCategoryLabel())
+                    focusPolicy: Qt.TabFocus
+                    onClicked: libraryCategoryMenu.openBelow(libraryCategoryButton, root)
+                }
+
                 Rectangle {
                     visible: historySortButton.visible && clearCollectionButton.visible
                     width: 1
@@ -574,6 +620,7 @@ Item {
                     visible: (root.section === "browse" && (root.compact || toolbar.narrow))
                              || ((root.section === "history" || root.section === "recent")
                                  && toolbar.narrow)
+                             || (root.section === "library" && toolbar.narrow)
                     width: 36; height: 36; buttonSize: 36
                     metrics: root.metrics
                     glyph: "..."
@@ -646,6 +693,10 @@ Item {
                     text: root.section === "history" ? qsTr("Clear History") : qsTr("Clear Recent")
                     onTriggered: root.clearCurrentCollection()
                 }
+                CineMenuItem { visible: root.section === "library" && toolbar.narrow; text: qsTr("Category: All"); checkable: true; checked: root.libraryCategory === "all"; onTriggered: root.libraryCategory = "all" }
+                CineMenuItem { visible: root.section === "library" && toolbar.narrow; text: qsTr("Category: Movies"); checkable: true; checked: root.libraryCategory === "movie"; onTriggered: root.libraryCategory = "movie" }
+                CineMenuItem { visible: root.section === "library" && toolbar.narrow; text: qsTr("Category: TV Shows"); checkable: true; checked: root.libraryCategory === "tv"; onTriggered: root.libraryCategory = "tv" }
+                CineMenuItem { visible: root.section === "library" && toolbar.narrow; text: qsTr("Category: Anime"); checkable: true; checked: root.libraryCategory === "anime"; onTriggered: root.libraryCategory = "anime" }
                 CineMenuItem {
                     objectName: "historySortNewestAction"
                     visible: root.section === "history" && toolbar.narrow
@@ -702,6 +753,16 @@ Item {
                     checked: root.historyFilter === "completed"
                     onTriggered: root.historyFilter = "completed"
                 }
+            }
+
+            CineMenu {
+                id: libraryCategoryMenu
+                metrics: root.metrics
+
+                CineMenuItem { text: qsTr("All"); checkable: true; checked: root.libraryCategory === "all"; onTriggered: root.libraryCategory = "all" }
+                CineMenuItem { text: qsTr("Movies"); checkable: true; checked: root.libraryCategory === "movie"; onTriggered: root.libraryCategory = "movie" }
+                CineMenuItem { text: qsTr("TV Shows"); checkable: true; checked: root.libraryCategory === "tv"; onTriggered: root.libraryCategory = "tv" }
+                CineMenuItem { text: qsTr("Anime"); checkable: true; checked: root.libraryCategory === "anime"; onTriggered: root.libraryCategory = "anime" }
             }
 
             CineMenu {
@@ -1043,7 +1104,7 @@ Item {
                 clip: true
                 model: root.collectionFor(root.section)
                 cellWidth: width / root.cardColumns
-                cellHeight: 178
+                cellHeight: 216
                 boundsBehavior: Flickable.StopAtBounds
                 delegate: ItemDelegate {
                     id: mediaCard
@@ -1054,7 +1115,9 @@ Item {
                     focusPolicy: Qt.TabFocus
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     Accessible.name: modelData.name
-                    Accessible.description: modelData.completed ? qsTr("Completed") : qsTr("Resume at %1 seconds").arg(Math.round(modelData.position || 0))
+                    Accessible.description: modelData.overview || (modelData.completed
+                        ? qsTr("Completed")
+                        : qsTr("Resume at %1 seconds").arg(Math.round(modelData.position || 0)))
                     onClicked: {
                         if (modelData.kind === "folder") {
                             root.requestSection("browse");
@@ -1087,7 +1150,7 @@ Item {
                         spacing: 8
                         Rectangle {
                             width: parent.width
-                            height: 86
+                            height: 104
                             radius: 8
                             color: Theme.panelStrong
                             Image {
@@ -1133,6 +1196,7 @@ Item {
                             }
                         }
                         Text { width: parent.width; text: mediaCard.modelData.name; color: Theme.text; font.pixelSize: Theme.fontSizeSmall; font.bold: true; elide: Text.ElideRight }
+                        Text { visible: text.length > 0; width: parent.width; text: root.metadataSummary(mediaCard.modelData); color: Theme.accent; font.pixelSize: Theme.fontSizeCaption; elide: Text.ElideRight }
                         Text { width: parent.width; text: mediaCard.modelData.completed ? qsTr("Completed") : mediaCard.modelData.playCount > 0 ? qsTr("Played %1 times").arg(mediaCard.modelData.playCount) : qsTr("Not played"); color: Theme.mutedText; font.pixelSize: Theme.fontSizeCaption; elide: Text.ElideRight }
                     }
                 }

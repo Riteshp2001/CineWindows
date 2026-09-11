@@ -272,6 +272,7 @@ set(CINEWINDOWS_SOURCES
     src/services/CastService.cpp src/services/CastService.h
     src/services/SessionManager.cpp src/services/SessionManager.h
     src/services/SubtitleService.cpp src/services/SubtitleService.h
+    src/services/TmdbMetadataService.cpp src/services/TmdbMetadataService.h
     src/services/UpdateService.cpp src/services/UpdateService.h
     src/services/YouTubeSearchService.cpp src/services/YouTubeSearchService.h
     src/utils/MediaUtils.cpp src/utils/MediaUtils.h

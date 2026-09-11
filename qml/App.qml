@@ -600,6 +600,11 @@ ApplicationWindow {
         id: mediaLibrary
         player: player
         onUserMessage: function (message) { toastText.showMessage(message); }
+        onIndexingChanged: if (!indexing && tmdbMetadata.enabled) tmdbMetadata.refresh()
+    }
+    TmdbMetadataService {
+        id: tmdbMetadata
+        library: mediaLibrary
     }
     MediaThumbnailService {
         id: mediaThumbnailService
@@ -1224,6 +1229,7 @@ ApplicationWindow {
     /// Runs non-visual startup work after the first frame is on screen.
     function runDeferredStartup() {
         mediaLibrary.initialize();
+        tmdbMetadata.refresh();
         sessionRestoreAttempted = true;
         if (startupPaths.length > 0)
             controller.openPaths(startupPaths, true);
@@ -1831,7 +1837,10 @@ ApplicationWindow {
         LazyPopupLoader {
             id: preferencesDialog
             sourceComponent: Component {
-                PreferencesDialog { updateService: appUpdateService }
+                PreferencesDialog {
+                    updateService: appUpdateService
+                    metadataService: tmdbMetadata
+                }
             }
         }
         LazyPopupLoader {

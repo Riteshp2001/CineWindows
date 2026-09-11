@@ -17,7 +17,7 @@
 # CineWindows Privacy Policy
 
 **Effective date:** June 28, 2026  
-**Last updated:** September 10, 2026
+**Last updated:** September 11, 2026
 
 CineWindows is designed to play your media, not profile you. This Privacy Policy applies to the CineWindows desktop application, the CineWindows website, and support communications operated by Ritesh Pandit (“CineWindows,” “we,” “us,” or “our”).
 
@@ -34,6 +34,10 @@ When automatic update checks are enabled, CineWindows requests the latest releas
 ### Online media
 
 When you open an online media URL, CineWindows and its bundled playback tools connect to the provider you selected. That provider may receive the URL, IP address, device or network information, and other standard request data under its own privacy policy. We do not control a third-party media provider’s practices.
+
+### Optional media metadata
+
+When you enable TMDB metadata and provide an API token or key, CineWindows sends cleaned title information derived from filenames in your indexed library to TMDB. TMDB may receive those search terms, your IP address, request time, and standard network data under its own privacy policy. CineWindows does not upload your media files. Matching titles, artwork links, summaries, years, and ratings are cached in the local media-library database. The credential is stored in local application settings and is not encrypted by CineWindows. You can leave this feature disabled or turn it off in Preferences.
 
 ### Support communications
 
@@ -57,7 +61,7 @@ Local settings remain on your device until you clear them or uninstall the app, 
 
 ## Your choices and rights
 
-You can disable automatic update checks, avoid opening online URLs, clear local settings, or uninstall CineWindows. Depending on where you live, you may have rights to access, correct, delete, or object to our handling of personal information. Contact us to make a request.
+You can disable automatic update checks and TMDB metadata, avoid opening online URLs, clear local settings, or uninstall CineWindows. Depending on where you live, you may have rights to access, correct, delete, or object to our handling of personal information. Contact us to make a request.
 
 ## Children’s privacy
 

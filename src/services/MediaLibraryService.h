@@ -26,6 +26,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVariantList>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 class MediaLibraryService : public QObject
@@ -124,6 +125,12 @@ public:
 
     /** Immediately persist the current playback position and watched time. */
     Q_INVOKABLE void flushPlaybackState();
+
+    /** Cache TMDB metadata for a local library item.
+        @param mediaId Target media row.
+        @param metadata Normalized metadata, or an empty map to record a completed lookup.
+        @return true when the row was updated. */
+    bool updateTmdbMetadata(qint64 mediaId, const QVariantMap& metadata);
 
 Q_SIGNALS:
     void playerChanged();

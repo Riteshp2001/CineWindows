@@ -49,7 +49,13 @@ QVariantMap mediaMap(const QSqlQuery& query)
             {QStringLiteral("favorite"), query.value(QStringLiteral("favorite")).toBool()},
             {QStringLiteral("kind"), query.value(QStringLiteral("kind")).toString()},
             {QStringLiteral("missing"), query.value(QStringLiteral("missing")).toBool()},
-            {QStringLiteral("thumbnail"), MediaUtils::localOrRemoteUrl(query.value(QStringLiteral("thumbnail_path")).toString())}};
+            {QStringLiteral("thumbnail"), MediaUtils::localOrRemoteUrl(query.value(QStringLiteral("thumbnail_path")).toString())},
+            {QStringLiteral("tmdbId"), query.value(QStringLiteral("tmdb_id"))},
+            {QStringLiteral("metadataType"), query.value(QStringLiteral("tmdb_media_type"))},
+            {QStringLiteral("overview"), query.value(QStringLiteral("tmdb_overview"))},
+            {QStringLiteral("releaseYear"), query.value(QStringLiteral("tmdb_release_year"))},
+            {QStringLiteral("rating"), query.value(QStringLiteral("tmdb_rating"))},
+            {QStringLiteral("metadataUpdatedAt"), query.value(QStringLiteral("tmdb_updated_at_ms"))}};
 }
 } // namespace
 
@@ -144,9 +150,11 @@ void MediaLibraryService::refresh()
         return;
     // Shared column list: includes a sub-query to check favourite status.
     const QString fields = QStringLiteral(
-        "m.media_id, m.locator, COALESCE(NULLIF(m.media_title, ''), m.display_name) AS title, "
+        "m.media_id, m.locator, COALESCE(NULLIF(m.tmdb_title, ''), NULLIF(m.media_title, ''), m.display_name) AS title, "
         "m.duration_ms, m.position_ms, m.completed, m.play_count, m.last_played_at_ms, "
-        "m.missing, m.thumbnail_path, m.source_kind AS kind, "
+        "m.missing, COALESCE(NULLIF(m.tmdb_artwork_url, ''), m.thumbnail_path) AS thumbnail_path, "
+        "m.source_kind AS kind, m.tmdb_id, m.tmdb_media_type, m.tmdb_overview, "
+        "m.tmdb_release_year, m.tmdb_rating, m.tmdb_updated_at_ms, "
         "EXISTS(SELECT 1 FROM favorites f WHERE f.locator_key=m.locator_key) AS favorite ");
     // Rebuild the four main collections.
     m_recent = queryCollection(QStringLiteral("SELECT %1 FROM media_items m WHERE m.last_played_at_ms IS NOT NULL "
@@ -406,6 +414,35 @@ void MediaLibraryService::removeHistoryItem(qint64 mediaId)
 {
     LibraryDatabase::removePlaybackHistory(m_database, mediaId);
     refresh();
+}
+
+bool MediaLibraryService::updateTmdbMetadata(qint64 mediaId, const QVariantMap& metadata)
+{
+    if (!m_database.isOpen() || mediaId <= 0)
+        return false;
+
+    QSqlQuery query(m_database);
+    if (metadata.isEmpty())
+    {
+        query.prepare(QStringLiteral("UPDATE media_items SET tmdb_updated_at_ms=? WHERE media_id=?"));
+        query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+        query.addBindValue(mediaId);
+        return query.exec();
+    }
+
+    query.prepare(QStringLiteral(
+        "UPDATE media_items SET tmdb_id=?, tmdb_media_type=?, tmdb_title=?, tmdb_overview=?, "
+        "tmdb_release_year=?, tmdb_rating=?, tmdb_artwork_url=?, tmdb_updated_at_ms=? WHERE media_id=?"));
+    query.addBindValue(metadata.value(QStringLiteral("id")));
+    query.addBindValue(metadata.value(QStringLiteral("type")));
+    query.addBindValue(metadata.value(QStringLiteral("title")));
+    query.addBindValue(metadata.value(QStringLiteral("overview")));
+    query.addBindValue(metadata.value(QStringLiteral("year")));
+    query.addBindValue(metadata.value(QStringLiteral("rating")));
+    query.addBindValue(metadata.value(QStringLiteral("artworkUrl")));
+    query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+    query.addBindValue(mediaId);
+    return query.exec();
 }
 
 /** @copydoc MediaLibraryService::beginPlayback */
