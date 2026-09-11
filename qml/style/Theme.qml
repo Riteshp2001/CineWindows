@@ -86,6 +86,8 @@ QtObject {
     readonly property int windowBorderWidth: 1
     /// Subtle border color for restored top-level windows
     readonly property color windowBorderColor: isLight ? "#24000000" : "#38ffffff"
+    /// Tint layered over a supported native backdrop material
+    readonly property color windowBackdropTint: isLight ? "#b8f4f5f7" : "#b80b0c0f"
     /// Floating popup corner radius
     readonly property int popupRadius: 10
     /// Icon tint for dark backgrounds

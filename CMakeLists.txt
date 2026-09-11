@@ -238,7 +238,7 @@ set(CINEWINDOWS_QML_FILES
     qml/style/ViewportMetrics.qml
     qml/utils/TimeUtils.qml
     qml/window/ResizeHandles.qml
-    qml/window/WindowFrame.qml
+    qml/window/WindowSurface.qml
 )
 
 set_source_files_properties(qml/style/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)

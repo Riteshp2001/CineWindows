@@ -114,6 +114,7 @@ void SettingsManager::load()
     if (!QColor::isValidColorName(m_accentColor))
         m_accentColor = QStringLiteral("#10c7d1");
     m_reduceMotion = settings.value(QStringLiteral("ui/reduceMotion"), m_reduceMotion).toBool();
+    m_systemBackdrop = settings.value(QStringLiteral("ui/systemBackdrop"), m_systemBackdrop).toBool();
 
     // Purge thumbnail scripts from the legacy mpv config location
     removeLegacyThumbnailScripts();
@@ -417,6 +418,7 @@ QString SettingsManager::keyBindings() const
 QString SettingsManager::themeMode() const { return m_themeMode; }
 QString SettingsManager::accentColor() const { return m_accentColor; }
 bool SettingsManager::reduceMotion() const { return m_reduceMotion; }
+bool SettingsManager::systemBackdrop() const { return m_systemBackdrop; }
 
 /**
  * @brief Sets the left-click action binding.
@@ -505,6 +507,15 @@ void SettingsManager::setReduceMotion(bool value)
     m_reduceMotion = value;
     saveValue(QStringLiteral("ui/reduceMotion"), value);
     Q_EMIT reduceMotionChanged();
+}
+
+void SettingsManager::setSystemBackdrop(bool value)
+{
+    if (m_systemBackdrop == value)
+        return;
+    m_systemBackdrop = value;
+    saveValue(QStringLiteral("ui/systemBackdrop"), value);
+    Q_EMIT systemBackdropChanged();
 }
 
 /**

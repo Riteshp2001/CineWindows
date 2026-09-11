@@ -26,10 +26,14 @@ Item {
 
     /// The window that this resize handles control
     property var targetWindow
+    /// Whether the window uses application-side decorations.
+    property bool clientSideDecorated: true
     /// Thickness of the interactive resize border in pixels
     readonly property int borderSize: 6
 
-    visible: targetWindow && targetWindow.visibility === Window.Windowed
+    visible: clientSideDecorated
+        && targetWindow
+        && targetWindow.visibility === Window.Windowed
 
     MouseArea {
         width: root.borderSize

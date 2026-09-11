@@ -102,6 +102,8 @@ class SettingsManager : public QObject
     Q_PROPERTY(QString accentColor READ accentColor WRITE setAccentColor NOTIFY accentColorChanged)
     /** @brief Whether non-essential interface motion should be disabled. */
     Q_PROPERTY(bool reduceMotion READ reduceMotion WRITE setReduceMotion NOTIFY reduceMotionChanged)
+    /** @brief Whether supported platforms should use the native system backdrop. */
+    Q_PROPERTY(bool systemBackdrop READ systemBackdrop WRITE setSystemBackdrop NOTIFY systemBackdropChanged)
 
 public:
     /**
@@ -173,6 +175,8 @@ public:
     QString accentColor() const;
     /** @brief Returns whether non-essential interface motion should be disabled. */
     bool reduceMotion() const;
+    /** @brief Returns whether the native system backdrop is enabled. */
+    bool systemBackdrop() const;
 
     /** @brief Sets the audio volume level. @param value Volume level (0 - MaxVolume). */
     void setVolume(int value);
@@ -222,6 +226,8 @@ public:
     void setAccentColor(const QString& value);
     /** @brief Sets whether non-essential motion is disabled. @param value True to reduce motion. */
     void setReduceMotion(bool value);
+    /** @brief Enables or disables the native system backdrop. @param value True to enable it. */
+    void setSystemBackdrop(bool value);
 
     /**
      * @brief Restores playback-related preferences to default values.
@@ -317,6 +323,8 @@ Q_SIGNALS:
     void accentColorChanged();
     /** @brief Emitted when the reduce-motion preference changes. */
     void reduceMotionChanged();
+    /** @brief Emitted when the native system-backdrop preference changes. */
+    void systemBackdropChanged();
 
 private:
     /** @brief Loads all settings from persistent storage into member variables. */
@@ -354,4 +362,5 @@ private:
     QString m_themeMode{QStringLiteral("dark")};        ///< Active theme mode: dark or light.
     QString m_accentColor{QStringLiteral("#10c7d1")};   ///< Application accent colour.
     bool m_reduceMotion{false};                         ///< Whether reduced motion is preferred.
+    bool m_systemBackdrop{true};                        ///< Whether native backdrop materials are enabled.
 };

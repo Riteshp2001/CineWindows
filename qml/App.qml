@@ -44,14 +44,20 @@ ApplicationWindow {
     height: initialHeight
     x: Screen.virtualX + Math.round((Screen.desktopAvailableWidth - initialWidth) / 2)
     y: Screen.virtualY + Math.round((Screen.desktopAvailableHeight - initialHeight) / 2)
-    minimumWidth: compactMode > 0 ? 320 : Math.min(900, defaultWidth)
-    minimumHeight: compactMode > 0 ? 180 : Math.min(560, defaultHeight)
+    minimumWidth: 320
+    minimumHeight: compactMode > 0 ? 180 : 240
     visible: true
-    color: "transparent"
+    readonly property bool clientSideDecorated: windowChrome.clientSideDecorationsRecommended
+    color: clientSideDecorated
+        || (Qt.platform.os === "windows" && SettingsManager.systemBackdrop)
+        ? "transparent"
+        : Theme.background
     title: player.mediaTitle.length > 0
         ? player.mediaTitle + " - " + Qt.application.displayName
         : Qt.application.displayName
-    flags: Qt.Window | Qt.FramelessWindowHint | (compactMode === 2 ? Qt.WindowStaysOnTopHint : 0)
+    flags: Qt.Window
+        | (clientSideDecorated ? Qt.FramelessWindowHint : 0)
+        | (compactMode === 2 ? Qt.WindowStaysOnTopHint : 0)
 
     property int normalWidth: initialWidth ///< Saved width of windowed geometry for restore after fullscreen/maximize
     property int normalHeight: initialHeight ///< Saved height of windowed geometry for restore after fullscreen/maximize
@@ -73,6 +79,9 @@ ApplicationWindow {
     property bool pipControlsVisible: true
     property bool pipTransparent: false
     property int pipSubtitleTrack: 0
+    property bool fittingVideoGeometry: false
+    property string fittedMediaPath: ""
+    property real fittedVideoAspect: 0
 
     ViewportMetrics {
         id: viewportMetrics
@@ -84,24 +93,34 @@ ApplicationWindow {
     }
 
     WindowCornerPreference {
+        id: windowChrome
         targetWindow: window
-        rounded: rootContainer.rounded
+        rounded: window.visibility === Window.Windowed
+        cornerRadius: window.compactMode === 2
+            ? Theme.windowCompactRadius
+            : Theme.windowRadius
+        clientSideDecorated: window.clientSideDecorated
+        darkMode: !Theme.isLight
+        backdropEnabled: SettingsManager.systemBackdrop
+            && !window.clientSideDecorated
+            && window.compactMode === 0
+            && !window.isFullscreen
     }
 
     onWidthChanged: {
-        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !isFullscreen)
+        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !fittingVideoGeometry && !isFullscreen)
             normalWidth = window.width;
     }
     onHeightChanged: {
-        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !isFullscreen)
+        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !fittingVideoGeometry && !isFullscreen)
             normalHeight = window.height;
     }
     onXChanged: {
-        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !isFullscreen)
+        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !fittingVideoGeometry && !isFullscreen)
             normalX = window.x;
     }
     onYChanged: {
-        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !isFullscreen)
+        if (compactMode === 0 && window.visibility === Window.Windowed && !minimizeAnimation.running && !stateTransitioning && !fittingVideoGeometry && !isFullscreen)
             normalY = window.y;
     }
 
@@ -157,6 +176,61 @@ ApplicationWindow {
         captureNormalGeometry();
     }
 
+    function fitWindowToVideo() {
+        const aspect = Number(player.videoAspectRatio);
+        const path = player.currentPath;
+        if (!isFinite(aspect) || aspect < 0.2 || aspect > 5.0 || path.length === 0
+                || compactMode !== 0 || visibility !== Window.Windowed
+                || stateTransitioning || minimizeAnimation.running)
+            return;
+        if (fittedMediaPath === path && Math.abs(fittedVideoAspect - aspect) < 0.001)
+            return;
+
+        const frameInset = clientSideDecorated
+            ? 2 * Theme.windowBorderWidth
+            : 0;
+        let targetWidth = Math.max(1, width - frameInset);
+        let targetHeight = Math.max(1, height - frameInset);
+        if (targetWidth / targetHeight > aspect)
+            targetWidth = targetHeight * aspect;
+        else
+            targetHeight = targetWidth / aspect;
+
+        const minimumVideoWidth = aspect < 0.8 ? 320 : 560;
+        const minimumVideoHeight = 320;
+        const grow = Math.max(1,
+            minimumVideoWidth / Math.max(1, targetWidth),
+            minimumVideoHeight / Math.max(1, targetHeight));
+        targetWidth *= grow;
+        targetHeight *= grow;
+
+        const bounds = availableScreenGeometry();
+        const maximumWidth = Math.max(1, Math.round(bounds.width * 0.92));
+        const maximumHeight = Math.max(1, Math.round(bounds.height * 0.92));
+        const shrink = Math.min(1,
+            maximumWidth / Math.max(1, targetWidth),
+            maximumHeight / Math.max(1, targetHeight));
+        targetWidth = Math.max(1, Math.round(targetWidth * shrink)) + frameInset;
+        targetHeight = Math.max(1, Math.round(targetHeight * shrink)) + frameInset;
+
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        const geometry = correctedWindowGeometry(
+            Math.round(centerX - targetWidth / 2),
+            Math.round(centerY - targetHeight / 2),
+            targetWidth, targetHeight, bounds);
+
+        fittingVideoGeometry = true;
+        width = geometry.width;
+        height = geometry.height;
+        x = geometry.x;
+        y = geometry.y;
+        captureNormalGeometry();
+        fittedMediaPath = path;
+        fittedVideoAspect = aspect;
+        fittingVideoGeometry = false;
+    }
+
     NumberAnimation {
         id: fadeAnimation
         target: window
@@ -208,6 +282,8 @@ ApplicationWindow {
             if (pendingCallback)
                 pendingCallback();
             window.stateTransitioning = false;
+            if (window.visibility === Window.Windowed)
+                Qt.callLater(window.fitWindowToVideo);
         }
     }
 
@@ -1277,6 +1353,8 @@ ApplicationWindow {
             cursorHidden = false;
         if (!player.idle)
             showChrome(2200);
+        if (visibility === Window.Windowed)
+            Qt.callLater(fitWindowToVideo);
     }
 
     /// Hides the chrome after the auto-hide delay expires.
@@ -1317,11 +1395,14 @@ ApplicationWindow {
         }
     }
 
-    WindowFrame {
+    WindowSurface {
         id: rootContainer
         anchors.fill: parent
+        anchors.margins: rounded ? Theme.windowBorderWidth : 0
         targetWindow: window
+        clientSideDecorated: window.clientSideDecorated
         compact: window.compactMode === 2
+        backdropActive: windowChrome.backdropActive && !window.mediaActive
 
         CineMpvItem {
             id: player
@@ -1398,7 +1479,10 @@ ApplicationWindow {
             onChaptersChanged: function (chapters) {
                 chapterModel.updateFromMpv(chapters);
             }
+            onVideoGeometryChanged: Qt.callLater(window.fitWindowToVideo)
             onFileStarted: {
+                window.fittedMediaPath = "";
+                window.fittedVideoAspect = 0;
                 window.leaveMediaHub();
                 player.setPause(false);
                 window.ignoreVolumeOsd = true;
@@ -1449,6 +1533,7 @@ ApplicationWindow {
                 window.leaveMediaHub();
                 controller.applySettings();
                 player.forceActiveFocus();
+                Qt.callLater(window.fitWindowToVideo);
                 Qt.callLater(function () {
                     window.ignoreVolumeOsd = false;
                 });
@@ -1686,6 +1771,8 @@ ApplicationWindow {
             player: player
             updateService: appUpdateService
             hubVisible: window.mediaHubVisible
+            clientSideDecorated: window.clientSideDecorated
+            decorationStyle: windowChrome.decorationStyle
             visible: window.compactMode === 0
             Behavior on opacity {
                 NumberAnimation {
@@ -2357,6 +2444,7 @@ ApplicationWindow {
     ResizeHandles {
         anchors.fill: parent
         targetWindow: window
+        clientSideDecorated: window.clientSideDecorated
         z: 9999
     }
 }

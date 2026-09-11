@@ -66,11 +66,16 @@ void CineMpvItem::setupConnections()
 {
     connect(mpvController(), &MpvController::propertyChanged, this, &CineMpvItem::onPropertyChanged,
             Qt::QueuedConnection);
-    connect(mpvController(), &MpvController::fileStarted, this, &CineMpvItem::fileStarted, Qt::QueuedConnection);
+    connect(mpvController(), &MpvController::fileStarted, this, [this] {
+        resetVideoGeometry();
+        Q_EMIT fileStarted();
+    }, Qt::QueuedConnection);
     connect(mpvController(), &MpvController::fileLoaded, this, &CineMpvItem::fileLoaded, Qt::QueuedConnection);
     connect(mpvController(), &MpvController::endFile, this, &CineMpvItem::endFile, Qt::QueuedConnection);
-    connect(mpvController(), &MpvController::videoReconfig, this, &CineMpvItem::videoReconfigured,
-            Qt::QueuedConnection);
+    connect(mpvController(), &MpvController::videoReconfig, this, [this] {
+        updateVideoGeometry();
+        Q_EMIT videoReconfigured();
+    }, Qt::QueuedConnection);
 }
 
 void CineMpvItem::configureDefaults()
@@ -298,6 +303,51 @@ int CineMpvItem::playlistCount() const
 bool CineMpvItem::rendererReady() const
 {
     return m_rendererReady;
+}
+int CineMpvItem::videoWidth() const { return m_videoWidth; }
+int CineMpvItem::videoHeight() const { return m_videoHeight; }
+double CineMpvItem::videoAspectRatio() const { return m_videoAspectRatio; }
+
+void CineMpvItem::updateVideoGeometry()
+{
+    const QVariantMap parameters = getProperty(QStringLiteral("video-out-params")).toMap();
+    int width = parameters.value(QStringLiteral("dw")).toInt();
+    int height = parameters.value(QStringLiteral("dh")).toInt();
+    if (width <= 0 || height <= 0)
+    {
+        width = parameters.value(QStringLiteral("w")).toInt();
+        height = parameters.value(QStringLiteral("h")).toInt();
+    }
+
+    double aspectRatio = parameters.value(QStringLiteral("aspect")).toDouble();
+    if (aspectRatio <= 0.0 && width > 0 && height > 0)
+        aspectRatio = static_cast<double>(width) / static_cast<double>(height);
+
+    const int rotation = qAbs(parameters.value(QStringLiteral("rotate")).toInt()) % 360;
+    if ((rotation == 90 || rotation == 270) && width > 0 && height > 0)
+    {
+        std::swap(width, height);
+        if (aspectRatio > 0.0)
+            aspectRatio = 1.0 / aspectRatio;
+    }
+
+    if (m_videoWidth == width && m_videoHeight == height
+        && qFuzzyCompare(m_videoAspectRatio, aspectRatio))
+        return;
+    m_videoWidth = width;
+    m_videoHeight = height;
+    m_videoAspectRatio = aspectRatio;
+    Q_EMIT videoGeometryChanged();
+}
+
+void CineMpvItem::resetVideoGeometry()
+{
+    if (m_videoWidth == 0 && m_videoHeight == 0 && m_videoAspectRatio == 0.0)
+        return;
+    m_videoWidth = 0;
+    m_videoHeight = 0;
+    m_videoAspectRatio = 0.0;
+    Q_EMIT videoGeometryChanged();
 }
 
 void CineMpvItem::setPosition(double value)

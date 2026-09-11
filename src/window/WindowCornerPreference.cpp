@@ -19,7 +19,9 @@
 #include "WindowCornerPreference.h"
 
 #include <QEvent>
+#include <QPainterPath>
 #include <QPlatformSurfaceEvent>
+#include <QRegion>
 #include <QWindow>
 
 #ifdef Q_OS_WIN
@@ -74,6 +76,7 @@ void WindowCornerPreference::setTargetWindow(QWindow* window)
         window->installEventFilter(this);
         m_destroyedConnection = connect(window, &QObject::destroyed, this, [this] {
             m_targetWindow = nullptr;
+            setBackdropActive(false);
             Q_EMIT targetWindowChanged();
         });
     }
@@ -103,6 +106,80 @@ void WindowCornerPreference::setRounded(bool rounded)
     applyPreference();
 }
 
+int WindowCornerPreference::cornerRadius() const { return m_cornerRadius; }
+void WindowCornerPreference::setCornerRadius(int radius)
+{
+    radius = qMax(0, radius);
+    if (m_cornerRadius == radius)
+        return;
+    m_cornerRadius = radius;
+    Q_EMIT cornerRadiusChanged();
+    applyPreference();
+}
+
+bool WindowCornerPreference::clientSideDecorated() const { return m_clientSideDecorated; }
+void WindowCornerPreference::setClientSideDecorated(bool decorated)
+{
+    if (m_clientSideDecorated == decorated)
+        return;
+    m_clientSideDecorated = decorated;
+    Q_EMIT clientSideDecoratedChanged();
+    applyPreference();
+}
+
+bool WindowCornerPreference::darkMode() const { return m_darkMode; }
+void WindowCornerPreference::setDarkMode(bool darkMode)
+{
+    if (m_darkMode == darkMode)
+        return;
+    m_darkMode = darkMode;
+    Q_EMIT darkModeChanged();
+    applyPreference();
+}
+
+bool WindowCornerPreference::backdropEnabled() const { return m_backdropEnabled; }
+void WindowCornerPreference::setBackdropEnabled(bool enabled)
+{
+    if (m_backdropEnabled == enabled)
+        return;
+    m_backdropEnabled = enabled;
+    Q_EMIT backdropEnabledChanged();
+    applyPreference();
+}
+
+bool WindowCornerPreference::backdropActive() const { return m_backdropActive; }
+
+bool WindowCornerPreference::clientSideDecorationsRecommended() const
+{
+#ifdef Q_OS_LINUX
+    return true;
+#else
+    return false;
+#endif
+}
+
+QString WindowCornerPreference::decorationStyle() const
+{
+#ifdef Q_OS_LINUX
+    const QString desktop = QString::fromLocal8Bit(qgetenv("XDG_CURRENT_DESKTOP"))
+                                .append(QLatin1Char(':'))
+                                .append(QString::fromLocal8Bit(qgetenv("DESKTOP_SESSION")))
+                                .toLower();
+    if (desktop.contains(QStringLiteral("kde")) || desktop.contains(QStringLiteral("plasma")))
+        return QStringLiteral("kde");
+    if (desktop.contains(QStringLiteral("gnome")) || desktop.contains(QStringLiteral("unity"))
+        || desktop.contains(QStringLiteral("cinnamon")) || desktop.contains(QStringLiteral("budgie")))
+        return QStringLiteral("gnome");
+    return QStringLiteral("generic");
+#elif defined(Q_OS_MACOS)
+    return QStringLiteral("macos");
+#elif defined(Q_OS_WIN)
+    return QStringLiteral("windows");
+#else
+    return QStringLiteral("native");
+#endif
+}
+
 /**
  * @brief Filters events on the target window to detect surface (re)creation.
  * @param watched The object that received the event.
@@ -121,26 +198,39 @@ bool WindowCornerPreference::eventFilter(QObject* watched, QEvent* event)
         if (surfaceEvent->surfaceEventType() == QPlatformSurfaceEvent::SurfaceCreated)
             applyPreference();
     }
+    else if (watched == m_targetWindow
+             && (event->type() == QEvent::WindowStateChange || event->type() == QEvent::Show))
+    {
+        applyPreference();
+    }
+#ifndef Q_OS_WIN
+    else if (watched == m_targetWindow && event->type() == QEvent::Resize)
+    {
+        applyPreference();
+    }
+#endif
 
     return QObject::eventFilter(watched, event);
 }
 
 /**
- * @brief Applies the rounded / sharp corner preference via DwmSetWindowAttribute.
- *
- * Uses attribute 33 (DWMWCP) with value 2 (round) or 1 (don't round).
- * Failure is silently ignored because the attribute is cosmetic and may not
- * be supported on older DWM versions.
+ * @brief Applies platform-native frame effects or a client-side window mask.
  */
 void WindowCornerPreference::applyPreference()
 {
 #ifdef Q_OS_WIN
     if (!m_targetWindow)
+    {
+        setBackdropActive(false);
         return;
+    }
 
     const WId nativeId = m_targetWindow->winId();
     if (nativeId == 0)
+    {
+        setBackdropActive(false);
         return;
+    }
 
     constexpr DWORD windowCornerPreferenceAttribute = 33;
     constexpr DWORD doNotRoundPreference = 1;
@@ -148,10 +238,65 @@ void WindowCornerPreference::applyPreference()
     const DWORD preference = m_rounded ? roundPreference : doNotRoundPreference;
     const HWND windowHandle = reinterpret_cast<HWND>(nativeId);
 
-    // Cosmetic attribute; unsupported DWM versions may silently reject it
     (void)DwmSetWindowAttribute(windowHandle,
                                 windowCornerPreferenceAttribute,
                                 &preference,
                                 sizeof(preference));
+
+    constexpr DWORD immersiveDarkModeAttribute = 20;
+    constexpr DWORD legacyImmersiveDarkModeAttribute = 19;
+    const BOOL useDarkMode = m_darkMode ? TRUE : FALSE;
+    if (FAILED(DwmSetWindowAttribute(windowHandle, immersiveDarkModeAttribute,
+                                     &useDarkMode, sizeof(useDarkMode))))
+    {
+        (void)DwmSetWindowAttribute(windowHandle, legacyImmersiveDarkModeAttribute,
+                                    &useDarkMode, sizeof(useDarkMode));
+    }
+
+    constexpr DWORD systemBackdropAttribute = 38;
+    constexpr DWORD legacyMicaAttribute = 1029;
+    constexpr DWORD backdropNone = 1;
+    constexpr DWORD backdropMainWindow = 2;
+    const DWORD backdrop = m_backdropEnabled ? backdropMainWindow : backdropNone;
+    HRESULT backdropResult = DwmSetWindowAttribute(windowHandle, systemBackdropAttribute,
+                                                    &backdrop, sizeof(backdrop));
+    if (FAILED(backdropResult))
+    {
+        const BOOL legacyMica = m_backdropEnabled ? TRUE : FALSE;
+        backdropResult = DwmSetWindowAttribute(windowHandle, legacyMicaAttribute,
+                                               &legacyMica, sizeof(legacyMica));
+    }
+
+    const bool active = m_backdropEnabled && SUCCEEDED(backdropResult);
+    const MARGINS frameMargins = active ? MARGINS{-1, -1, -1, -1} : MARGINS{0, 0, 0, 0};
+    (void)DwmExtendFrameIntoClientArea(windowHandle, &frameMargins);
+    (void)RedrawWindow(windowHandle, nullptr, nullptr,
+                       RDW_INVALIDATE | RDW_FRAME | RDW_UPDATENOW);
+    setBackdropActive(active);
+#else
+    setBackdropActive(false);
+    if (!m_targetWindow)
+        return;
+
+    if (m_clientSideDecorated && m_rounded && m_cornerRadius > 0
+        && m_targetWindow->width() > 0 && m_targetWindow->height() > 0)
+    {
+        QPainterPath shape;
+        shape.addRoundedRect(QRectF(0, 0, m_targetWindow->width(), m_targetWindow->height()),
+                             m_cornerRadius, m_cornerRadius);
+        m_targetWindow->setMask(QRegion(shape.toFillPolygon().toPolygon()));
+    }
+    else
+    {
+        m_targetWindow->setMask(QRegion());
+    }
 #endif
+}
+
+void WindowCornerPreference::setBackdropActive(bool active)
+{
+    if (m_backdropActive == active)
+        return;
+    m_backdropActive = active;
+    Q_EMIT backdropActiveChanged();
 }

@@ -60,6 +60,9 @@ class CineMpvItem : public MpvAbstractItem
     Q_PROPERTY(int playlistPosition READ playlistPosition NOTIFY playlistPositionChanged)
     Q_PROPERTY(int playlistCount READ playlistCount NOTIFY playlistCountChanged)
     Q_PROPERTY(bool rendererReady READ rendererReady NOTIFY rendererReadyChanged)
+    Q_PROPERTY(int videoWidth READ videoWidth NOTIFY videoGeometryChanged)
+    Q_PROPERTY(int videoHeight READ videoHeight NOTIFY videoGeometryChanged)
+    Q_PROPERTY(double videoAspectRatio READ videoAspectRatio NOTIFY videoGeometryChanged)
 
 public:
     /**
@@ -212,6 +215,12 @@ public:
      * @thread Safe to call from the Qt main thread.
      */
     bool rendererReady() const;
+    /** @brief Returns the rotation-adjusted video display width. */
+    int videoWidth() const;
+    /** @brief Returns the rotation-adjusted video display height. */
+    int videoHeight() const;
+    /** @brief Returns the rotation-adjusted video display aspect ratio. */
+    double videoAspectRatio() const;
 
     /**
      * @brief Loads a media item into mpv.
@@ -390,6 +399,8 @@ Q_SIGNALS:
     void playlistCountChanged();
     /** @brief Emitted when the renderer becomes ready (or loses readiness). */
     void rendererReadyChanged();
+    /** @brief Emitted when decoded video display geometry changes. */
+    void videoGeometryChanged();
     /** @brief Emitted when the list of available media tracks is updated.
      *  @param tracks List of track info objects (variant maps). */
     void tracksChanged(const QVariantList& tracks);
@@ -489,6 +500,10 @@ private:
      * @thread Must be called on the Qt main thread.
      */
     void updateFormattedDuration();
+    /** @brief Refreshes display dimensions and aspect ratio from mpv. */
+    void updateVideoGeometry();
+    /** @brief Clears display geometry while a replacement file is loading. */
+    void resetVideoGeometry();
 
     /** @brief Maximum allowed volume level (mpv permits values above 100). */
     static constexpr int MaxVolume = 200;
@@ -525,6 +540,12 @@ private:
     int m_playlistCount{0};
     /** @brief true once the mpv render context is fully initialised. */
     bool m_rendererReady{false};
+    /** @brief Rotation-adjusted display width reported by mpv. */
+    int m_videoWidth{0};
+    /** @brief Rotation-adjusted display height reported by mpv. */
+    int m_videoHeight{0};
+    /** @brief Rotation-adjusted display aspect ratio reported by mpv. */
+    double m_videoAspectRatio{0.0};
     /** @brief true when a loadFile() call is deferred until the renderer is ready. */
     bool m_hasPendingLoad{false};
     /** @brief Path stored for a deferred media load request. */
