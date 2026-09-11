@@ -67,8 +67,8 @@ AbstractButton {
     property bool tooltipBelow: false
 
     /* ---- State ---- */
-    property color checkedBackground: Theme.isLight ? Theme.accent : "white"
-    property color checkedIconTint: "white"
+    property color checkedBackground: Theme.isLight ? Theme.accent : Theme.iconOnDark
+    property color checkedIconTint: Theme.iconOnDark
 
     /* ---- Computed ---- */
     readonly property bool _isIcon: styleVariant === "icon"
@@ -152,7 +152,7 @@ AbstractButton {
                 return root.hovered ? Theme.pillSecondaryHover : Theme.pillSecondary;
             }
             if (root._isClose) {
-                return root.down ? "#cc5555" : (root.hovered ? Theme.closeHover : "transparent");
+                return root.down ? Theme.closePressed : (root.hovered ? Theme.closeHover : "transparent");
             }
             if (root.checked && root._isIcon) {
                 if (root.down) return Theme.toggleCheckedActiveGlow;
@@ -161,7 +161,7 @@ AbstractButton {
             }
             if (root._isDialog) {
                 if (root.colorVariant === "primary")
-                    return !enabled ? Theme.cardStrong : (root.down ? "#1a5fb4" : (root.hovered ? "#2b70c5" : "#3584e4"));
+                    return !enabled ? Theme.cardStrong : (root.down ? Theme.controlPrimaryActive : (root.hovered ? Theme.controlPrimaryHover : Theme.accent));
                 return root.down ? Theme.glassActive : (root.hovered ? Theme.glassHover : "transparent");
             }
             if (root._isText) {
@@ -178,10 +178,10 @@ AbstractButton {
                 return Qt.darker(Theme.danger, 1.18);
             if (root.playerControl && root.colorVariant === "danger" && root.hovered)
                 return Theme.danger;
-            if (root.playerControl && root.down) return "#40ffffff";
-            if (root.playerControl && root.hovered) return "#28ffffff";
-            if (root.down) return "#3a000000";
-            if (root.hovered) return "#24000000";
+            if (root.playerControl && root.down) return Theme.controlPressed;
+            if (root.playerControl && root.hovered) return Theme.controlHover;
+            if (root.down) return Theme.glassActive;
+            if (root.hovered) return Theme.glassHover;
             return "transparent";
         }
 

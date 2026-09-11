@@ -150,6 +150,18 @@ if ($temporarySourceExe) {
 }
 
 $windeployqt = Find-WindeployQt
+$adsDll = Get-ChildItem -Path @(
+    (Join-Path $buildPath "x64/bin/$Configuration/*qtadvanceddocking-qt6*.dll"),
+    (Join-Path $buildPath "x64/bin/*qtadvanceddocking-qt6*.dll")
+) -File -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $adsDll) {
+    throw "Qt Advanced Docking System DLL was not found under $buildPath/x64/bin."
+}
+Copy-Item -LiteralPath $adsDll.FullName -Destination $stagePath -Force
+$adsLicenseDir = Join-Path $stagePath "licenses/Qt-Advanced-Docking-System"
+New-Item -ItemType Directory -Path $adsLicenseDir -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repoRoot "third_party/Qt-Advanced-Docking-System/LICENSE") -Destination $adsLicenseDir
+Copy-Item -LiteralPath (Join-Path $repoRoot "third_party/Qt-Advanced-Docking-System/gnu-lgpl-v2.1.md") -Destination $adsLicenseDir
 if (-not $windeployqt) {
     throw "windeployqt.exe was not found. Pass -QtBin or set QT_ROOT_DIR/Qt6_DIR."
 }

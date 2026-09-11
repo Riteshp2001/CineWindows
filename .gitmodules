@@ -20,3 +20,6 @@
 [submodule "third_party/qtlogger"]
 	path = third_party/qtlogger
 	url = https://github.com/yamixst/qtlogger.git
+[submodule "third_party/Qt-Advanced-Docking-System"]
+	path = third_party/Qt-Advanced-Docking-System
+	url = https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System.git

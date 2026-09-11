@@ -30,6 +30,7 @@ ApplicationWindow {
     id: window
     property rect startupScreenGeometry: Qt.rect(0, 0, 1200, 800)
     property var diagnostics
+    property var workspace
     readonly property bool hasSavedSize: SettingsManager.initialSize.width >= 320
         && SettingsManager.initialSize.height >= 240
     readonly property int defaultWidth: 1200
@@ -595,6 +596,7 @@ ApplicationWindow {
     }
     FileService {
         id: fileService
+        onMediaChosen: function (paths, append) { controller.openPaths(paths, !append); }
     }
 
     function enterCompactMode(mode) {
@@ -1823,6 +1825,11 @@ ApplicationWindow {
             onShowShortcuts: shortcutsDialog.open()
             onShowAbout: aboutDialog.open()
             onNewWindowRequested: SettingsManager.launchNewWindow()
+            onWorkspaceRequested: if (window.workspace) window.workspace.open([])
+            onCurrentVideoWorkspaceRequested: {
+                if (window.workspace && window.workspace.openCurrent(player.currentPath, player.position, player.pause))
+                    player.pause = true;
+            }
             onCloseRequested: window.close()
             onToggleMaximizeRequested: window.toggleMaximize()
             onMinimizeWindowRequested: window.minimizeWindow()
@@ -1908,29 +1915,16 @@ ApplicationWindow {
             }
         }
 
-        LazyPopupLoader {
+        QtObject {
             id: urlDialog
-            sourceComponent: Component {
-                UrlDialog {
-                    fileService: fileService
-                    onAcceptedUrl: function (url) {
-                        controller.openPaths([url], true);
-                    }
-                }
-            }
+            readonly property bool popupVisible: fileService.mediaDialogOpen
+            function open() { fileService.openMediaDialog(false); }
         }
 
-        LazyPopupLoader {
+        QtObject {
             id: addUrlDialog
-            sourceComponent: Component {
-                UrlDialog {
-                    title: qsTr("Add URL")
-                    fileService: fileService
-                    onAcceptedUrl: function (url) {
-                        controller.openPaths([url], false);
-                    }
-                }
-            }
+            readonly property bool popupVisible: fileService.mediaDialogOpen
+            function open() { fileService.openMediaDialog(true); }
         }
 
         LazyPopupLoader {
@@ -1994,7 +1988,7 @@ ApplicationWindow {
                     }
                     MenuSeparator {}
                     CineMenuItem {
-                        text: qsTr("Open File...")
+                        text: qsTr("Open Media...")
                         onTriggered: openFilesDialog.open()
                     }
                     CineMenuItem {
@@ -2096,27 +2090,14 @@ ApplicationWindow {
             }
         }
 
-        LazyPopupLoader {
+        QtObject {
             id: openFilesDialog
-            sourceComponent: Component {
-                FileDialog {
-                    fileMode: FileDialog.OpenFiles
-                    nameFilters: fileService.mediaNameFilters()
-                    onAccepted: window.openUrls(selectedFiles, true)
-                }
-            }
+            function open() { fileService.openMediaDialog(false); }
         }
 
-        LazyPopupLoader {
+        QtObject {
             id: addFilesDialog
-            sourceComponent: Component {
-                FileDialog {
-                    title: qsTr("Add Files")
-                    fileMode: FileDialog.OpenFiles
-                    nameFilters: fileService.mediaNameFilters()
-                    onAccepted: window.openUrls(selectedFiles, false)
-                }
-            }
+            function open() { fileService.openMediaDialog(true); }
         }
 
         LazyPopupLoader {

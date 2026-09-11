@@ -79,7 +79,7 @@ MenuItem {
             anchors.rightMargin: shortcutText.visible ? 12 : 0
             anchors.verticalCenter: parent.verticalCenter
             text: root.text
-            color: root.enabled ? Theme.text : "#88ffffff"
+            color: root.enabled ? Theme.text : Theme.mutedText
             font.pixelSize: root.metrics.fontCaption
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight

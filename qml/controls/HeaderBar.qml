@@ -58,6 +58,8 @@ Item {
     signal addSubtitleTrack
     signal addAudioTrack
     signal newWindowRequested
+    signal workspaceRequested
+    signal currentVideoWorkspaceRequested
     signal saveSessionRequested
 
     height: metrics.titleBarHeight
@@ -66,7 +68,7 @@ Item {
         id: openMenu
         menuWidth: 224
         CineMenuItem {
-            text: qsTr("Open Files")
+            text: qsTr("Open Media")
             shortcut: "Ctrl+O"
             onTriggered: root.openFiles()
         }
@@ -76,13 +78,13 @@ Item {
             onTriggered: root.openFolder()
         }
         CineMenuItem {
-            text: qsTr("Open URL")
+            text: qsTr("Open Path or URL")
             shortcut: "Ctrl+U"
             onTriggered: root.openUrl()
         }
         MenuSeparator {}
         CineMenuItem {
-            text: qsTr("Add Files")
+            text: qsTr("Add Media")
             shortcut: "Ctrl+Shift+O"
             onTriggered: root.addFiles()
         }
@@ -144,6 +146,15 @@ Item {
             text: qsTr("New Window")
             shortcut: "Ctrl+N"
             onTriggered: root.newWindowRequested()
+        }
+        CineMenuItem {
+            text: qsTr("Video Workspace")
+            onTriggered: root.workspaceRequested()
+        }
+        CineMenuItem {
+            text: qsTr("Open Current in Workspace")
+            enabled: root.player && root.player.currentPath.length > 0
+            onTriggered: root.currentVideoWorkspaceRequested()
         }
         CineMenuItem {
             text: qsTr("Playlist")

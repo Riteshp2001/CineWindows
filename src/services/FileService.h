@@ -19,8 +19,12 @@
 #pragma once
 
 #include <QObject>
+#include <QPointer>
+#include <QStringList>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
+
+class QDialog;
 
 /**
  * @class FileService
@@ -43,6 +47,7 @@ class FileService : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
+    Q_PROPERTY(bool mediaDialogOpen READ mediaDialogOpen NOTIFY mediaDialogOpenChanged)
 
 public:
     /**
@@ -50,6 +55,11 @@ public:
      * @param parent Optional QObject parent for Qt memory management.
      */
     explicit FileService(QObject* parent = nullptr);
+    ~FileService() override;
+
+    bool mediaDialogOpen() const;
+    Q_INVOKABLE void openMediaDialog(bool append = false);
+    Q_INVOKABLE QString normalizeMediaPath(const QString& input) const;
 
     /**
      * @brief Returns QFileDialog name filters for playable media formats.
@@ -232,4 +242,11 @@ public:
      * @thread Must be called on the main Qt/QML thread.
      */
     Q_INVOKABLE void openLocation(const QString& path) const;
+
+Q_SIGNALS:
+    void mediaChosen(const QStringList& paths, bool append);
+    void mediaDialogOpenChanged();
+
+private:
+    QPointer<QDialog> m_mediaDialog;
 };

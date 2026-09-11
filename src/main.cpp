@@ -25,6 +25,7 @@ extern "C" {
 }
 #endif
 
+#include <QApplication>
 #include <QDir>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
@@ -56,6 +57,7 @@ extern "C" {
 #include "player/CineMpvItem.h"
 #include "player/IpcServer.h"
 #include "utils/PathUtils.h"
+#include "workspace/WorkspaceController.h"
 
 #include <limits>
 #include <utility>
@@ -216,13 +218,16 @@ int main(int argc, char* argv[])
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 #endif
 
-    QGuiApplication app(argc, argv);
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    QApplication app(argc, argv);
+    QApplication::setStyle(QStringLiteral("Fusion"));
     app.setApplicationName(QStringLiteral("CineWindows"));
     app.setApplicationDisplayName(QStringLiteral(APP_DISPLAY_NAME));
     app.setApplicationVersion(QStringLiteral(APP_VERSION));
     app.setOrganizationName(QStringLiteral("gyrolet"));
     app.setOrganizationDomain(QStringLiteral("io.github.gyrolet"));
-    app.setWindowIcon(QIcon(QStringLiteral(":/cinewindows/icons/apps/CineWindows.svg")));
+    app.setDesktopFileName(QStringLiteral(APP_ID));
+    app.setWindowIcon(QIcon(QStringLiteral(":/cinewindows/icons/apps/CineWindows.png")));
     ApplicationLog applicationLog;
     qCInfo(cineAppLog).noquote() << app.applicationDisplayName() << app.applicationVersion()
                                  << "starting with Qt" << qVersion()
@@ -241,12 +246,21 @@ int main(int argc, char* argv[])
         QStringLiteral("port"));
     parser.addOption(cliOption);
     parser.addOption(ipcOption);
+    const QCommandLineOption workspaceOption(QStringLiteral("workspace"),
+        QStringLiteral("Open each media file or URL in an independent dockable video pane."));
+    parser.addOption(workspaceOption);
     parser.addPositionalArgument(QStringLiteral("files"),
                                  QStringLiteral("Media files or URLs to open."),
                                  QStringLiteral("[files...]"));
     parser.process(app);
 
     const bool cliMode = parser.isSet(cliOption);
+    const bool workspaceMode = parser.isSet(workspaceOption);
+    if (workspaceMode && (cliMode || parser.isSet(ipcOption)))
+    {
+        qCCritical(cineIpcLog) << "--cli and --ipc-server target the single player and cannot be combined with --workspace";
+        return EXIT_FAILURE;
+    }
     const QStringList startupPaths = parser.positionalArguments();
     quint16 ipcPort = 0;
     // Validate the --ipc-server port argument
@@ -281,11 +295,19 @@ int main(int argc, char* argv[])
             QDir::toNativeSeparators(QStandardPaths::writableLocation(QStandardPaths::CacheLocation)).toLocal8Bit());
 
     QQmlApplicationEngine engine;
+    WorkspaceController workspace(&engine, &applicationLog);
+    if (workspaceMode)
+    {
+        workspace.open(startupPaths);
+        startupShell.hide();
+        return app.exec();
+    }
     const QRect startupBounds = startupScreen
         ? startupScreen->availableGeometry() : QRect(0, 0, 1200, 800);
     engine.setInitialProperties({{QStringLiteral("startupPaths"), startupPaths},
                                  {QStringLiteral("startupScreenGeometry"), startupBounds},
-                                 {QStringLiteral("diagnostics"), QVariant::fromValue(&applicationLog)}});
+                                 {QStringLiteral("diagnostics"), QVariant::fromValue(&applicationLog)},
+                                 {QStringLiteral("workspace"), QVariant::fromValue(&workspace)}});
 
     // Exit application if the QML engine fails to create the root component
     QObject::connect(

@@ -2,6 +2,7 @@
 
 Pinned external source dependencies and reference material.
 
+- `Qt-Advanced-Docking-System`: ADS 5.1.1 by Uwe Kindler and contributors, dynamically linked for the Video Workspace.
 - `qtlogger`: QtLogger 0.11.1 by Mikhail Yatsenko, used as the application logging backend.
 - `QR-Code-generator`: Project Nayuki's QR Code generator, used for companion pairing.
 - `RinUI`: pinned design and implementation reference only; not a runtime dependency.
