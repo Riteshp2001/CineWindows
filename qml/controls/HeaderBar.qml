@@ -318,7 +318,7 @@ Item {
         text: root.player && root.player.mediaTitle.length > 0
             ? root.player.mediaTitle
             : Qt.application.displayName
-        color: Theme.text
+        color: Theme.headerText
         font.bold: true
         font.pixelSize: root.metrics.fontBody
         elide: Text.ElideMiddle
@@ -358,6 +358,7 @@ Item {
             styleVariant: "windowCtrl"
             metrics: root.metrics
             windowControlRole: CineButton.MenuControl
+            windowControlTint: root.hubVisible ? Theme.text : Theme.headerIcon
             btnTooltip: qsTr("Main Menu")
             tooltipBelow: true
             onClicked: mainMenu.openBelowRight(menuButton, root.Window.window ? root.Window.window.contentItem : root)
@@ -369,6 +370,7 @@ Item {
             styleVariant: "windowCtrl"
             metrics: root.metrics
             windowControlRole: CineButton.MinimizeControl
+            windowControlTint: root.hubVisible ? Theme.text : Theme.headerIcon
             btnTooltip: qsTr("Minimize")
             tooltipBelow: true
             onClicked: root.minimizeWindowRequested()
@@ -384,6 +386,7 @@ Item {
                     || root.Window.window.visibility === Window.FullScreen)
                 ? CineButton.RestoreControl
                 : CineButton.MaximizeControl
+            windowControlTint: root.hubVisible ? Theme.text : Theme.headerIcon
             btnTooltip: windowControlRole === CineButton.RestoreControl
                 ? qsTr("Restore")
                 : qsTr("Maximize")
@@ -397,6 +400,8 @@ Item {
             styleVariant: "close"
             metrics: root.metrics
             windowControlRole: CineButton.CloseControl
+            windowControlTint: closeButton.hovered ? "white"
+                : root.hubVisible ? Theme.text : Theme.headerIcon
             btnTooltip: qsTr("Close")
             tooltipBelow: true
             onClicked: root.closeRequested()

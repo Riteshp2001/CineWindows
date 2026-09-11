@@ -50,6 +50,7 @@ AbstractButton {
     property string btnTooltip: ""
     property string glyph: ""
     property color glyphColor: Theme.text
+    property color windowControlTint: Theme.text
     property bool filledIcon: false
 
     /* ---- Sizing ---- */
@@ -295,7 +296,7 @@ AbstractButton {
                     width: root._windowGlyphSize
                     height: root._windowStrokeWidth
                     radius: height / 2
-                    color: Theme.text
+                    color: root.windowControlTint
                 }
             }
         }
@@ -306,7 +307,7 @@ AbstractButton {
             width: root._windowGlyphSize
             height: root._windowStrokeWidth
             radius: height / 2
-            color: Theme.text
+            color: root.windowControlTint
         }
         Rectangle {
             objectName: "maximizeControlShape"
@@ -316,7 +317,7 @@ AbstractButton {
             height: root._windowGlyphSize
             radius: Math.max(1, Math.round(root._windowGlyphSize * 0.15))
             color: "transparent"
-            border.color: Theme.text
+            border.color: root.windowControlTint
             border.width: root._windowStrokeWidth
         }
         Item {
@@ -333,7 +334,7 @@ AbstractButton {
                 height: width
                 radius: Math.max(1, Math.round(root._windowGlyphSize * 0.12))
                 color: "transparent"
-                border.color: Theme.text
+                border.color: root.windowControlTint
                 border.width: root._windowStrokeWidth
             }
             Rectangle {
@@ -343,7 +344,7 @@ AbstractButton {
                 height: width
                 radius: Math.max(1, Math.round(root._windowGlyphSize * 0.12))
                 color: Theme.background
-                border.color: Theme.text
+                border.color: root.windowControlTint
                 border.width: root._windowStrokeWidth
             }
         }
@@ -363,7 +364,7 @@ AbstractButton {
                     height: root._windowStrokeWidth
                     radius: height / 2
                     rotation: modelData
-                    color: Theme.text
+                    color: root.windowControlTint
                 }
             }
         }

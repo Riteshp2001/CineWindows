@@ -245,21 +245,21 @@ QtObject {
 
     // Header bar
     /// Header background (semi-transparent overlay)
-    readonly property color headerBg: isLight ? "#c4f0f1f4" : "#c414161b"
+    readonly property color headerBg: "#c414161b"
     /// Header hover state
-    readonly property color headerHover: isLight ? Qt.alpha(accent, 0.18) : "#24ffffff"
+    readonly property color headerHover: "#24ffffff"
     /// Header active/pressed state
-    readonly property color headerActive: isLight ? Qt.alpha(accent, 0.30) : "#36ffffff"
+    readonly property color headerActive: "#36ffffff"
     /// Header border color
-    readonly property color headerBorder: isLight ? "#28000000" : "#32ffffff"
+    readonly property color headerBorder: "#32ffffff"
     /// Header icon tint
-    readonly property color headerIcon: isLight ? "#17181b" : "#f4f7fa"
+    readonly property color headerIcon: "#f4f7fa"
     /// Header label text
-    readonly property color headerText: isLight ? "#17181b" : "#f4f7fa"
+    readonly property color headerText: "#f4f7fa"
     /// Header chevron tint
-    readonly property color headerChevron: isLight ? "#626772" : "#aeb5c0"
-    /// Header title text outline color (light: subtle, dark: stronger)
-    readonly property color headerTitleOutline: isLight ? Qt.rgba(1, 1, 1, 0.7) : Qt.rgba(0, 0, 0, 0.6)
+    readonly property color headerChevron: "#c8cdd5"
+    /// Header title text outline color
+    readonly property color headerTitleOutline: Qt.rgba(0, 0, 0, 0.78)
 
     // Switch track (OFF state)
     /// Switch track background when unchecked
