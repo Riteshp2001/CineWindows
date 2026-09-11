@@ -210,7 +210,13 @@ body {
 .marquee-track {
   display: flex;
   width: max-content;
+  min-width: 200%;
   animation: marquee 25s linear infinite;
+}
+
+.marquee-track > div {
+  min-width: 50vw;
+  justify-content: space-around;
 }
 
 .legal-copy { max-width: 46rem; font-size: 1rem; line-height: 1.75; }

@@ -144,15 +144,13 @@ function Header() {
 
         <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
           {navigation.map((item) => (
-            <a
+            <SiteLink
               className="nav-link"
               href={item.href}
               key={item.href}
-              target={item.external ? "_blank" : undefined}
-              rel={item.external ? "noreferrer" : undefined}
             >
               {item.label}
-            </a>
+            </SiteLink>
           ))}
         </nav>
 
@@ -199,15 +197,13 @@ function Header() {
             >
               {navigation.map((item) => (
                 <SheetClose asChild key={item.href}>
-                  <a
+                  <SiteLink
                     className="flex min-h-14 items-center justify-between border-b border-border text-lg font-semibold"
                     href={item.href}
-                    target={item.external ? "_blank" : undefined}
-                    rel={item.external ? "noreferrer" : undefined}
                   >
                     {item.label}
                     <ArrowRight className="size-4 text-muted" />
-                  </a>
+                  </SiteLink>
                 </SheetClose>
               ))}
             </nav>
@@ -623,34 +619,26 @@ const capabilityWords = [
 ]
 
 function CapabilityMarquee() {
+  const repeatedWords = Array.from({ length: 4 })
   return (
     <div
       className="marquee-pause overflow-hidden border-y border-border bg-accent py-4 text-accent-foreground select-none"
       aria-hidden="true"
     >
       <div className="marquee-track">
-        <div className="flex shrink-0 items-center gap-7 pr-7">
-          {capabilityWords.map((word) => (
-            <span
-              className="inline-flex items-center gap-7 text-sm font-bold tracking-wider whitespace-nowrap"
-              key={word}
-            >
-              {word}
-              <span className="text-xs opacity-50 font-normal">✦</span>
-            </span>
-          ))}
-        </div>
-        <div className="flex shrink-0 items-center gap-7 pr-7">
-          {capabilityWords.map((word) => (
-            <span
-              className="inline-flex items-center gap-7 text-sm font-bold tracking-wider whitespace-nowrap"
-              key={`${word}-dup`}
-            >
-              {word}
-              <span className="text-xs opacity-50 font-normal">✦</span>
-            </span>
-          ))}
-        </div>
+        {repeatedWords.map((_, copyIndex) => (
+          <div className="flex shrink-0 items-center gap-7 pr-7" key={copyIndex}>
+            {capabilityWords.map((word) => (
+              <span
+                className="inline-flex items-center gap-7 text-sm font-bold tracking-wider whitespace-nowrap"
+                key={`${copyIndex}-${word}`}
+              >
+                {word}
+                <span className="text-xs opacity-50 font-normal">✦</span>
+              </span>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -1002,7 +990,7 @@ const bundledRelease: GitHubRelease = {
 }
 
 function useReleaseFeed(all = false) {
-  const [releases, setReleases] = useState<GitHubRelease[]>([])
+  const [releases, setReleases] = useState<GitHubRelease[]>([bundledRelease])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -1019,7 +1007,10 @@ function useReleaseFeed(all = false) {
         if (response.status === 404) return []
         if (!response.ok) throw new Error(`GitHub returned ${response.status}`)
         const data = await response.json() as GitHubRelease | GitHubRelease[]
-        return Array.isArray(data) ? data : [data]
+        return (Array.isArray(data) ? data : [data]).map((release) => ({
+          ...release,
+          assets: Array.isArray(release.assets) ? release.assets : [],
+        }))
       })
       .then((liveReleases) => {
         setReleases(liveReleases.length ? liveReleases : [bundledRelease])

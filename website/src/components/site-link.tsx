@@ -41,7 +41,15 @@ export function SiteLink({ href, onClick, ...props }: SiteLinkProps) {
     event.preventDefault()
     window.history.pushState({}, "", href)
     window.dispatchEvent(new PopStateEvent("popstate"))
-    window.scrollTo({ top: 0, behavior: "auto" })
+    const hashIndex = href.indexOf("#")
+    const hash = hashIndex >= 0 ? href.slice(hashIndex + 1) : ""
+    if (hash) {
+      window.requestAnimationFrame(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" })
+      })
+    } else {
+      window.scrollTo({ top: 0, behavior: "auto" })
+    }
   }
 
   return <a href={href} onClick={handleClick} {...props} />
