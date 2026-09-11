@@ -308,6 +308,19 @@ Item {
         }
     }
 
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: root.metrics.spacingSm
+        anchors.rightMargin: root.metrics.spacingSm
+        anchors.verticalCenter: buttonsFlow.verticalCenter
+        height: buttonsFlow.height + root.metrics.spacingSm
+        radius: Theme.shapeLarge
+        color: Theme.controlSurface
+        border.width: 1
+        border.color: Theme.controlSurfaceBorder
+    }
+
     Row {
         id: buttonsFlow
         anchors.left: parent.left
@@ -338,6 +351,8 @@ Item {
                 objectName: "playPauseButton"
                 metrics: root.metrics
                 playerControl: true
+                colorVariant: "primary"
+                iconTint: Theme.iconOnLight
                 iconName: root.player && !root.player.pause ? "cine-playback-pause-symbolic" : "cine-playback-start-symbolic"
                 btnText: qsTr("Play/Pause")
                 /// Toggles between play and pause states
@@ -558,7 +573,7 @@ Item {
         Text {
             id: positionTime
             text: root.showRemaining ? root.remainingText() : (root.player ? root.player.formattedPosition : "0:00")
-            color: Theme.text
+            color: Theme.iconOnDark
             font: timeFontMetrics.font
             style: Text.Outline
             styleColor: Theme.textOutline
@@ -582,7 +597,7 @@ Item {
         Text {
             id: durationTime
             text: root.player ? root.player.formattedDuration : "0:00"
-            color: Theme.mutedText
+            color: Theme.controlMutedText
             font: timeFontMetrics.font
             style: Text.Outline
             styleColor: Theme.textOutline
@@ -691,6 +706,7 @@ Item {
         value: root.player ? root.player.position : 0
         player: root.player
         chapters: root.chapters
+        trackColor: Theme.controlSeekTrack
         focusPolicy: Qt.NoFocus
         Accessible.name: qsTr("Seek")
 

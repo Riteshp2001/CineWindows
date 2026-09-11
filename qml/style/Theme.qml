@@ -198,6 +198,20 @@ QtObject {
     readonly property color controlScrimStart: "#00000000"
     /// Control scrim gradient end
     readonly property color controlScrimEnd: "#33000000"
+    /// Floating playback control surface
+    readonly property color controlSurface: "#b814161b"
+    /// Floating playback control border
+    readonly property color controlSurfaceBorder: "#30ffffff"
+    /// Primary playback action background
+    readonly property color controlPrimary: accent
+    /// Primary playback action hover background
+    readonly property color controlPrimaryHover: Qt.lighter(accent, 1.12)
+    /// Primary playback action pressed background
+    readonly property color controlPrimaryActive: Qt.darker(accent, 1.12)
+    /// Playback seek rail over video
+    readonly property color controlSeekTrack: "#4dffffff"
+    /// Secondary playback text over video
+    readonly property color controlMutedText: "#c8ffffff"
 
     // Text & icon shadows
     /// Shadow opacity for text/icon outlines

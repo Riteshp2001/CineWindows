@@ -50,6 +50,7 @@ AbstractButton {
     property string btnTooltip: ""
     property string glyph: ""
     property color glyphColor: Theme.text
+    property color iconTint: playerControl ? Theme.iconOnDark : Theme.iconDefault
     property color windowControlTint: Theme.text
     property bool filledIcon: false
 
@@ -168,6 +169,10 @@ AbstractButton {
             if (root._isWindowCtrl) {
                 return root.down ? Theme.glassActive : (root.hovered ? Theme.glassHover : "transparent");
             }
+            if (root.playerControl && root.colorVariant === "primary") {
+                if (root.down) return Theme.controlPrimaryActive;
+                return root.hovered ? Theme.controlPrimaryHover : Theme.controlPrimary;
+            }
             if (root.playerControl && root.colorVariant === "danger" && root.down)
                 return Qt.darker(Theme.danger, 1.18);
             if (root.playerControl && root.colorVariant === "danger" && root.hovered)
@@ -280,7 +285,7 @@ AbstractButton {
             height: root._effectiveIconSize
             name: root.iconName
             filled: root.filledIcon || root.hovered || root.down || root.checked
-            tint: root.checked ? root.checkedIconTint : Theme.iconDefault
+            tint: root.checked ? root.checkedIconTint : root.iconTint
             shadowEnabled: root.playerControl
         }
 
