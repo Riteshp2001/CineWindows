@@ -36,6 +36,9 @@ if [ ! -d "$APP_PATH" ]; then
 fi
 
 mkdir -p "${ARTIFACT_DIR}"
+LICENSE_DIR="${APP_PATH}/Contents/Resources/licenses/CineWindows"
+mkdir -p "${LICENSE_DIR}"
+cp LICENSE.md THIRD_PARTY_NOTICES.md "${LICENSE_DIR}/"
 
 if ! command -v macdeployqt >/dev/null 2>&1; then
     echo "ERROR: macdeployqt was not found in PATH. Use the same Qt installation that built CineWindows."

@@ -226,4 +226,19 @@ QString thumbnailCacheDir()
     return ensureDir(QDir(cache.isEmpty() ? appConfigDir() : cache).filePath(QStringLiteral("thumbnails")));
 }
 
+QString logFilePath()
+{
+    const QString overridePath = qEnvironmentVariable("CINEWINDOWS_DATA_DIR");
+    if (!overridePath.isEmpty())
+    {
+        return QDir(ensureDir(QDir(QDir::fromNativeSeparators(overridePath))
+                                  .filePath(QStringLiteral("logs"))))
+            .filePath(QStringLiteral("cinewindows.log"));
+    }
+    const QString data = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    const QString root = data.isEmpty() ? appConfigDir() : data;
+    return QDir(ensureDir(QDir(root).filePath(QStringLiteral("logs"))))
+        .filePath(QStringLiteral("cinewindows.log"));
+}
+
 } // namespace PathUtils

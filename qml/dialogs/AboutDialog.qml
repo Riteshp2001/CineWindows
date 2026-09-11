@@ -167,6 +167,20 @@ Controls.ResponsivePopup {
                         Text { text: qsTr("Focus"); color: Theme.mutedText; font.pixelSize: Theme.fontSizeCaption }
                         Text { text: qsTr("Local and streamed media"); color: Theme.text; font.pixelSize: Theme.fontSizeSmall; font.bold: true; elide: Text.ElideRight }
                     }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.columnSpan: root.compactLayout ? 1 : 2
+                        spacing: 2
+                        Text { text: qsTr("Logging"); color: Theme.mutedText; font.pixelSize: Theme.fontSizeCaption }
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("QtLogger 0.11.1 by Mikhail Yatsenko (MIT)")
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.bold: true
+                            elide: Text.ElideRight
+                        }
+                    }
                 }
             }
 

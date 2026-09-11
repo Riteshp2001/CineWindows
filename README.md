@@ -130,6 +130,12 @@ CineWindows/
 
 Other architectures are not currently packaged or claimed as supported.
 
+Initialize the pinned source dependencies after cloning:
+
+```bash
+git submodule update --init --recursive
+```
+
 ### Quick Start
 
 #### Windows
@@ -194,6 +200,15 @@ cmake --build --preset debug
 # Custom MpvQt install path
 cmake --preset release -DMpvQt_DIR=C:\path\to\MpvQt\lib\cmake\MpvQt
 ```
+
+### Diagnostic Logs
+
+All Qt, QML, player, library, and service diagnostics are routed through the
+pinned QtLogger backend. CineWindows writes `cinewindows.log` under the
+platform application-data directory, keeps up to five 5 MiB files, and
+compresses rotated files. Console builds also receive colored stderr output.
+Set `CINEWINDOWS_DATA_DIR` to place application data and logs under a custom root.
+No HTTP logging sink is enabled.
 
 ---
 

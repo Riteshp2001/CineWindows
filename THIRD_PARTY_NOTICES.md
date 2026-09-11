@@ -29,6 +29,17 @@ This file records third-party source material retained by CineWindows for refere
 
 Material Web is provided under the Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
 
+## QtLogger
+
+- Project: QtLogger
+- Creator: Mikhail Yatsenko (`yamixst`)
+- Repository: https://github.com/yamixst/qtlogger
+- Version: 0.11.1
+- Pinned revision: `ca7d3d355844ab9033bf2d70302b3129ffc1721f`
+- Copyright: Copyright (c) 2024 Mikhail Yatsenko
+- License: MIT License
+- CineWindows status: statically linked logging backend for Qt messages, colored console output, and local rotating log files.
+
 ## QR Code Generator Library
 
 - Project: QR Code generator library
@@ -60,25 +71,3 @@ Attribution: Solar icons by 480 Design, licensed under CC BY 4.0. The SVGs were 
 - CineWindows status: source-reference submodule only; RinUI is not loaded, imported, linked, or deployed at runtime.
 
 The pinned source is retained in `third_party/RinUI` for design and implementation reference. Future adaptations must copy the necessary code or assets into CineWindows-owned resources, preserve attribution for copied or substantially derived material, remove RinUI runtime/theme/Python/import-path dependencies, and add an immediate production consumer and relevant tests in the same change. The submodule must not become a runtime or packaging dependency.
-
-### MIT License
-
-Copyright (c) 2025 RinLit
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.

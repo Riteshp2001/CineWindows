@@ -40,16 +40,16 @@ extern "C" {
 #include <QStandardPaths>
 #include <QStringList>
 #include <QTimer>
-#include <QTextStream>
 #include <QTranslator>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
+#include "app/ApplicationLog.h"
+#include "app/StartupShell.h"
 #include "player/CineMpvItem.h"
 #include "player/IpcServer.h"
-#include "app/StartupShell.h"
 #include "utils/PathUtils.h"
 
 #include <limits>
@@ -216,6 +216,9 @@ int main(int argc, char* argv[])
     app.setOrganizationName(QStringLiteral("gyrolet"));
     app.setOrganizationDomain(QStringLiteral("io.github.gyrolet"));
     app.setWindowIcon(QIcon(QStringLiteral(":/cinewindows/icons/apps/CineWindows.svg")));
+    ApplicationLog applicationLog;
+    qInfo().noquote() << app.applicationDisplayName() << app.applicationVersion()
+                      << "starting with Qt" << qVersion();
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
@@ -273,6 +276,7 @@ int main(int argc, char* argv[])
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
         [] {
+            qCritical() << "QML root component creation failed";
             QCoreApplication::exit(EXIT_FAILURE);
         },
         Qt::QueuedConnection);
@@ -302,7 +306,10 @@ int main(int argc, char* argv[])
                 break;
         }
         if (!player)
+        {
+            qCritical() << "QML root did not expose a CineMpvItem";
             return;
+        }
 
         // Launch the TCP JSON IPC server if --ipc-server was given
         if (ipcPort > 0)
@@ -327,7 +334,7 @@ int main(int argc, char* argv[])
             console->setPlayer(player);
             if (console->start())
             {
-                QTextStream(stderr) << "CineWindows CLI ready. Send JSON IPC or raw mpv commands.\n";
+                qInfo() << "CineWindows CLI ready. Send JSON IPC or raw mpv commands.";
             }
             else
             {

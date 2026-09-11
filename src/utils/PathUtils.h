@@ -70,4 +70,7 @@ QString libraryDatabasePath();
 /** @brief Returns the persistent media thumbnail cache directory. */
 QString thumbnailCacheDir();
 
+/** @brief Returns the rotating application log file path. */
+QString logFilePath();
+
 } // namespace PathUtils

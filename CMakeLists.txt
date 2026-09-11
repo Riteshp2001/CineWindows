@@ -89,6 +89,16 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
     LinguistTools
 )
 
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/qtlogger/src/qtlogger/CMakeLists.txt")
+    message(FATAL_ERROR "QtLogger is missing. Run: git submodule update --init --recursive")
+endif()
+set(QTLOGGER_LIBRARY OFF CACHE BOOL "Build QtLogger as a static library" FORCE)
+set(QTLOGGER_DEBUG_OUTPUT OFF CACHE BOOL "Disable QtLogger internal diagnostics" FORCE)
+set(QTLOGGER_NO_THREAD OFF CACHE BOOL "Enable QtLogger asynchronous logging" FORCE)
+set(QTLOGGER_NETWORK OFF CACHE BOOL "Disable QtLogger remote logging sinks" FORCE)
+set(QTLOGGER_JOURNAL OFF CACHE BOOL "Disable the optional systemd journal sink" FORCE)
+add_subdirectory(third_party/qtlogger/src/qtlogger EXCLUDE_FROM_ALL)
+
 if(EXISTS "${CINEWINDOWS_MPVQT_PREFIX}/lib/cmake/MpvQt")
     list(PREPEND CMAKE_PREFIX_PATH "${CINEWINDOWS_MPVQT_PREFIX}")
 endif()
@@ -246,6 +256,7 @@ set_source_files_properties(qml/input/KeyBindings.qml PROPERTIES QT_QML_SINGLETO
 set_source_files_properties(qml/utils/TimeUtils.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 set(CINEWINDOWS_SOURCES
+    src/app/ApplicationLog.cpp src/app/ApplicationLog.h
     src/app/SettingsManager.cpp src/app/SettingsManager.h
     src/app/StartupShell.cpp src/app/StartupShell.h
     src/controls/QrCodeItem.cpp src/controls/QrCodeItem.h
@@ -336,6 +347,7 @@ target_include_directories(CineWindows PRIVATE
 )
 
 target_link_libraries(CineWindows PRIVATE
+    qtlogger::qtlogger
     Qt6::Concurrent
     Qt6::Core
     Qt6::Gui
@@ -358,10 +370,6 @@ target_compile_definitions(CineWindows PRIVATE
     APP_DISPLAY_NAME="${CINEWINDOWS_DISPLAY_NAME}"
     APP_VERSION="${PROJECT_VERSION}"
     QT_NO_KEYWORDS
-    $<$<CONFIG:Release>:QT_NO_DEBUG_OUTPUT>
-    $<$<CONFIG:Release>:QT_NO_INFO_OUTPUT>
-    $<$<CONFIG:MinSizeRel>:QT_NO_DEBUG_OUTPUT>
-    $<$<CONFIG:MinSizeRel>:QT_NO_INFO_OUTPUT>
 )
 
 if(MSVC)

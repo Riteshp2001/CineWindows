@@ -27,6 +27,10 @@ CineWindows is designed to play your media, not profile you. This Privacy Policy
 
 CineWindows processes media files, folders, playlists, subtitle tracks, playback positions, window preferences, language settings, keyboard mappings, and related configuration on your device. This information is stored locally when you choose features such as session or position restore. We do not receive your local media or local settings.
 
+### Diagnostic logs
+
+CineWindows writes rotating diagnostic logs to its local application-data directory. Logs can include technical messages, local media paths, and URLs involved in playback or troubleshooting. They remain on your device unless you choose to share them. Older logs are compressed and removed automatically as the rotation limit is reached.
+
 ### Update checks
 
 When automatic update checks are enabled, CineWindows requests the latest release information from GitHub. GitHub may receive standard network data such as your IP address, request time, and a CineWindows user-agent string. You can disable automatic update checks in Preferences.
