@@ -356,6 +356,7 @@ target_include_directories(CineWindows PRIVATE
     src/services
     src/utils
     src/window
+    src/workspace
     third_party/QR-Code-generator/cpp
     ${Libmpv_INCLUDE_DIRS}
 )
