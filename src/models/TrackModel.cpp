@@ -19,7 +19,44 @@
 #include "models/TrackModel.h"
 
 #include <QCoreApplication>
+#include <QFileInfo>
+#include <QLocale>
+#include <QRegularExpression>
 #include <QVariantMap>
+
+namespace {
+QString normalizedLanguageCode(const QString& value)
+{
+    return value.trimmed().section(QRegularExpression(QStringLiteral("[-_]")), 0, 0).toLower();
+}
+
+QString inferredSubtitleLanguage(const QVariantMap& track)
+{
+    const QString baseName = QFileInfo(track.value(QStringLiteral("external-filename")).toString()).completeBaseName();
+    const QStringList tokens = baseName.split(QRegularExpression(QStringLiteral("[._ -]+")), Qt::SkipEmptyParts);
+    for (auto token = tokens.crbegin(); token != tokens.crend(); ++token)
+    {
+        const QString code = normalizedLanguageCode(*token);
+        if ((code.size() == 2 || code.size() == 3)
+            && QLocale::codeToLanguage(code) != QLocale::AnyLanguage)
+        {
+            return code;
+        }
+    }
+    return {};
+}
+
+QString languageLabel(const QString& code)
+{
+    const QString normalized = normalizedLanguageCode(code);
+    const QLocale::Language language = QLocale::codeToLanguage(normalized);
+    if (language == QLocale::AnyLanguage)
+    {
+        return code.trimmed().toUpper();
+    }
+    return QStringLiteral("%1 (%2)").arg(QLocale::languageToString(language), normalized);
+}
+} // namespace
 
 TrackModel::TrackModel(QObject* parent)
     : QAbstractListModel(parent)
@@ -131,15 +168,22 @@ void TrackModel::updateFromMpv(const QVariantList& tracks)
         track.id = map.value(QStringLiteral("id")).toInt();
         track.type = type;
         track.title = map.value(QStringLiteral("title")).toString();
-        track.language = map.value(QStringLiteral("lang")).toString();
-        QStringList parts;
-        if (!track.title.trimmed().isEmpty())
+        track.language = normalizedLanguageCode(map.value(QStringLiteral("lang")).toString());
+        if (track.language.isEmpty() && type == QStringLiteral("sub"))
         {
-            parts.append(track.title);
+            track.language = inferredSubtitleLanguage(map);
         }
-        if (!track.language.trimmed().isEmpty())
+        QStringList parts;
+        const QString displayLanguage = languageLabel(track.language);
+        if (!displayLanguage.isEmpty())
         {
-            parts.append(track.language);
+            parts.append(displayLanguage);
+        }
+        const QString title = track.title.trimmed();
+        if (!title.isEmpty() && title.compare(track.language, Qt::CaseInsensitive) != 0
+            && title.compare(displayLanguage, Qt::CaseInsensitive) != 0)
+        {
+            parts.append(title);
         }
         track.label = parts.isEmpty() ? QCoreApplication::translate("TrackModel", "Track %1").arg(track.id)
                                       : parts.join(QStringLiteral(" - "));
