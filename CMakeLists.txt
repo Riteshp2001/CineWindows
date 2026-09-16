@@ -359,7 +359,6 @@ target_link_libraries(CineWindows PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::QuickDialogs2
-    Qt6::QuickWidgets
     Qt6::Sql
     Qt6::Svg
     Qt6::Widgets

@@ -59,6 +59,7 @@ extern "C" {
 #include "utils/PathUtils.h"
 
 #include <limits>
+#include <cstdio>
 #include <utility>
 
 namespace {
@@ -187,11 +188,21 @@ static void prepareWindowsConsole()
  */
 int main(int argc, char* argv[])
 {
+    const bool versionRequested = hasArg(argc, argv, QStringLiteral("--version"))
+        || hasArg(argc, argv, QStringLiteral("-v"));
+    if (versionRequested)
+    {
+#ifdef Q_OS_WIN
+        prepareWindowsConsole();
+#endif
+        std::printf("CineWindows %s\n", APP_VERSION);
+        return EXIT_SUCCESS;
+    }
+
     QElapsedTimer startupTimer;
     startupTimer.start();
     const bool consoleRequested = hasArg(argc, argv, QStringLiteral("--cli"))
-        || hasArg(argc, argv, QStringLiteral("--help")) || hasArg(argc, argv, QStringLiteral("-h"))
-        || hasArg(argc, argv, QStringLiteral("--version")) || hasArg(argc, argv, QStringLiteral("-v"));
+        || hasArg(argc, argv, QStringLiteral("--help")) || hasArg(argc, argv, QStringLiteral("-h"));
 
 #ifdef Q_OS_WIN
     // Attach or create a console when running in CLI / help / version mode
@@ -236,7 +247,6 @@ int main(int argc, char* argv[])
     parser.setApplicationDescription(
         QStringLiteral("CineWindows media player with optional mpv-compatible JSON IPC."));
     parser.addHelpOption();
-    parser.addVersionOption();
     const QCommandLineOption cliOption({QStringLiteral("c"), QStringLiteral("cli")},
                                        QStringLiteral("Read newline-delimited JSON IPC or raw mpv commands from stdin."));
     const QCommandLineOption ipcOption(

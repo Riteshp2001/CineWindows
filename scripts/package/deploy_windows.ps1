@@ -366,7 +366,7 @@ foreach ($archivePath in @($portableZip, $mediaZip)) {
             throw "Release ZIP is empty: $archivePath"
         }
         $requiredEntries = if ($archivePath -eq $portableZip) {
-                        @('CineWindows.exe', 'Qt6Widgets.dll', 'Qt6QuickWidgets.dll',
+                        @('CineWindows.exe', 'Qt6Widgets.dll',
                             'libMpvQt.dll', 'libmpv-2.dll',
               'platforms/qwindows.dll', 'qml/QtQuick/Controls/qtquickcontrols2plugin.dll')
         } else {
