@@ -16,7 +16,7 @@
 #
 cmake_minimum_required(VERSION 3.25)
 
-project(CineWindows VERSION 0.0.2 LANGUAGES CXX)
+project(CineWindows VERSION 0.0.3 LANGUAGES CXX)
 
 set(CINEWINDOWS_APP_ID "com.gyrolet.CineWindows")
 set(CINEWINDOWS_DISPLAY_NAME "CineWindows" CACHE STRING "Application display name")
@@ -214,6 +214,7 @@ set(CINEWINDOWS_QML_FILES
     qml/controls/CineTooltip.qml
     qml/controls/CineSpinner.qml
     qml/controls/CineScrollView.qml
+    qml/controls/CineDivider.qml
     qml/controls/CineSwitch.qml
     qml/controls/CineRangeSlider.qml
     qml/controls/LazyPopupLoader.qml
@@ -373,6 +374,7 @@ endif()
 
 option(CINEWINDOWS_BUILD_TESTS "Build focused configuration regression tests" OFF)
 if(CINEWINDOWS_BUILD_TESTS)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
     enable_testing()
     add_executable(CineWindowsConfigTests
         tests/ConfigTests.cpp
@@ -384,6 +386,25 @@ if(CINEWINDOWS_BUILD_TESTS)
     target_include_directories(CineWindowsConfigTests PRIVATE src)
     target_link_libraries(CineWindowsConfigTests PRIVATE Qt6::Core Qt6::Qml)
     add_test(NAME CineWindowsConfigTests COMMAND CineWindowsConfigTests)
+    add_executable(CineWindowsPlaybackTests
+        tests/PlaybackTests.cpp
+        src/player/CineMpvItem.cpp src/player/CineMpvItem.h
+        src/utils/MediaUtils.cpp
+        src/utils/PathUtils.cpp
+        src/app/LoggingCategories.cpp
+    )
+    set_target_properties(CineWindowsPlaybackTests PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+    target_include_directories(CineWindowsPlaybackTests PRIVATE src ${Libmpv_INCLUDE_DIRS})
+    target_link_libraries(CineWindowsPlaybackTests PRIVATE
+        Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick MpvQt::MpvQt ${Libmpv_LIBRARIES}
+    )
+    target_compile_definitions(CineWindowsPlaybackTests PRIVATE
+        CINEWINDOWS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+    add_test(NAME CineWindowsPlaybackTests COMMAND CineWindowsPlaybackTests)
+    set_tests_properties(CineWindowsPlaybackTests PROPERTIES TIMEOUT 60)
 endif()
 
 target_compile_definitions(CineWindows PRIVATE

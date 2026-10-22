@@ -133,6 +133,7 @@ ResponsivePopup {
         id: bindRow
         required property var action // Action definition object for this row
         readonly property bool stacked: root.width < 430
+        property bool showDivider: true
         width: parent ? parent.width : 0
         height: stacked ? 68 : 44
         Rectangle {
@@ -141,6 +142,14 @@ ResponsivePopup {
             color: bindRow.capturing ? Theme.glassActive : editHover.hovered ? Theme.glassHover : "transparent"
         }
         HoverHandler { id: editHover }
+        CineDivider {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            visible: bindRow.showDivider
+        }
 
         readonly property bool capturing: root.capturingId === action.id // Is this row actively capturing a chord?
         readonly property string sequence: KeyBindings.sequenceFor(action.id) // Current key chord for this action
@@ -430,7 +439,9 @@ ResponsivePopup {
                                 model: catCol.matchingActions
                                 BindRow {
                                     required property var modelData
+                                    required property int index
                                     action: modelData
+                                    showDivider: index < catCol.matchingActions.length - 1
                                 }
                             }
                         }

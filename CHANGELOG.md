@@ -4,6 +4,43 @@ All notable changes to CineWindows are documented here. Downloadable packages
 and their checksums are available from
 [GitHub Releases](https://github.com/Riteshp2001/CineWindows/releases).
 
+## [0.0.3] - 2026-10-23
+
+CineWindows 0.0.3 fixes subtitle selection and makes playback-position saving
+finish before the player closes.
+
+## Fixes
+
+- Selecting **None** in the subtitle menu now calls the embedded player's
+  supported track-disable API. The same correction applies to audio and video
+  track disabling.
+- When **Save Video Position on Close** is enabled, closing the window waits
+  for mpv's watch-later state to be written before tearing down the player.
+- The embedded player uses an explicit CineWindows watch-later directory and
+  applies the resume preference when opening media.
+
+## Interface
+
+- Consistent divider lines and spacing in grouped Preferences, Shortcuts,
+  Equalizer, and video-options sections.
+- Shared scrollbar gutters keep scrollbars clear of controls and text.
+- Swatch-first color selection with a custom editor and transparency support
+  for subtitle backgrounds.
+- Streamlined URL and subtitle-search dialogs and searchable keyboard shortcuts.
+
+## Verification
+
+- Adds real-libmpv regression coverage for the production subtitle-selection
+  action and writing/restoring saved playback positions.
+- Runs playback and configuration regression tests on Linux before publishing
+  AppImage release artifacts.
+
+Position saving remains optional: enable **Save Video Position on Close** in
+Preferences to resume files opened again later. Credentialed integrations and
+casting to external hardware are not covered by these automated tests.
+
+[Compare changes since v0.0.2](https://github.com/Riteshp2001/CineWindows/compare/v0.0.2...v0.0.3)
+
 ## [0.0.2] - 2026-09-15
 
 CineWindows 0.0.2 adds saved streaming-quality preferences, improves everyday
@@ -163,3 +200,4 @@ asset attribution.
 
 [0.0.1]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.1
 [0.0.2]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.2
+[0.0.3]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.3

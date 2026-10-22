@@ -180,6 +180,7 @@ Popup {
         height: visible ? 46 : 0
         radius: Theme.radius
         color: Theme.card
+        CineDivider { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.leftMargin: 12; anchors.rightMargin: 12 }
 
         function setValue(v) { // Clamp and apply a new value
             var newValue = Math.max(from, Math.min(to, v));
@@ -243,6 +244,7 @@ Popup {
         height: visible ? 46 : 0
         radius: Theme.radius
         color: Theme.card
+        CineDivider { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.leftMargin: 12; anchors.rightMargin: 12 }
 
         UndoButton {
             id: cundo
@@ -360,6 +362,7 @@ Popup {
         height: visible ? 46 : 0
         radius: Theme.radius
         color: Theme.card
+        CineDivider { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.leftMargin: 12; anchors.rightMargin: 12 }
 
         UndoButton {
             id: bundo

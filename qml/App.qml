@@ -1401,7 +1401,7 @@ ApplicationWindow {
             sessionManager.save(playlistModel, playlistModel.currentIndex, player.position);
         mediaLibrary.flushPlaybackState();
         if (SettingsManager.saveVideoPosition)
-            player.runCommandAsync(["write-watch-later-config"]);
+            player.savePlaybackPosition();
     }
 
     /// Shows chrome and clears cursor hide when returning from minimized/hidden states.

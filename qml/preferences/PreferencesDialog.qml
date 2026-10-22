@@ -83,10 +83,9 @@ ResponsivePopup {
     }
 
     // Horizontal separator line
-    component Sep: Rectangle {
+    component Sep: CineDivider {
         width: parent.width
         height: 1
-        color: Theme.separator
     }
 
     // Title with optional subtitle

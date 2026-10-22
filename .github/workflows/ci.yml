@@ -210,7 +210,14 @@ jobs:
             libxkbcommon-dev \
             libxcb1-dev \
             libdbus-1-dev \
-            pkg-config
+            pkg-config \
+            xvfb \
+            libxcb-cursor0 \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-keysyms1 \
+            libxcb-image0 \
+            libxcb-render-util0
 
       - name: Install ECM 6.15.0 (MpvQt dependency)
         run: |
@@ -243,13 +250,18 @@ jobs:
             qtlottie
 
       - name: Configure
-        run: cmake --preset release -DCINEWINDOWS_DISPLAY_NAME="CineWindows Beta"
+        run: cmake --preset release -DCINEWINDOWS_DISPLAY_NAME="CineWindows Beta" -DCINEWINDOWS_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build --preset release
 
       - name: QML lint
         run: cmake --build --preset release --target CineWindows_qmllint
+
+      - name: Playback and configuration regression tests
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: xvfb-run -a ctest --test-dir build/release -R 'CineWindows(Config|Playback)Tests' --output-on-failure
 
       - name: Release translations
         run: cmake --build --preset release --target release_translations

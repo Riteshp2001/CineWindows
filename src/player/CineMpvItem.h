@@ -311,6 +311,7 @@ public:
      * @thread Must be called on the Qt main thread.
      */
     Q_INVOKABLE void setTrackDisabled(const QString& property);
+    Q_INVOKABLE void savePlaybackPosition();
 
     /**
      * @brief Sets an arbitrary mpv option to the given value.

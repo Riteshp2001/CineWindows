@@ -237,6 +237,7 @@ ResponsivePopup {
                             }
                         }
 
+                        CineDivider { Layout.fillWidth: true }
                         GridLayout {
                             id: equalizerGrid
                             Layout.fillWidth: true
@@ -316,6 +317,7 @@ ResponsivePopup {
                         spacing: 12
 
                         Text { text: qsTr("Output tools"); color: Theme.text; font.pixelSize: Theme.fontSizeBody; font.bold: true }
+                        CineDivider { Layout.fillWidth: true }
                         GridLayout {
                             columns: root.compactLayout ? 1 : 2
                             Layout.fillWidth: true
@@ -364,6 +366,7 @@ ResponsivePopup {
                                 }
                             }
                         }
+                        CineDivider { Layout.fillWidth: true }
                         ColumnLayout {
                             Layout.fillWidth: true
                             Text { text: qsTr("HDR target peak"); color: Theme.mutedText; font.pixelSize: Theme.fontSizeCaption }

@@ -611,6 +611,11 @@ void CineMpvItem::setTrackDisabled(const QString& property)
     setPropertyAsync(property, QStringLiteral("no"));
 }
 
+void CineMpvItem::savePlaybackPosition()
+{
+    commandBlocking({QStringLiteral("write-watch-later-config")});
+}
+
 void CineMpvItem::setMpvOption(const QString& name, const QVariant& value)
 {
     // Queued but synchronous on the controller thread, so options keep their call order
