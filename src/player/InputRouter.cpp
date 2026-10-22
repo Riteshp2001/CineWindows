@@ -88,6 +88,11 @@ void InputRouter::forwardMouseButton(const QString& button)
     }
 }
 
+QString InputRouter::mpvKeyName(int key, int modifiers) const
+{
+    return mpvKey(key, static_cast<unsigned>(modifiers));
+}
+
 /**
  * @brief Converts a Qt key code and modifier bitmask into an mpv key name string.
  * @details Handles keypad keys, named special keys, shifted symbols, and letter case
@@ -229,6 +234,65 @@ QString InputRouter::mpvKey(int key, unsigned modifiers) const
             case Qt::Key_Pause:
                 base = QStringLiteral("PAUSE");
                 break;
+            case Qt::Key_Return:
+            case Qt::Key_Enter:
+                base = QStringLiteral("ENTER");
+                break;
+            case Qt::Key_Backspace:
+                base = QStringLiteral("BS");
+                break;
+            case Qt::Key_Tab:
+            case Qt::Key_Backtab:
+                base = QStringLiteral("TAB");
+                break;
+            case Qt::Key_Print:
+                base = QStringLiteral("PRINT");
+                break;
+            case Qt::Key_Menu:
+                base = QStringLiteral("MENU");
+                break;
+            case Qt::Key_MediaTogglePlayPause:
+                base = QStringLiteral("PLAYPAUSE");
+                break;
+            case Qt::Key_MediaPlay:
+                base = QStringLiteral("PLAYONLY");
+                break;
+            case Qt::Key_MediaPause:
+                base = QStringLiteral("PAUSEONLY");
+                break;
+            case Qt::Key_MediaStop:
+                base = QStringLiteral("STOP");
+                break;
+            case Qt::Key_MediaNext:
+                base = QStringLiteral("NEXT");
+                break;
+            case Qt::Key_MediaPrevious:
+                base = QStringLiteral("PREV");
+                break;
+            case Qt::Key_AudioForward:
+                base = QStringLiteral("FORWARD");
+                break;
+            case Qt::Key_AudioRewind:
+                base = QStringLiteral("REWIND");
+                break;
+            case Qt::Key_VolumeUp:
+                base = QStringLiteral("VOLUME_UP");
+                break;
+            case Qt::Key_VolumeDown:
+                base = QStringLiteral("VOLUME_DOWN");
+                break;
+            case Qt::Key_VolumeMute:
+                base = QStringLiteral("MUTE");
+                break;
+            case Qt::Key_Control:
+            case Qt::Key_Shift:
+            case Qt::Key_Alt:
+            case Qt::Key_AltGr:
+            case Qt::Key_Meta:
+            case Qt::Key_CapsLock:
+            case Qt::Key_NumLock:
+            case Qt::Key_ScrollLock:
+                return {};
             case Qt::Key_Comma:
                 base = QStringLiteral(",");
                 break;

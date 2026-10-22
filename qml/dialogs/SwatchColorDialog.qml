@@ -36,7 +36,7 @@ ResponsivePopup {
     modal: true
     dim: true
     preferredWidth: 520
-    preferredHeight: 420
+    preferredHeight: 480
     padding: 0
     focus: true
 
@@ -44,6 +44,7 @@ ResponsivePopup {
     property string title: qsTr("Subtitle Color")
     /// The currently selected color (highlighted in the grid)
     property color currentColor: "#ffffff"
+    property bool useAlpha: false
     /// Emitted with the chosen color when user presses Select
     signal accepted(color selectedColor)
 
@@ -69,7 +70,7 @@ ResponsivePopup {
     readonly property bool actionsWrapped: actionFlow.height > 38
 
     background: Rectangle {
-        radius: 16
+        radius: Theme.radius
         color: Theme.popover
         opacity: 0.97
         border.color: Theme.popoverBorder
@@ -113,14 +114,22 @@ ResponsivePopup {
         id: sw
         // The colour this swatch represents
         property color value: "#ffffff"
+        activeFocusOnTab: true
+        Accessible.role: Accessible.RadioButton
+        Accessible.name: qsTr("Color %1").arg(value.toString())
+        Accessible.checkable: true
+        Accessible.checked: isSelected
+        Accessible.onPressAction: root.currentColor = value
+        Keys.onSpacePressed: root.currentColor = value
+        Keys.onReturnPressed: root.currentColor = value
         // True when this swatch matches the dialog's current selection
         readonly property bool isSelected: Qt.colorEqual(root.currentColor, value)
         width: 44
         height: 44
-        radius: 9
+        radius: Theme.radius
         color: value
-        border.width: isSelected ? 3 : 1
-        border.color: isSelected ? Theme.accent : "#33ffffff"
+        border.width: isSelected || activeFocus || swatchMouse.containsMouse ? 2 : 1
+        border.color: isSelected || activeFocus || swatchMouse.containsMouse ? Theme.accent : "#33ffffff"
         Behavior on border.color {
             ColorAnimation {
                 duration: Theme.motionFast
@@ -131,15 +140,20 @@ ResponsivePopup {
             anchors.centerIn: parent
             visible: sw.isSelected
             name: "cine-check-symbolic"
-            tint: "#06181a"
+            tint: 0.2126 * sw.value.r + 0.7152 * sw.value.g + 0.0722 * sw.value.b > 0.5
+                ? "#101114" : "#ffffff"
             width: 18
             height: 18
         }
         MouseArea {
+            id: swatchMouse
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.currentColor = sw.value
+            onClicked: {
+                sw.forceActiveFocus();
+                root.currentColor = sw.value;
+            }
         }
     }
 
@@ -148,26 +162,26 @@ ResponsivePopup {
         anchors.top: headerBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: actionFlow.top
+        anchors.bottom: customSection.top
         anchors.topMargin: 18
         anchors.leftMargin: 20
         anchors.rightMargin: 20
         anchors.bottomMargin: 12
-        contentWidth: width
+        contentWidth: Math.max(0, width - Theme.scrollbarGutter)
         contentHeight: body.implicitHeight
         boundsBehavior: Flickable.StopAtBounds
         clip: true
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: ScrollBar { width: 8; policy: ScrollBar.AsNeeded }
 
         Column {
             id: body
-            width: swatchFlickable.width
+            width: swatchFlickable.contentWidth
             spacing: 18
 
             Grid {
                 id: swatchGrid
                 anchors.horizontalCenter: parent.horizontalCenter
-                columns: root.swatchColumns
+                columns: Math.max(1, Math.min(9, Math.floor((body.width + spacing) / (44 + spacing))))
                 spacing: 6
                 width: columns * 44 + Math.max(0, columns - 1) * spacing
                 height: childrenRect.height
@@ -181,30 +195,38 @@ ResponsivePopup {
                 }
             }
 
-            Text {
-                text: qsTr("Custom")
-                color: Theme.text
-                font.pixelSize: 14
-                font.bold: true
+        }
+    }
+
+    Item {
+        id: customSection
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: actionFlow.top
+        anchors.leftMargin: 20
+        anchors.rightMargin: 20
+        anchors.bottomMargin: 12
+        height: 72
+        Text {
+            text: qsTr("Custom")
+            color: Theme.text
+            font.pixelSize: 14
+            font.bold: true
+        }
+        Row {
+            anchors.bottom: parent.bottom
+            spacing: 10
+            CineButton {
+                id: addBtn
+                btnTooltip: qsTr("Custom color")
+                styleVariant: "icon"
+                iconName: "cine-list-add-symbolic"
+                buttonSize: 44
+                width: 44
+                height: 44
+                onClicked: hsvDialog.openFor(root.customColor)
             }
-
-            Row {
-                spacing: 10
-
-                CineButton {
-                    id: addBtn
-                    styleVariant: "text"
-                    iconName: "cine-list-add-symbolic"
-                    buttonSize: 44
-                    width: 44
-                    height: 44
-                    onClicked: hsvDialog.openFor(root.customColor)
-                }
-
-                Swatch {
-                    value: root.customColor
-                }
-            }
+            Swatch { value: root.customColor }
         }
     }
 
@@ -243,16 +265,19 @@ ResponsivePopup {
     }
 
     // Nested HSV picker used by the "+" button.
-    HsvColorDialog {
+    LazyPopupLoader {
         id: hsvDialog
-        objectName: "customHsvDialog"
-        metrics: root.metrics
-        title: qsTr("Custom Color")
-        useAlpha: false
-        // c: colour chosen from the HSV picker
-        onAccepted: function (c) {
-            root.customColor = c;
-            root.currentColor = c;
+        sourceComponent: Component {
+            HsvColorDialog {
+                objectName: "customHsvDialog"
+                metrics: root.metrics
+                title: qsTr("Custom Color")
+                useAlpha: root.useAlpha
+                onAccepted: function (c) {
+                    root.customColor = c;
+                    root.currentColor = c;
+                }
+            }
         }
     }
 }

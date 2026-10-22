@@ -60,8 +60,8 @@ ApplicationWindow {
     visible: false
     color: useCustomWindowFrame ? "transparent" : Theme.background
     title: player.mediaTitle.length > 0
-        ? player.mediaTitle + " - " + Qt.application.displayName
-        : Qt.application.displayName
+        ? player.mediaTitle + " - " + Qt.application.name
+        : Qt.application.name
     flags: Qt.Window
         | (useCustomWindowFrame ? Qt.FramelessWindowHint : 0)
         | (compactMode === 2 ? Qt.WindowStaysOnTopHint : 0)
@@ -315,7 +315,7 @@ ApplicationWindow {
     property string dropActionText: qsTr("Play") ///< Label text shown in the drop overlay
 
     readonly property bool anyPopupOpen: {
-        return videoContextMenu.popupVisible || subtitleMenu.popupVisible || audioMenu.popupVisible || videoMenu.popupVisible || chaptersMenu.popupVisible || playlistDrawer.popupVisible || preferencesDialog.popupVisible || optionsDialog.popupVisible || aboutDialog.popupVisible || shortcutsDialog.popupVisible || urlDialog.popupVisible || addUrlDialog.popupVisible || (typeof controls !== "undefined" && controls.volumePopupOpen) || (typeof header !== "undefined" && (header.openMenuOpen || header.mainMenuOpen));
+        return videoContextMenu.popupVisible || subtitleMenu.popupVisible || audioMenu.popupVisible || videoMenu.popupVisible || chaptersMenu.popupVisible || playlistDrawer.popupVisible || preferencesDialog.popupVisible || optionsDialog.popupVisible || aboutDialog.popupVisible || shortcutsDialog.popupVisible || urlDialog.popupVisible || addUrlDialog.popupVisible || advancedPlaybackDialog.popupVisible || youtubeSearchDialog.popupVisible || subtitleSearchDialog.popupVisible || remoteControlDialog.popupVisible || castDialog.popupVisible || addSubtitleDialog.popupVisible || addAudioDialog.popupVisible || openFolderDialog.popupVisible || addFolderDialog.popupVisible || (typeof controls !== "undefined" && controls.volumePopupOpen) || (typeof header !== "undefined" && (header.openMenuOpen || header.mainMenuOpen));
     }
 
     /// Converts a QKeyEvent into a canonical key sequence string via the KeyBindings registry.
@@ -704,7 +704,6 @@ ApplicationWindow {
     }
     MpvConfig {
         id: mpvConfig
-        player: player
     }
     VideoOptionsController {
         id: videoOptions
@@ -823,7 +822,7 @@ ApplicationWindow {
     /// @param trackId Track id to select, or <= 0 to disable subtitles.
     function selectSubtitleTrack(trackId) {
         if (trackId <= 0)
-            player.setTrackOff("sid");
+            player.setTrackDisabled("sid");
         else
             player.setTrack("sid", trackId);
         subtitleTracks.selectedTrack = Math.max(0, trackId);
@@ -833,7 +832,7 @@ ApplicationWindow {
     /// @param trackId Track id to select, or <= 0 to disable audio.
     function selectAudioTrack(trackId) {
         if (trackId <= 0)
-            player.setTrackOff("aid");
+            player.setTrackDisabled("aid");
         else
             player.setTrack("aid", trackId);
         audioTracks.selectedTrack = Math.max(0, trackId);
@@ -843,7 +842,7 @@ ApplicationWindow {
     /// @param trackId Track id to select, or <= 0 to disable video.
     function selectVideoTrack(trackId) {
         if (trackId <= 0)
-            player.setTrackOff("vid");
+            player.setTrackDisabled("vid");
         else
             player.setTrack("vid", trackId);
         videoTracks.selectedTrack = Math.max(0, trackId);
@@ -1330,10 +1329,69 @@ ApplicationWindow {
         customWindowFrame = SettingsManager.customWindowFrame;
         ensureWindowGeometryVisible();
         controller.applySettings();
+        // Attach the mpv config folder after the preferences so mpv.conf values win at startup.
+        mpvConfig.player = player;
         Qt.callLater(runDeferredStartup);
         Qt.callLater(function () {
             ignoreVolumeOsd = false;
         });
+    }
+
+    onIsFullscreenChanged: player.fullscreen = isFullscreen
+
+    /// Handles keys that bypass the app shortcut table: media keys and keys bound in input.conf.
+    /// @returns True when the event was consumed.
+    function handlePassThroughKey(event) {
+        if (mpvConfig.isMpvKeyBound(inputRouter.mpvKeyName(event.key, event.modifiers)))
+            return inputRouter.handleKey(event.key, event.modifiers, true);
+        switch (event.key) {
+        case Qt.Key_MediaTogglePlayPause:
+            togglePause();
+            break;
+        case Qt.Key_MediaPlay:
+            player.pause = false;
+            break;
+        case Qt.Key_MediaPause:
+            player.pause = true;
+            break;
+        case Qt.Key_MediaStop:
+            controller.stop();
+            break;
+        case Qt.Key_MediaNext:
+            controller.playNext();
+            break;
+        case Qt.Key_MediaPrevious:
+            controller.playPrevious();
+            break;
+        default:
+            return false;
+        }
+        markAppHandledKey(event.key);
+        return true;
+    }
+
+    /// Returns the mpv modifier prefix (e.g. "Ctrl+Shift+") for a pointer event.
+    function mpvModifierPrefix(modifiers) {
+        var prefix = "";
+        if (modifiers & Qt.ControlModifier)
+            prefix += "Ctrl+";
+        if (modifiers & Qt.AltModifier)
+            prefix += "Alt+";
+        if (modifiers & Qt.ShiftModifier)
+            prefix += "Shift+";
+        if (modifiers & Qt.MetaModifier)
+            prefix += "Meta+";
+        return prefix;
+    }
+
+    /// Sends a mouse key name such as "WHEEL_UP" to mpv when input.conf binds it.
+    /// @returns True when input.conf handled the key.
+    function forwardBoundMouseKey(name, modifiers) {
+        var key = mpvModifierPrefix(modifiers) + name;
+        if (!mpvConfig.isMpvKeyBound(key))
+            return false;
+        player.runCommandAsync(["keypress", key]);
+        return true;
     }
 
     /// Saves window geometry, session state, and watch-later config on close.
@@ -1418,6 +1476,10 @@ ApplicationWindow {
                     event.accepted = true;
                     return;
                 }
+                if (mpvConfig.isMpvKeyBound(inputRouter.mpvKeyName(event.key, event.modifiers))) {
+                    event.accepted = true;
+                    return;
+                }
                 var sequence = window.sequenceFromKeyEvent(event);
                 if (sequence.length > 0 && window.isWindowShortcut(sequence))
                     event.accepted = true;
@@ -1428,6 +1490,10 @@ ApplicationWindow {
                     if (event.key === Qt.Key_Escape || (event.key === Qt.Key_D && (event.modifiers & Qt.ControlModifier))) {
                         window.consoleInputActive = false;
                     }
+                    return;
+                }
+                if (window.handlePassThroughKey(event)) {
+                    event.accepted = true;
                     return;
                 }
                 if (event.key === Qt.Key_F11) {
@@ -1485,7 +1551,7 @@ ApplicationWindow {
             }
             onFileStarted: {
                 window.leaveMediaHub();
-                player.setPause(false);
+                player.pause = false;
                 window.ignoreVolumeOsd = true;
                 window.pipSubtitleTrack = 0;
                 subtitleTracks.clear();
@@ -1508,9 +1574,7 @@ ApplicationWindow {
             }
             onEndFile: function (reason) {
                 bufferingSpinner.visible = false;
-                if (reason === "eof" && playlistModel.currentIndex + 1 < playlistModel.count)
-                    controller.playNext();
-                else if (reason === "error")
+                if (reason === "error")
                     toastText.showMessage(qsTr("Unable to play this media. Check the URL or update yt-dlp."));
             }
 
@@ -1532,12 +1596,22 @@ ApplicationWindow {
             onFileLoaded: {
                 bufferingSpinner.visible = false;
                 window.leaveMediaHub();
-                controller.applySettings();
                 player.forceActiveFocus();
                 Qt.callLater(function () {
                     window.ignoreVolumeOsd = false;
                 });
             }
+            onFullscreenChanged: {
+                if (player.fullscreen === window.isFullscreen)
+                    return;
+                if (window.stateTransitioning)
+                    player.fullscreen = window.isFullscreen;
+                else if (window.compactMode === 2 && player.fullscreen)
+                    window.exitCompactMode();
+                else
+                    window.toggleFullscreen();
+            }
+            onShutdownRequested: window.close()
         }
 
         // Click handler overlay on the video area
@@ -1593,15 +1667,19 @@ ApplicationWindow {
                 window.showChrome(2200);
 
                 if (wheel.angleDelta.y > 0) {
-                    controller.nudgeVolume(2);
+                    if (!window.forwardBoundMouseKey("WHEEL_UP", wheel.modifiers))
+                        controller.nudgeVolume(2);
                 } else if (wheel.angleDelta.y < 0) {
-                    controller.nudgeVolume(-2);
+                    if (!window.forwardBoundMouseKey("WHEEL_DOWN", wheel.modifiers))
+                        controller.nudgeVolume(-2);
                 }
 
                 if (wheel.angleDelta.x > 0) {
-                    window.showSeek(10);
+                    if (!window.forwardBoundMouseKey("WHEEL_LEFT", wheel.modifiers))
+                        window.showSeek(10);
                 } else if (wheel.angleDelta.x < 0) {
-                    window.showSeek(-10);
+                    if (!window.forwardBoundMouseKey("WHEEL_RIGHT", wheel.modifiers))
+                        window.showSeek(-10);
                 }
 
                 wheel.accepted = true;
@@ -1630,9 +1708,11 @@ ApplicationWindow {
                         videoContextMenu.popup(videoMouseArea, mouse.x, mouse.y);
                     }
                 } else if (mouse.button === Qt.BackButton) {
-                    controller.playPrevious();
+                    if (!window.forwardBoundMouseKey("MBTN_BACK", mouse.modifiers))
+                        controller.playPrevious();
                 } else if (mouse.button === Qt.ForwardButton) {
-                    controller.playNext();
+                    if (!window.forwardBoundMouseKey("MBTN_FORWARD", mouse.modifiers))
+                        controller.playNext();
                 }
             }
 
@@ -1704,25 +1784,27 @@ ApplicationWindow {
             visible: !window.mediaHubVisible && (showing || opacity > 0)
         }
 
-        MediaHub {
-            id: mediaHub
-            metrics: viewportMetrics
+        Loader {
             anchors.fill: parent
-            clip: true
             z: 7
-            visible: window.mediaHubVisible
-            fileBrowser: fileBrowserModel
-            mediaLibrary: mediaLibrary
-            thumbnailService: mediaThumbnailService
-            controller: controller
-            section: window.mediaHubSection
-            playerActive: window.mediaActive
-            onSectionRequested: function (section) { window.mediaHubSection = section }
-            onOpenFilesRequested: openFilesDialog.open()
-            onOpenFolderRequested: openFolderDialog.open()
-            onOpenUrlRequested: urlDialog.open()
-            onAddLibraryFolderRequested: libraryFolderDialog.open()
-            onCloseRequested: if (window.mediaActive) window.leaveMediaHub()
+            active: window.mediaHubVisible
+            asynchronous: true
+            sourceComponent: MediaHub {
+                metrics: viewportMetrics
+                clip: true
+                fileBrowser: fileBrowserModel
+                mediaLibrary: mediaLibrary
+                thumbnailService: mediaThumbnailService
+                controller: controller
+                section: window.mediaHubSection
+                playerActive: window.mediaActive
+                onSectionRequested: function (section) { window.mediaHubSection = section }
+                onOpenFilesRequested: openFilesDialog.open()
+                onOpenFolderRequested: openFolderDialog.open()
+                onOpenUrlRequested: urlDialog.open()
+                onAddLibraryFolderRequested: libraryFolderDialog.open()
+                onCloseRequested: if (window.mediaActive) window.leaveMediaHub()
+            }
         }
 
         DropArea {
@@ -1736,7 +1818,14 @@ ApplicationWindow {
                 window.dropActive = false;
                 var playable = [];
                 for (var i = 0; i < drop.urls.length; ++i) {
+                    var folderItems = fileService.listMediaFiles(drop.urls[i]);
+                    if (folderItems.length > 0) {
+                        playable = playable.concat(folderItems);
+                        continue;
+                    }
                     var p = fileService.urlsToPaths([drop.urls[i]])[0];
+                    if (!p)
+                        continue;
                     if (window.mediaActive && fileService.isSubtitle(p))
                         player.addSubtitle(p);
                     else
@@ -1893,16 +1982,26 @@ ApplicationWindow {
             }
         }
 
-        QtObject {
+        LazyPopupLoader {
             id: urlDialog
-            readonly property bool popupVisible: fileService.mediaDialogOpen
-            function open() { fileService.openMediaDialog(false); }
+            sourceComponent: Component {
+                UrlDialog {
+                    fileService: fileService
+                    onAcceptedUrl: function (url) { controller.openPaths([url], true); }
+                }
+            }
         }
 
-        QtObject {
+        LazyPopupLoader {
             id: addUrlDialog
-            readonly property bool popupVisible: fileService.mediaDialogOpen
-            function open() { fileService.openMediaDialog(true); }
+            sourceComponent: Component {
+                UrlDialog {
+                    title: qsTr("Add URL")
+                    actionText: qsTr("Add to Playlist")
+                    fileService: fileService
+                    onAcceptedUrl: function (url) { controller.openPaths([url], false); }
+                }
+            }
         }
 
         LazyPopupLoader {
@@ -1912,6 +2011,7 @@ ApplicationWindow {
                     updateService: appUpdateService
                     metadataService: tmdbMetadata
                     diagnostics: window.diagnostics
+                    mpvConfig: mpvConfig
                 }
             }
         }

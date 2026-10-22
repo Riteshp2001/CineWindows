@@ -80,7 +80,7 @@ ResponsivePopup {
             id: comboItem
             required property var modelData
             required property int index
-            width: ListView.view ? ListView.view.width : combo.width
+            width: Math.max(0, (ListView.view ? ListView.view.width : combo.width) - Theme.scrollbarGutter)
             height: 36
             highlighted: combo.highlightedIndex === index
             background: Rectangle {
@@ -187,6 +187,7 @@ ResponsivePopup {
         }
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.separator }
         Flickable {
+            id: settingsFlickable
             objectName: "dialogSurface"
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -200,7 +201,7 @@ ResponsivePopup {
             ColumnLayout {
                 id: settingsColumn
                 x: 22; y: 20
-                width: parent.width - 44
+                width: Math.max(0, settingsFlickable.width - 44 - Theme.scrollbarGutter)
                 spacing: 14
 
                 Rectangle {

@@ -16,6 +16,8 @@
  * Modified by: Ritesh Pandit
  */
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls.Basic
 import CineWindows

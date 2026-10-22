@@ -67,7 +67,8 @@ void ensureMpvSubdirs(const QString& path)
     const QDir dir(path);
     ensureDir(dir.filePath(QStringLiteral("scripts")));
     ensureDir(dir.filePath(QStringLiteral("script-opts")));
-    ensureDir(dir.filePath(QStringLiteral("watch_later")));
+    ensureDir(dir.filePath(QStringLiteral("shaders")));
+    ensureDir(dir.filePath(QStringLiteral("fonts")));
 }
 } // namespace
 
@@ -124,46 +125,46 @@ QString appConfigDir()
 }
 
 /**
- * @brief Returns the mpv configuration directory path used by CineWindows.
- * @return Absolute path to the internal mpv config directory.
+ * @brief Returns the CineWindows-specific mpv configuration directory.
+ * @details A "portable_config" folder next to the executable wins (mpv's portable
+ *          convention), then CINEWINDOWS_DATA_DIR/mpv, then %APPDATA%/CineWindows/mpv
+ *          (~/.config/CineWindows/mpv elsewhere). The standalone mpv folder is never used.
+ * @return Absolute path to the CineWindows mpv config directory.
  */
 QString mpvConfigDir()
 {
-    const QString path = ensureDir(QDir(roamingConfigBase()).filePath(QStringLiteral("cine")));
+    QString path = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("portable_config"));
+    if (!QFileInfo(path).isDir())
+    {
+        const QString overridePath = qEnvironmentVariable("CINEWINDOWS_DATA_DIR");
+        path = overridePath.isEmpty()
+            ? QDir(roamingConfigBase()).filePath(QStringLiteral("CineWindows/mpv"))
+            : QDir(QDir::fromNativeSeparators(overridePath)).filePath(QStringLiteral("mpv"));
+    }
+    path = QDir::cleanPath(path);
+    ensureDir(path);
     ensureMpvSubdirs(path);
     return path;
 }
 
 /**
- * @brief Returns the user's own mpv configuration directory path.
- * @return Absolute path to the user's mpv config directory.
+ * @brief Returns the standalone mpv player's configuration directory without creating it.
+ * @return Absolute path such as %APPDATA%/mpv, used only as an explicit import source.
  */
-QString mpvUserConfigDir()
+QString standardMpvConfigDir()
 {
-    // mpv's portable mode: a "portable_config" folder next to the executable
-    // takes precedence over the per-user config location.
-    const QString portable = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("portable_config"));
-    if (QFileInfo::exists(portable))
-    {
-        return portable;
-    }
+    return QDir(roamingConfigBase()).filePath(QStringLiteral("mpv"));
+}
 
-#ifdef Q_OS_WIN
-    const QString appData = qEnvironmentVariable("APPDATA");
-    if (!appData.isEmpty())
-    {
-        return ensureDir(QDir(QDir::fromNativeSeparators(appData)).filePath(QStringLiteral("mpv")));
-    }
-#endif
-
-    const QString config = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
-    const QString base = config.isEmpty() ? QDir::homePath() + QStringLiteral("/.config") : config;
-    return ensureDir(QDir(base).filePath(QStringLiteral("mpv")));
+/** @brief Returns the folder older releases used as MPV_HOME, without creating it. */
+QString legacyMpvConfigDir()
+{
+    return QDir(roamingConfigBase()).filePath(QStringLiteral("cine"));
 }
 
 /**
  * @brief Sets up the mpv environment by configuring MPV_HOME and PATH.
- * @details Points MPV_HOME to the internal mpv config directory and prepends
+ * @details Points MPV_HOME to the CineWindows mpv config directory and prepends
  *          the yt-dlp tool directory to PATH if not already present.
  */
 void setupMpvEnvironment()

@@ -29,16 +29,19 @@ namespace PathUtils {
 QString appConfigDir();
 
 /**
- * @brief Returns the mpv configuration directory path used by CineWindows.
- * @return Absolute path to the internal mpv config directory.
+ * @brief Returns the CineWindows-specific mpv configuration directory, creating it if needed.
+ * @return Absolute path such as %APPDATA%/CineWindows/mpv (or portable_config next to the executable).
  */
 QString mpvConfigDir();
 
 /**
- * @brief Returns the user's own mpv configuration directory path.
- * @return Absolute path to the user's mpv config directory (e.g. ~/.config/mpv).
+ * @brief Returns the standalone mpv player's configuration directory without creating it.
+ * @return Absolute path such as %APPDATA%/mpv; only used as an explicit import source.
  */
-QString mpvUserConfigDir();
+QString standardMpvConfigDir();
+
+/** @brief Returns the folder older releases used as MPV_HOME, without creating it. */
+QString legacyMpvConfigDir();
 
 /**
  * @brief Sets up the mpv environment by configuring the MPV_HOME and related variables.

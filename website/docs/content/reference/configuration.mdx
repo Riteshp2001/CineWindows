@@ -47,13 +47,19 @@ For installed versions, the config root is `%APPDATA%/gyrolet/CineWindows/`.
 <Tab title="mpv Config Directory">
 
 ```
-%APPDATA%\mpv\
+%APPDATA%\CineWindows\mpv\
   ├── mpv.conf              # Runtime mpv options (loaded via "include")
-  ├── input.conf            # Additional key bindings (via "keybind" command)
-  └── scripts\              # Lua/JS scripts (via "load-script" command)
+  ├── input.conf            # Additional key bindings in an app-owned input section
+  ├── scripts\              # Lua/JS scripts and script packages
+  ├── script-opts\          # Per-script .conf files
+  ├── shaders\              # GLSL shaders
+  ├── fonts\                # Subtitle and OSD fonts
+  └── watch_later\          # Saved playback positions
 ```
 
-CineWindows reads the standard mpv config directory at startup through the `MpvConfig` loader. This is separate from the application settings — it applies mpv-native options to the embedded libmpv instance.
+CineWindows uses its own mpv folder, separate from application preferences and the standalone player's `%APPDATA%\mpv` folder. An existing `portable_config` directory beside the executable takes precedence. Otherwise, setting `CINEWINDOWS_DATA_DIR` places the mpv folder under that directory. On other platforms the default is `~/.config/CineWindows/mpv`.
+
+Preferences provides commands to open this folder, edit either configuration file, reload configuration, and explicitly import standalone mpv files. Import leaves the source untouched and keeps existing destination files, except unmodified templates. CineWindows never automatically reads standalone mpv configuration.
 
 </Tab>
 </Tabs>
@@ -127,13 +133,19 @@ Key bindings are serialised as a JSON string stored in the `input/keyBindings` s
 
 ## mpv.conf Support
 
-CineWindows loads the user's `mpv.conf` from `%APPDATA%/mpv/mpv.conf` at runtime via the `MpvConfig` loader. Since libmpv defaults to `config=no` and MpvQt initialises mpv immediately, the config is applied after startup using mpv's `include` option.
+CineWindows loads `mpv.conf` from its dedicated mpv folder after applying application preferences, so configured mpv options take precedence at startup. Since libmpv defaults to `config=no` and MpvQt initialises mpv immediately, configuration is applied at runtime using mpv's `include` option.
 
-Only runtime-settable options in `mpv.conf` will apply. Options that must be set before mpv initialisation (e.g. `vo`, `ao`, `gpu-context`) are ignored when loaded via `include`.
+Supported features include profiles, conditional profiles, nested `include=` files, `~~/` paths, hardware decoding options, shaders, script options, and BOM-marked UTF-8/UTF-16 configuration files. Nested includes are limited to eight levels. Relative include paths resolve against the CineWindows mpv folder.
+
+Only runtime-settable options can apply. CineWindows owns the video output, graphics context, and native window, so options such as `vo`, `gpu-api`, `gpu-context`, `fullscreen`, `geometry`, `border`, and `ontop` are ignored in configuration files. Preferences lists ignored options. No embedded player can support every standalone mpv option or script unchanged.
+
+Lua/JavaScript files and script packages containing `main.lua` or `main.js` are loaded from `scripts`. Per-script configuration comes from `script-opts/<script-name>.conf`; explicit `script-opts` values in `mpv.conf` take priority. Reload adds new scripts without loading existing scripts twice. Restart after changing or removing a running script, or when an option requires reinitialisation. Removed ordinary option assignments are not automatically reset to their defaults by Reload.
 
 ## input.conf Support
 
-CineWindows reads `%APPDATA%/mpv/input.conf` and registers each binding using mpv's `keybind` command. These bindings take priority over the application defaults for keys that are forwarded into libmpv.
+CineWindows reads `input.conf` from its own mpv folder, or the path selected by `input-conf=` in `mpv.conf`, and registers default-section bindings in a dedicated mpv input section. Bindings take priority over application shortcuts while the player has keyboard focus; text fields retain normal editing behavior. Reload replaces the section so commands removed from the file no longer execute. Non-default named input sections and multi-key sequences are not handled by the application shortcut override lookup.
+
+Wheel and mouse back/forward bindings are forwarded when configured. Left/right click actions remain application preferences. Commands that change mpv's fullscreen state are mirrored to the native window, and mpv's `quit` command closes CineWindows.
 
 The `MpvConfig` class exposes `isOverridden(qtSequence)` and `commandFor(qtSequence)` to QML so the Shortcuts settings panel can display collision warnings when a key is also bound in `input.conf`.
 

@@ -314,7 +314,7 @@ Popup {
 
                     property bool isMatch: search.text.length === 0 || delegateItem.name.toLowerCase().indexOf(search.text.toLowerCase()) !== -1
 
-                    width: list.width
+                    width: Math.max(0, list.width - Theme.scrollbarGutter)
                     height: isMatch ? 55 : 0
                     visible: isMatch
 

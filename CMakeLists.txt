@@ -213,6 +213,7 @@ set(CINEWINDOWS_QML_FILES
     qml/controls/CineIcon.qml
     qml/controls/CineTooltip.qml
     qml/controls/CineSpinner.qml
+    qml/controls/CineScrollView.qml
     qml/controls/CineSwitch.qml
     qml/controls/CineRangeSlider.qml
     qml/controls/LazyPopupLoader.qml
@@ -368,6 +369,21 @@ target_link_libraries(CineWindows PRIVATE
 
 if(WIN32)
     target_link_libraries(CineWindows PRIVATE dwmapi)
+endif()
+
+option(CINEWINDOWS_BUILD_TESTS "Build focused configuration regression tests" OFF)
+if(CINEWINDOWS_BUILD_TESTS)
+    enable_testing()
+    add_executable(CineWindowsConfigTests
+        tests/ConfigTests.cpp
+        src/player/MpvConfigFilter.cpp
+        src/utils/PathUtils.cpp
+        src/models/PlaylistModel.cpp
+        src/utils/MediaUtils.cpp
+    )
+    target_include_directories(CineWindowsConfigTests PRIVATE src)
+    target_link_libraries(CineWindowsConfigTests PRIVATE Qt6::Core Qt6::Qml)
+    add_test(NAME CineWindowsConfigTests COMMAND CineWindowsConfigTests)
 endif()
 
 target_compile_definitions(CineWindows PRIVATE

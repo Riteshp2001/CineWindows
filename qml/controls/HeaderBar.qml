@@ -318,7 +318,7 @@ Item {
         y: Math.round((root.height - height) / 2)
         text: root.player && root.player.mediaTitle.length > 0
             ? root.player.mediaTitle
-            : Qt.application.displayName
+            : Qt.application.name
         color: Theme.headerText
         font.bold: true
         font.pixelSize: root.metrics.fontBody

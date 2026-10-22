@@ -38,6 +38,7 @@ CineMpvItem::CineMpvItem(QQuickItem* parent)
     observeProperty(QStringLiteral("duration"), MPV_FORMAT_DOUBLE);
     observeProperty(QStringLiteral("pause"), MPV_FORMAT_FLAG);
     observeProperty(QStringLiteral("idle-active"), MPV_FORMAT_FLAG);
+    observeProperty(QStringLiteral("eof-reached"), MPV_FORMAT_FLAG);
     observeProperty(QStringLiteral("volume"), MPV_FORMAT_INT64);
     observeProperty(QStringLiteral("mute"), MPV_FORMAT_FLAG);
     observeProperty(QStringLiteral("speed"), MPV_FORMAT_DOUBLE);
@@ -48,6 +49,7 @@ CineMpvItem::CineMpvItem(QQuickItem* parent)
     observeProperty(QStringLiteral("sid"), MPV_FORMAT_NODE);
     observeProperty(QStringLiteral("aid"), MPV_FORMAT_NODE);
     observeProperty(QStringLiteral("vid"), MPV_FORMAT_NODE);
+    observeProperty(QStringLiteral("fullscreen"), MPV_FORMAT_FLAG);
 
     setupConnections();
     setupMpvLogging();
@@ -135,6 +137,18 @@ void CineMpvItem::drainMpvLogMessages()
         mpv_event* event = mpv_wait_event(m_logClient, 0);
         if (!event || event->event_id == MPV_EVENT_NONE)
             break;
+        if (event->event_id == MPV_EVENT_SHUTDOWN)
+        {
+            // The core is gone (e.g. "quit" from input.conf or IPC); stop polling it.
+            m_logDrainTimer.stop();
+            if (!m_shutdown)
+            {
+                m_shutdown = true;
+                qCInfo(cineMpvLog) << "libmpv core shut down";
+                Q_EMIT shutdownRequested();
+            }
+            break;
+        }
         if (event->event_id != MPV_EVENT_LOG_MESSAGE || !event->data)
             continue;
 
@@ -179,6 +193,11 @@ void CineMpvItem::configureDefaults()
     setProperty(QStringLiteral("volume-max"), 200);
     setProperty(QStringLiteral("screenshot-directory"), PathUtils::screenshotsDir());
     setProperty(QStringLiteral("screenshot-template"), QStringLiteral("cine_%n"));
+    // libmpv runs with config=no, so mpv cannot resolve its ~~/ defaults for these folders.
+    const QDir configDir(PathUtils::mpvConfigDir());
+    setProperty(QStringLiteral("watch-later-dir"), configDir.filePath(QStringLiteral("watch_later")));
+    setProperty(QStringLiteral("sub-fonts-dir"), configDir.filePath(QStringLiteral("fonts")));
+    setProperty(QStringLiteral("osd-fonts-dir"), configDir.filePath(QStringLiteral("fonts")));
     setProperty(QStringLiteral("audio-file-auto"), QStringLiteral("fuzzy"));
     setProperty(QStringLiteral("sub-auto"), QStringLiteral("fuzzy"));
     setProperty(QStringLiteral("sub-file-paths"),
@@ -268,6 +287,16 @@ void CineMpvItem::onPropertyChanged(const QString& property, const QVariant& val
             Q_EMIT idleChanged();
         }
     }
+    else if (property == QStringLiteral("eof-reached"))
+    {
+        const bool reached = value.toBool();
+        if (m_eofReached != reached)
+        {
+            m_eofReached = reached;
+            if (reached)
+                Q_EMIT playbackFinished();
+        }
+    }
     else if (property == QStringLiteral("volume"))
     {
         const int volumeValue = value.toInt();
@@ -320,6 +349,15 @@ void CineMpvItem::onPropertyChanged(const QString& property, const QVariant& val
     else if (property == QStringLiteral("chapter-list"))
     {
         Q_EMIT chaptersChanged(value.toList());
+    }
+    else if (property == QStringLiteral("fullscreen"))
+    {
+        const bool fullscreenValue = value.toBool();
+        if (m_fullscreen != fullscreenValue)
+        {
+            m_fullscreen = fullscreenValue;
+            Q_EMIT fullscreenChanged();
+        }
     }
 }
 
@@ -392,6 +430,21 @@ bool CineMpvItem::rendererReady() const
 int CineMpvItem::videoWidth() const { return m_videoWidth; }
 int CineMpvItem::videoHeight() const { return m_videoHeight; }
 double CineMpvItem::videoAspectRatio() const { return m_videoAspectRatio; }
+
+bool CineMpvItem::fullscreen() const
+{
+    return m_fullscreen;
+}
+
+void CineMpvItem::setFullscreen(bool value)
+{
+    if (m_fullscreen == value)
+        return;
+    // Update the cache first so mpv's echo of this change is not treated as a request.
+    m_fullscreen = value;
+    setPropertyAsync(QStringLiteral("fullscreen"), value);
+    Q_EMIT fullscreenChanged();
+}
 
 void CineMpvItem::updateVideoGeometry()
 {
@@ -560,7 +613,9 @@ void CineMpvItem::setTrackDisabled(const QString& property)
 
 void CineMpvItem::setMpvOption(const QString& name, const QVariant& value)
 {
-    setPropertyAsync(name, value);
+    // Queued but synchronous on the controller thread, so options keep their call order
+    // relative to MpvConfig's include and other queued player calls.
+    setProperty(name, value);
 }
 
 QVariant CineMpvItem::mpvOption(const QString& name)

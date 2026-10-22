@@ -77,6 +77,14 @@ public:
      */
     Q_INVOKABLE void forwardMouseButton(const QString& button);
 
+    /**
+     * @brief Returns the mpv key name a key event would be forwarded as.
+     * @param key       Qt key code.
+     * @param modifiers Bitmask of Qt keyboard modifiers.
+     * @return mpv key name (e.g. "Ctrl+a", "KP1", "ENTER") or an empty string if unmapped.
+     */
+    Q_INVOKABLE QString mpvKeyName(int key, int modifiers) const;
+
 Q_SIGNALS:
     /**
      * @brief Emitted when the player property changes.

@@ -73,6 +73,8 @@ Popup {
     height: Math.min(380, Math.max(250, (parent ? parent.height : 600) - 220))
     modal: false
     dim: false
+    focus: true
+    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     leftPadding: 10
 
     Binding {
@@ -130,10 +132,14 @@ Popup {
     component MiniButton: AbstractButton { // Small icon-only button for stepper/row actions
         id: miniBtn
         property string actionIcon: "" // Icon name for the button
+        property string actionName: ""
         implicitWidth: 38
         implicitHeight: 30
         hoverEnabled: true
-        Accessible.name: miniBtn.actionIcon.length > 0 ? miniBtn.actionIcon : ""
+        Accessible.name: actionName
+        ToolTip.text: actionName
+        ToolTip.visible: hovered
+        ToolTip.delay: 500
         background: Rectangle {
             radius: Theme.radius
             color: miniBtn.down ? Theme.panelStrong : (miniBtn.hovered ? Theme.cardHover : Theme.cardStrong)
@@ -183,6 +189,7 @@ Popup {
 
         UndoButton {
             id: undo
+            btnTooltip: qsTr("Reset %1").arg(stepper.label)
             anchors.left: parent.left
             anchors.leftMargin: 6
             anchors.verticalCenter: parent.verticalCenter
@@ -204,6 +211,7 @@ Popup {
             // Layout: − value +  (value centred between the stepper buttons).
             MiniButton {
                 actionIcon: "cine-list-remove-symbolic"
+                actionName: qsTr("Decrease %1").arg(stepper.label)
                 onClicked: stepper.setValue(stepper.value - stepper.step)
             }
             Text {
@@ -217,6 +225,7 @@ Popup {
             }
             MiniButton {
                 actionIcon: "cine-list-add-symbolic"
+                actionName: qsTr("Increase %1").arg(stepper.label)
                 onClicked: stepper.setValue(stepper.value + stepper.step)
             }
         }
@@ -237,6 +246,7 @@ Popup {
 
         UndoButton {
             id: cundo
+            btnTooltip: qsTr("Reset %1").arg(comboRow.label)
             anchors.left: parent.left
             anchors.leftMargin: 6
             anchors.verticalCenter: parent.verticalCenter
@@ -258,7 +268,8 @@ Popup {
             anchors.verticalCenter: parent.verticalCenter
             width: 124
             height: 34
-            focusPolicy: Qt.NoFocus
+            focusPolicy: Qt.StrongFocus
+            Accessible.name: comboRow.label
             model: parent.model
             onActivated: comboRow.apply(currentIndex, currentText)
             background: Rectangle {
@@ -288,7 +299,7 @@ Popup {
                 id: comboItem
                 required property var modelData
                 required property int index
-                width: ListView.view ? ListView.view.width : combo.width
+                width: Math.max(0, (ListView.view ? ListView.view.width : combo.width) - Theme.scrollbarGutter)
                 height: 34
                 highlighted: combo.highlightedIndex === index
                 background: Rectangle {
@@ -339,6 +350,8 @@ Popup {
         property string label: "" // Display label
         property string leftIcon: "" // Left button icon
         property string rightIcon: "" // Right button icon
+        property string leftActionName: ""
+        property string rightActionName: ""
         // qmllint disable use-proper-function
         property var leftAct: function () {} // Left button callback
         property var rightAct: function () {} // Right button callback
@@ -350,6 +363,7 @@ Popup {
 
         UndoButton {
             id: bundo
+            btnTooltip: qsTr("Reset %1").arg(btnRow.label)
             anchors.left: parent.left
             anchors.leftMargin: 6
             anchors.verticalCenter: parent.verticalCenter
@@ -368,10 +382,12 @@ Popup {
             spacing: 6
             MiniButton {
                 actionIcon: btnRow.leftIcon
+                actionName: btnRow.leftActionName
                 onClicked: btnRow.leftAct()
             }
             MiniButton {
                 actionIcon: btnRow.rightIcon
+                actionName: btnRow.rightActionName
                 onClicked: btnRow.rightAct()
             }
         }
@@ -449,7 +465,7 @@ Popup {
 
     contentItem: Flickable {
         id: optionsFlickable
-        readonly property int scrollbarGutter: 10
+        readonly property int scrollbarGutter: Theme.scrollbarGutter
 
         contentWidth: width - scrollbarGutter
         contentHeight: content.implicitHeight
@@ -524,6 +540,8 @@ Popup {
             ButtonsRow {
                 id: rotateRow
                 label: qsTr("Rotate")
+                leftActionName: qsTr("Rotate left")
+                rightActionName: qsTr("Rotate right")
                 leftIcon: "object-rotate-left-symbolic"
                 rightIcon: "object-rotate-right-symbolic"
                 leftAct: function () {
@@ -539,6 +557,8 @@ Popup {
             ButtonsRow {
                 id: flipRow
                 label: qsTr("Flip")
+                leftActionName: qsTr("Flip horizontally")
+                rightActionName: qsTr("Flip vertically")
                 leftIcon: "object-flip-horizontal-symbolic"
                 rightIcon: "object-flip-vertical-symbolic"
                 leftAct: function () {

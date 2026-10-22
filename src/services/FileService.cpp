@@ -189,7 +189,11 @@ QStringList FileService::urlsToPaths(const QList<QUrl>& urls) const
 
 QStringList FileService::listMediaFiles(const QUrl& folder) const
 {
-    return MediaUtils::listMediaFiles(folder.toLocalFile());
+    // An empty path would make QDirIterator scan the process working directory.
+    const QString path = folder.isLocalFile() ? folder.toLocalFile() : QString();
+    if (path.isEmpty() || !QFileInfo(path).isDir())
+        return {};
+    return MediaUtils::listMediaFiles(path);
 }
 
 bool FileService::isSubtitle(const QString& path) const

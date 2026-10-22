@@ -43,7 +43,7 @@ Controls.ResponsivePopup {
     }
     onOpened: enableSwitch.forceActiveFocus()
 
-    contentItem: ScrollView {
+    contentItem: Controls.CineScrollView {
         id: bodyScroll
         objectName: "dialogSurface"
         clip: true

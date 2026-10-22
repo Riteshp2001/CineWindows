@@ -45,7 +45,7 @@ Controls.ResponsivePopup {
         border.width: 1
     }
 
-    contentItem: ScrollView {
+    contentItem: Controls.CineScrollView {
         id: bodyScroll
         objectName: "dialogSurface"
         clip: true
@@ -84,7 +84,7 @@ Controls.ResponsivePopup {
                     spacing: 4
                     Text {
                         Layout.fillWidth: true
-                        text: Qt.application.displayName
+                        text: Qt.application.name
                         color: Theme.text
                         font.pixelSize: 26
                         font.bold: true

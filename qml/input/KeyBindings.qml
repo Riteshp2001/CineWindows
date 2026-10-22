@@ -769,12 +769,13 @@ QtObject {
         }
 
         var named = ({});                                // maps Qt key codes to human-readable names
+        named[Qt.Key_Left] = "Left";
         named[Qt.Key_Right] = "Right";
         named[Qt.Key_Up] = "Up";
         named[Qt.Key_Down] = "Down";
         named[Qt.Key_Space] = "Space";
         named[Qt.Key_Backspace] = "Backspace";
-        named[Qt.Key_Return] = "Return";
+        named[Qt.Key_Return] = "Enter";
         named[Qt.Key_Enter] = "Enter";
         named[Qt.Key_Escape] = "Esc";
         named[Qt.Key_PageUp] = "PgUp";
@@ -783,6 +784,9 @@ QtObject {
         named[Qt.Key_End] = "End";
         named[Qt.Key_Tab] = "Tab";
         named[Qt.Key_Delete] = "Del";
+        named[Qt.Key_Insert] = "Ins";
+        named[Qt.Key_Pause] = "Pause";
+        named[Qt.Key_Print] = "Print";
         named[Qt.Key_Comma] = ",";
         named[Qt.Key_Period] = ".";
         named[Qt.Key_Slash] = "/";

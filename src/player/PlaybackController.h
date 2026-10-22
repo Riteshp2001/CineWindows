@@ -46,6 +46,7 @@ class SettingsManager;
 class PlaybackController : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(bool playlistLoop READ playlistLoop WRITE setPlaylistLoop NOTIFY playlistLoopChanged)
     QML_ELEMENT
 
     Q_PROPERTY(CineMpvItem* player READ player WRITE setPlayer NOTIFY playerChanged)
@@ -53,6 +54,8 @@ class PlaybackController : public QObject
     Q_PROPERTY(SettingsManager* settings READ settings WRITE setSettings NOTIFY settingsChanged)
 
 public:
+    bool playlistLoop() const;
+    void setPlaylistLoop(bool enabled);
     /**
      * @brief Constructs a PlaybackController with an optional QObject parent.
      *
@@ -282,6 +285,7 @@ public:
     Q_INVOKABLE void applySettings();
 
 Q_SIGNALS:
+    void playlistLoopChanged();
     /** @brief Emitted when the assigned player instance changes. */
     void playerChanged();
     /** @brief Emitted when the assigned playlist model changes. */
@@ -294,6 +298,8 @@ Q_SIGNALS:
 
 private:
     void applyYoutubeQuality();
+    void applyResumeOptions();
+    void saveWatchLaterPosition();
 
     /** @brief The active mpv player item that receives playback commands. */
     CineMpvItem* m_player{nullptr};
@@ -303,9 +309,13 @@ private:
     SettingsManager* m_settings{nullptr};
     /** @brief Tracks the connection to CineMpvItem::fileLoaded for pending-seek logic. */
     QMetaObject::Connection m_fileLoadedConnection;
+    QMetaObject::Connection m_endFileConnection;
     QMetaObject::Connection m_rendererReadyConnection;
+    QMetaObject::Connection m_volumeConnection;
+    QMetaObject::Connection m_muteConnection;
     /** @brief Path stored while waiting for fileLoaded, used by openPathAt / playIndexAt. */
     QString m_pendingResumePath;
     /** @brief Seek position stored while waiting for fileLoaded, clamped to [0, duration-1]. */
     double m_pendingResumePosition{0.0};
+    bool m_playlistLoop{false};
 };

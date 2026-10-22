@@ -271,7 +271,7 @@ Item {
             NumberAnimation { duration: Theme.motionPanel; easing.type: Easing.OutCubic }
         }
 
-        ScrollView {
+        CineScrollView {
             id: sidebarScroll
             anchors.fill: parent
             anchors.topMargin: root.metrics.titleBarHeight + root.metrics.spacingMd
@@ -822,7 +822,7 @@ Item {
                 visible: root.section === "home"
                 enabled: visible
                 clip: true
-                contentWidth: width
+                contentWidth: Math.max(0, width - Theme.scrollbarGutter)
                 contentHeight: homeContent.height
                 boundsBehavior: Flickable.StopAtBounds
                 interactive: contentHeight > height
@@ -830,7 +830,7 @@ Item {
 
                 Item {
                     id: homeContent
-                    width: homeFlickable.width
+                    width: homeFlickable.contentWidth
                     height: Math.max(homeFlickable.height,
                                      homeColumn.height + 2 * root.metrics.spacingLg)
 
@@ -962,7 +962,7 @@ Item {
                     height: parent.height - 30
                     clip: true
                     spacing: 4
-                    model: root.fileBrowser
+                    model: visible ? root.fileBrowser : null
                     boundsBehavior: Flickable.StopAtBounds
                     delegate: ItemDelegate {
                         id: fileRow
@@ -979,7 +979,7 @@ Item {
                         readonly property bool videoFile: !isDirectory
                             && iconName === "cine-video-x-generic-symbolic"
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        width: ListView.view.width
+                        width: Math.max(0, ListView.view.width - Theme.scrollbarGutter)
                         height: 48
                         focusPolicy: Qt.TabFocus
                         Accessible.name: name
@@ -1029,6 +1029,8 @@ Item {
                                         objectName: "browseThumbnail"
                                         anchors.fill: parent
                                         source: fileRow.thumbnailUrl
+                                        sourceSize: Qt.size(Math.max(1, Math.ceil(width * Screen.devicePixelRatio)),
+                                                            Math.max(1, Math.ceil(height * Screen.devicePixelRatio)))
                                         visible: status === Image.Ready
                                         fillMode: Image.PreserveAspectCrop
                                         asynchronous: true
@@ -1102,8 +1104,8 @@ Item {
                 visible: root.section === "library" || root.section === "favorites" || root.section === "recent"
                 enabled: visible
                 clip: true
-                model: root.collectionFor(root.section)
-                cellWidth: width / root.cardColumns
+                model: visible ? root.collectionFor(root.section) : []
+                cellWidth: Math.max(0, width - Theme.scrollbarGutter) / root.cardColumns
                 cellHeight: 216
                 boundsBehavior: Flickable.StopAtBounds
                 delegate: ItemDelegate {
@@ -1158,6 +1160,8 @@ Item {
                                 objectName: "mediaCardThumbnailImage"
                                 anchors.fill: parent
                                 source: mediaCard.thumbnailUrl
+                                sourceSize: Qt.size(Math.max(1, Math.ceil(width * Screen.devicePixelRatio)),
+                                                    Math.max(1, Math.ceil(height * Screen.devicePixelRatio)))
                                 visible: source.toString().length > 0 && status !== Image.Error
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
@@ -1208,7 +1212,7 @@ Item {
                 anchors.fill: parent
                 visible: root.section === "history"
                 enabled: visible
-                model: root.historyRows()
+                model: visible ? root.historyRows() : []
                 clip: true
                 spacing: 4
                 boundsBehavior: Flickable.StopAtBounds
@@ -1216,7 +1220,7 @@ Item {
                     id: historyEntry
                     required property var modelData
                     readonly property var item: modelData.isHeader ? ({}) : modelData.item
-                    width: ListView.view.width
+                    width: Math.max(0, ListView.view.width - Theme.scrollbarGutter)
                     height: modelData.isHeader ? 32 : 78
 
                     Text {
@@ -1276,6 +1280,8 @@ Item {
                                     objectName: historyEntry.modelData.isHeader ? "" : "historyThumbnailImage"
                                     anchors.fill: parent
                                     source: historyThumbnailFrame.thumbnailUrl
+                                    sourceSize: Qt.size(Math.max(1, Math.ceil(width * Screen.devicePixelRatio)),
+                                                        Math.max(1, Math.ceil(height * Screen.devicePixelRatio)))
                                     visible: source.toString().length > 0 && status !== Image.Error
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true

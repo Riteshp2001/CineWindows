@@ -19,6 +19,7 @@
 
 
 import QtQuick
+import QtQuick.Controls
 
 Loader {
     id: root
@@ -93,6 +94,23 @@ Loader {
         if (item)
             // qmllint disable missing-property
             item.close();
+    }
+
+    function releaseIfClosed() {
+        Qt.callLater(function () {
+            if (root.pendingMethod.length === 0 && !root.popupVisible)
+                root.active = false;
+        });
+    }
+
+    Connections {
+        target: root.item
+        ignoreUnknownSignals: true
+        function onClosed() { root.releaseIfClosed(); }
+        function onVisibleChanged() {
+            if (root.item && !(root.item instanceof Popup))
+                root.releaseIfClosed();
+        }
     }
 
     onLoaded: dispatchPending()

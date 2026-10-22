@@ -31,6 +31,8 @@ ResponsivePopup {
     property var updateService
     property var metadataService
     property var diagnostics
+    property var mpvConfig
+    property string mpvConfigStatus: ""
 
     parent: Overlay.overlay
     metrics: ViewportMetrics {
@@ -43,6 +45,7 @@ ResponsivePopup {
     preferredHeight: 660
     padding: 0
     focus: true
+    onAboutToShow: mpvConfigStatus = ""
 
     FileDialog {
         id: exportLogsDialog
@@ -108,7 +111,7 @@ ResponsivePopup {
             color: Theme.mutedText
             font.pixelSize: 12
             width: parent.width
-            wrapMode: Text.WordWrap
+            wrapMode: Text.Wrap
         }
     }
 
@@ -140,14 +143,16 @@ ResponsivePopup {
             anchors.right: parent.right
             anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            checked: parent.checked
-            onToggled: parent.toggled(checked)
+            Accessible.name: switchRow.title
+            checked: switchRow.checked
+            onToggled: switchRow.toggled(checked)
         }
     }
 
     // Settings row with custom right-side controls
     component ActionRow: Item {
         id: actionRow
+        readonly property bool stacked: width < holder.implicitWidth + 180
         // Label text
         property string title: ""
         // Optional description
@@ -155,7 +160,7 @@ ResponsivePopup {
         // Custom control widget
         default property alias control: holder.data
         width: parent ? parent.width : 0
-        height: visible ? (root.compactLayout
+        height: visible ? (actionRow.stacked
             ? lbl.implicitHeight + holder.implicitHeight + 34
             : Math.max(58, lbl.implicitHeight + 24)) : 0
         TitleSub {
@@ -163,11 +168,11 @@ ResponsivePopup {
             objectName: actionRow.objectName.length > 0 ? actionRow.objectName + "Label" : ""
             anchors.left: parent.left
             anchors.leftMargin: 16
-            anchors.right: root.compactLayout ? parent.right : holder.left
-            anchors.rightMargin: root.compactLayout ? 16 : 12
-            anchors.top: root.compactLayout ? parent.top : undefined
-            anchors.topMargin: root.compactLayout ? 10 : 0
-            anchors.verticalCenter: root.compactLayout ? undefined : parent.verticalCenter
+            anchors.right: actionRow.stacked ? parent.right : holder.left
+            anchors.rightMargin: actionRow.stacked ? 16 : 12
+            anchors.top: actionRow.stacked ? parent.top : undefined
+            anchors.topMargin: actionRow.stacked ? 10 : 0
+            anchors.verticalCenter: actionRow.stacked ? undefined : parent.verticalCenter
             title: actionRow.title
             subtitle: actionRow.subtitle
         }
@@ -176,9 +181,9 @@ ResponsivePopup {
             objectName: actionRow.objectName.length > 0 ? actionRow.objectName + "Controls" : ""
             anchors.right: parent.right
             anchors.rightMargin: 16
-            anchors.bottom: root.compactLayout ? parent.bottom : undefined
-            anchors.bottomMargin: root.compactLayout ? 10 : 0
-            anchors.verticalCenter: root.compactLayout ? undefined : parent.verticalCenter
+            anchors.bottom: actionRow.stacked ? parent.bottom : undefined
+            anchors.bottomMargin: actionRow.stacked ? 10 : 0
+            anchors.verticalCenter: actionRow.stacked ? undefined : parent.verticalCenter
             spacing: 8
         }
     }
@@ -274,7 +279,7 @@ ResponsivePopup {
                 required property var modelData
                 // Current item index
                 required property int index
-                width: ListView.view ? ListView.view.width : combo.width
+                width: Math.max(0, (ListView.view ? ListView.view.width : combo.width) - Theme.scrollbarGutter)
                 height: 36
                 highlighted: combo.highlightedIndex === index
                 background: Rectangle {
@@ -354,6 +359,13 @@ ResponsivePopup {
         property color value: "#ffffff"
         // Allow click interaction
         property bool interactive: true
+        property string actionName: qsTr("Choose color")
+        activeFocusOnTab: interactive
+        Accessible.role: Accessible.Button
+        Accessible.name: actionName
+        Accessible.onPressAction: if (interactive) picked()
+        Keys.onReturnPressed: if (interactive) picked()
+        Keys.onSpacePressed: if (interactive) picked()
         // Emitted when the chip is clicked
         signal picked
         width: 40
@@ -361,8 +373,8 @@ ResponsivePopup {
         radius: 8
         color: value
         opacity: interactive ? 1 : 0.4
-        border.width: chipMouse.containsMouse && interactive ? 2 : 1
-        border.color: chipMouse.containsMouse && interactive ? Theme.accent : Theme.separator
+        border.width: (chipMouse.containsMouse || activeFocus) && interactive ? 2 : 1
+        border.color: (chipMouse.containsMouse || activeFocus) && interactive ? Theme.accent : Theme.separator
         Behavior on border.color {
             ColorAnimation {
                 duration: Theme.motionFast
@@ -376,21 +388,12 @@ ResponsivePopup {
             }
         }
 
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: "transparent"
-            border.width: 1
-            border.color: Theme.chipBorder
-        }
-
         MouseArea {
             id: chipMouse
             anchors.fill: parent
             hoverEnabled: true
             enabled: chip.interactive
             cursorShape: chip.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    // Emit picked signal on click
                     onClicked: chip.picked()
         }
     }
@@ -417,7 +420,7 @@ ResponsivePopup {
     }
 
     // Subtitle background color picker
-    HsvColorDialog {
+    SwatchColorDialog {
         id: bgColorDialog
         objectName: "subtitleBackgroundDialog"
         metrics: root.metrics
@@ -430,7 +433,7 @@ ResponsivePopup {
     }
 
     // Accent color picker
-    HsvColorDialog {
+    SwatchColorDialog {
         id: accentColorDialog
         objectName: "accentColorDialog"
         metrics: root.metrics
@@ -501,7 +504,7 @@ ResponsivePopup {
         anchors.rightMargin: 12
         anchors.topMargin: 16
         anchors.bottomMargin: 16
-        readonly property int scrollbarGutter: 16
+        readonly property int scrollbarGutter: Theme.scrollbarGutter
         contentWidth: Math.max(0, width - scrollbarGutter)
         contentHeight: content.implicitHeight + 8
         clip: true
@@ -698,6 +701,7 @@ ResponsivePopup {
                         // Color swatch displaying current subtitle color
                         ColorChip {
                             anchors.verticalCenter: parent.verticalCenter
+                            actionName: qsTr("Choose subtitle color")
                             value: SettingsManager.subtitleColor
                             // Open color picker on click
                             onPicked: colorDialog.openFor(SettingsManager.subtitleColor)
@@ -771,6 +775,12 @@ ResponsivePopup {
                         // Current font name display
                         Text {
                             id: fontLabel
+                            activeFocusOnTab: true
+                            Accessible.role: Accessible.Button
+                            Accessible.name: qsTr("Choose subtitle font")
+                            Accessible.onPressAction: fontDialog.openFor(SettingsManager.subtitleFont)
+                            Keys.onReturnPressed: fontDialog.openFor(SettingsManager.subtitleFont)
+                            Keys.onSpacePressed: fontDialog.openFor(SettingsManager.subtitleFont)
                             anchors.verticalCenter: parent.verticalCenter
                             text: SettingsManager.subtitleFont
                             color: Theme.text
@@ -911,6 +921,7 @@ ResponsivePopup {
                         // Background color swatch
                         ColorChip {
                             anchors.verticalCenter: parent.verticalCenter
+                            actionName: qsTr("Choose subtitle background color")
                             value: SettingsManager.subtitleBackgroundColor
                             // Open background color picker
                             onPicked: bgColorDialog.openFor(SettingsManager.subtitleBackgroundColor)
@@ -1012,7 +1023,7 @@ ResponsivePopup {
                         textRole: "label"
                         model: [
                             {
-                                label: "System Default",
+                                label: qsTr("System Default"),
                                 code: ""
                             },
                             {
@@ -1329,7 +1340,7 @@ ResponsivePopup {
                         required property var modelData
                         // Current language index
                         required property int index
-                        width: ListView.view ? ListView.view.width : langCombo.width
+                        width: Math.max(0, (ListView.view ? ListView.view.width : langCombo.width) - Theme.scrollbarGutter)
                             height: 36
                             highlighted: langCombo.highlightedIndex === index
                             background: Rectangle {
@@ -1410,19 +1421,12 @@ ResponsivePopup {
                     title: qsTr("Accent Color")
                     subtitle: SettingsManager.accentColor
                     // Accent color swatch button
-                    Button {
-                        id: accentButton
+                    ColorChip {
                         width: 64
                         height: 34
-                        Accessible.name: qsTr("Choose accent color")
-                        // Open accent color picker
-                        onClicked: accentColorDialog.openFor(SettingsManager.accentColor)
-                        // Accent color preview
-                        background: Rectangle {
-                            radius: Theme.radius
-                            color: Theme.accent
-                            border.color: Theme.separator
-                        }
+                        value: SettingsManager.accentColor
+                        actionName: qsTr("Choose accent color")
+                        onPicked: accentColorDialog.openFor(SettingsManager.accentColor)
                     }
                 }
                 Sep {}
@@ -1442,7 +1446,7 @@ ResponsivePopup {
             }
 
             Text {
-                text: qsTr("Updates & Config")
+                text: qsTr("Updates")
                 color: Theme.text
                 font.pixelSize: 13
                 font.bold: true
@@ -1452,26 +1456,26 @@ ResponsivePopup {
             GroupCard {
                 SwitchRow {
                     title: qsTr("Check for Updates Automatically")
-                    subtitle: qsTr("Check for new CineWindows versions on startup")
                     checked: SettingsManager.autoUpdate
                     onToggled: value => SettingsManager.autoUpdate = value
                 }
                 Sep {}
                 ActionRow {
-                    title: Qt.application.displayName
-                    subtitle: qsTr("Version %1").arg(Qt.application.version)
+                    title: Qt.application.name
+                    subtitle: "v" + Qt.application.version
 
                     CineButton {
                         id: updateBtn
                         anchors.verticalCenter: parent.verticalCenter
                         styleVariant: "text"
-                        btnText: !root.updateService ? qsTr("Check for Updates")
+                        btnText: !root.updateService ? qsTr("Check")
                                : root.updateService.state === UpdateService.Checking ? qsTr("Checking...")
-                               : root.updateService.state === UpdateService.Available ? qsTr("Download Update")
-                               : root.updateService.state === UpdateService.Downloading ? qsTr("Cancel Download")
-                               : root.updateService.state === UpdateService.ReadyToInstall ? qsTr("Install and Restart")
+                               : root.updateService.state === UpdateService.Available ? qsTr("Download")
+                               : root.updateService.state === UpdateService.Downloading ? qsTr("Cancel")
+                               : root.updateService.state === UpdateService.ReadyToInstall ? qsTr("Install")
                                : root.updateService.state === UpdateService.Error ? qsTr("Retry")
-                               : qsTr("Check for Updates")
+                               : qsTr("Check")
+                           btnTooltip: qsTr("Check for Updates")
                         enabled: !!root.updateService
                         // Handle update button based on current update state
                         onClicked: {
@@ -1491,6 +1495,7 @@ ResponsivePopup {
                     width: parent.width
                     height: visible ? 40 : 0
                     visible: !!root.updateService && root.updateService.statusMessage.length > 0
+                        && root.updateService.state !== UpdateService.Idle
 
                     Text {
                         anchors.left: parent.left
@@ -1518,17 +1523,109 @@ ResponsivePopup {
                         width: updateProgress.visualPosition * updateProgress.width
                     }
                 }
+            }
+
+            Text {
+                text: qsTr("Configuration")
+                color: Theme.text
+                font.pixelSize: 13
+                font.bold: true
+                leftPadding: 12
+            }
+
+            GroupCard {
+                objectName: "mpvConfigCard"
+                ActionRow {
+                    objectName: "mpvConfigFilesRow"
+                    title: "mpv.conf"
+                    CineButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        styleVariant: "icon"
+                        iconName: "document-edit-symbolic"
+                        btnTooltip: qsTr("Edit mpv.conf")
+                        enabled: !!root.mpvConfig
+                        onClicked: if (!root.mpvConfig.openConfigFile("mpv.conf"))
+                            root.mpvConfigStatus = qsTr("Could not open mpv.conf")
+                    }
+                }
                 Sep {}
                 ActionRow {
-                    title: qsTr("Open Configuration Folder")
-                    subtitle: qsTr("Access mpv configuration files")
+                    title: "input.conf"
                     CineButton {
-                        id: openCfgBtn
+                        anchors.verticalCenter: parent.verticalCenter
+                        styleVariant: "icon"
+                        iconName: "document-edit-symbolic"
+                        btnTooltip: qsTr("Edit input.conf")
+                        enabled: !!root.mpvConfig
+                        onClicked: if (!root.mpvConfig.openConfigFile("input.conf"))
+                            root.mpvConfigStatus = qsTr("Could not open input.conf")
+                    }
+                }
+                Sep {}
+                ActionRow {
+                    objectName: "mpvConfigFolderRow"
+                    title: qsTr("Configuration Folder")
+                    CineButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        styleVariant: "icon"
+                        iconName: "cine-folder-symbolic"
+                        btnTooltip: qsTr("Open Configuration Folder")
+                        onClicked: SettingsManager.openConfigDirectory()
+                    }
+                }
+                Sep {}
+                ActionRow {
+                    objectName: "mpvConfigReloadRow"
+                    title: qsTr("Reload Configuration")
+                    CineButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        styleVariant: "icon"
+                        iconName: "cine-refresh-symbolic"
+                        btnTooltip: qsTr("Reload Configuration")
+                        enabled: !!root.mpvConfig
+                        onClicked: {
+                            root.mpvConfig.reload();
+                            root.mpvConfigStatus = qsTr("Configuration reloaded");
+                        }
+                    }
+                }
+                Sep {
+                    visible: importRow.visible
+                }
+                ActionRow {
+                    id: importRow
+                    objectName: "mpvConfigImportRow"
+                    visible: !!root.mpvConfig && root.mpvConfig.standardConfigAvailable
+                    title: qsTr("Import from mpv")
+                    CineButton {
                         anchors.verticalCenter: parent.verticalCenter
                         styleVariant: "text"
-                        btnText: qsTr("Open")
-                        // Open config directory in file manager
-                        onClicked: SettingsManager.openConfigDirectory()
+                        btnText: qsTr("Import")
+                        onClicked: {
+                            const copied = root.mpvConfig.importStandardConfig();
+                            root.mpvConfigStatus = copied < 0 ? qsTr("No mpv configuration was found")
+                                : copied === 0 ? qsTr("Nothing new to import")
+                                : qsTr("Imported %1 files").arg(copied);
+                        }
+                    }
+                }
+                Item {
+                    objectName: "mpvConfigStatus"
+                    width: parent.width
+                    visible: root.mpvConfigStatus.length > 0
+                    height: visible ? ignoredOptionsText.implicitHeight + 24 : 0
+                    Text {
+                        id: ignoredOptionsText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.mpvConfigStatus
+                        color: Theme.mutedText
+                        font.pixelSize: Theme.fontSizeCaption
+                        wrapMode: Text.Wrap
+                        textFormat: Text.PlainText
                     }
                 }
             }

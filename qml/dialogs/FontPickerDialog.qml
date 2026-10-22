@@ -221,7 +221,7 @@ ResponsivePopup {
             id: fontItem
             required property var modelData
             required property int index
-            width: ListView.view ? ListView.view.width : fontList.width
+            width: Math.max(0, (ListView.view ? ListView.view.width : fontList.width) - Theme.scrollbarGutter)
             height: 42
             highlighted: root.currentFamily === modelData
             HoverHandler { cursorShape: Qt.PointingHandCursor }

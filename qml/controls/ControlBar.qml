@@ -138,6 +138,7 @@ Item {
     /// Cycles loop mode through: none -> loop file -> loop playlist
     function cycleLoop() {
         _loopState = (_loopState + 1) % 3;
+        controller.playlistLoop = _loopState === 2;
         if (_loopState === 0) {
             player.setMpvOption("loop-file", "no");
             player.setMpvOption("loop-playlist", "no");
@@ -146,7 +147,7 @@ Item {
             player.setMpvOption("loop-playlist", "no");
         } else {
             player.setMpvOption("loop-file", "no");
-            player.setMpvOption("loop-playlist", "inf");
+            player.setMpvOption("loop-playlist", "no");
         }
     }
 

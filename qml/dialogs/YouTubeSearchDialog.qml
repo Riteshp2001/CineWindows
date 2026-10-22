@@ -110,7 +110,7 @@ Controls.ResponsivePopup {
         }
     }
 
-    contentItem: ScrollView {
+    contentItem: Controls.CineScrollView {
         id: bodyScroll
         objectName: "dialogSurface"
         clip: true
@@ -150,6 +150,13 @@ Controls.ResponsivePopup {
                     btnTooltip: qsTr("Preferred YouTube Quality: %1").arg(root.qualityLabel)
                     onClicked: qualityMenu.openBelow(qualityButton, bodyScroll)
                 }
+                Controls.CineButton {
+                    metrics: root.metrics
+                    styleVariant: "close"
+                    iconName: "cine-close-symbolic"
+                    btnTooltip: qsTr("Close")
+                    onClicked: root.close()
+                }
             }
             GridLayout {
                 objectName: "actionLayout"
@@ -161,6 +168,7 @@ Controls.ResponsivePopup {
                     objectName: "initialFocusControl"
                     Layout.fillWidth: true
                     placeholderText: qsTr("Videos, channels, or topics")
+                    Accessible.name: qsTr("YouTube search query")
                     color: Theme.text
                     onAccepted: {
                         if (root.searchService)
@@ -199,7 +207,7 @@ Controls.ResponsivePopup {
                 delegate: ItemDelegate {
                     id: resultRow
                     required property var modelData
-                    width: ListView.view.width
+                    width: Math.max(0, ListView.view.width - Theme.scrollbarGutter)
                     height: root.compactLayout ? 86 : 96
                     focusPolicy: Qt.TabFocus
                     HoverHandler { cursorShape: Qt.PointingHandCursor }

@@ -31,6 +31,9 @@ Controls.ResponsivePopup {
     property alias urlText: field.text
     /// Title displayed in the dialog header
     property string title: qsTr("Open URL")
+    property string actionText: qsTr("Open")
+    readonly property string normalizedInput: fileService
+        ? fileService.normalizeMediaPath(field.text) : field.text.trim()
     /// Service used to validate and interact with URLs
     property var fileService
     /// Emitted with the accepted URL string when user confirms
@@ -44,39 +47,33 @@ Controls.ResponsivePopup {
     dim: true
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    preferredWidth: 480
-    preferredHeight: 226
+    preferredWidth: 560
+    preferredHeight: (width < 360 ? 300 : 246)
+        + (field.text.trim().length > 0 && !canAccept() ? 28 : 0)
     padding: 0
 
     background: Rectangle {
-        radius: 14
+        radius: Theme.radius
         color: Theme.popover
-        opacity: 0.98
         border.color: Theme.popoverBorder
         border.width: 1
     }
 
     /// Returns true if the current text field value is a valid/acceptable URL
     function canAccept() {
-        var value = field.text.trim();
-        return fileService ? fileService.isSupportedUrl(value) : value.length > 0;
+        return normalizedInput.length > 0;
     }
 
     /// Emits acceptedUrl and closes the dialog if the input is valid
     function acceptUrl() {
         if (!canAccept())
             return;
-        acceptedUrl(field.text.trim());
+        acceptedUrl(normalizedInput);
         field.text = "";
         root.close();
     }
 
     onOpened: {
-        if (fileService && field.text.trim().length === 0) {
-            var clip = fileService.clipboardText();
-            if (fileService.isSupportedUrl(clip))
-                field.text = clip;
-        }
         field.forceActiveFocus();
         field.selectAll();
     }
@@ -89,7 +86,7 @@ Controls.ResponsivePopup {
 
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 54
+            Layout.preferredHeight: 56
 
             Text {
                 id: titleText
@@ -100,7 +97,7 @@ Controls.ResponsivePopup {
                 anchors.rightMargin: 8
                 text: root.title
                 color: Theme.text
-                font.pixelSize: 16
+                font.pixelSize: 17
                 font.bold: true
                 elide: Text.ElideRight
             }
@@ -121,7 +118,7 @@ Controls.ResponsivePopup {
             Layout.preferredHeight: 1
             color: Theme.separator
         }
-        ScrollView {
+        Controls.CineScrollView {
             id: bodyScroll
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -130,51 +127,63 @@ Controls.ResponsivePopup {
 
             ColumnLayout {
                 width: bodyScroll.availableWidth
-                spacing: 8
+                spacing: 16
 
-                Item { Layout.preferredHeight: 15 }
-                TextField {
-                    id: field
-                    objectName: "initialFocusControl"
+                Rectangle {
                     Layout.fillWidth: true
                     Layout.leftMargin: 20
                     Layout.rightMargin: 20
-                    Layout.preferredHeight: 44
-                    placeholderText: qsTr("Paste a stream URL or media path")
-                    placeholderTextColor: "#7f838c"
-                    selectByMouse: true
-                    color: Theme.text
-                    leftPadding: 13
-                    rightPadding: 13
-                    verticalAlignment: TextInput.AlignVCenter
-                    background: Rectangle {
-                        color: Theme.cardStrong
-                        border.color: field.activeFocus ? Theme.accent : (field.hovered ? Theme.chipBorder : Theme.popoverBorder)
-                        border.width: 1
-                        radius: 9
-                        Behavior on border.color {
-                            ColorAnimation {
-                                duration: Theme.motionNormal
-                                easing.type: Easing.OutCubic
-                            }
+                    Layout.topMargin: 20
+                    Layout.preferredHeight: inputSection.implicitHeight + 32
+                    radius: Theme.radius
+                    color: Theme.card
+
+                    ColumnLayout {
+                        id: inputSection
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 16
+                        spacing: 10
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("URL or media path")
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.bold: true
                         }
-                    }
-                    onAccepted: root.acceptUrl()
-                }
-                Text {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 20
-                    Layout.rightMargin: 20
-                    Layout.preferredHeight: 32
-                    opacity: field.text.trim().length > 0 && !root.canAccept() ? 1 : 0
-                    text: qsTr("Enter a supported stream URL or local media path.")
-                    color: Theme.danger
-                    font.pixelSize: 12
-                    wrapMode: Text.WordWrap
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Theme.motionFast
-                            easing.type: Easing.OutCubic
+                        TextField {
+                            id: field
+                            objectName: "initialFocusControl"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 44
+                            Accessible.name: qsTr("URL or media path")
+                            placeholderText: "https://"
+                            placeholderTextColor: Theme.mutedText
+                            selectByMouse: true
+                            color: Theme.text
+                            leftPadding: 12
+                            rightPadding: 12
+                            background: Rectangle {
+                                color: Theme.cardStrong
+                                border.color: field.activeFocus ? Theme.focusRing : Theme.separator
+                                border.width: field.activeFocus ? Theme.focusRingWidth : 1
+                                radius: Theme.radius
+                                Behavior on border.color {
+                                    ColorAnimation { duration: Theme.motionFast }
+                                }
+                            }
+                            onAccepted: root.acceptUrl()
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: field.text.trim().length > 0 && !root.canAccept()
+                            text: qsTr("This URL or media file is unavailable.")
+                            color: Theme.danger
+                            font.pixelSize: Theme.fontSizeCaption
+                            wrapMode: Text.Wrap
+                            textFormat: Text.PlainText
                         }
                     }
                 }
@@ -184,13 +193,14 @@ Controls.ResponsivePopup {
                     Layout.fillWidth: true
                     Layout.leftMargin: 20
                     Layout.rightMargin: 20
-                    columns: root.compactLayout ? 1 : 2
+                    columns: root.width < 360 ? 1 : 3
                     columnSpacing: 10
                     rowSpacing: 10
 
+                    Item { Layout.fillWidth: true; visible: root.width >= 360 }
                     Controls.CineButton {
                         id: cancelButton
-                        Layout.fillWidth: root.compactLayout
+                        Layout.fillWidth: root.width < 360
                         Layout.preferredWidth: 88
                         Layout.preferredHeight: 34
                         styleVariant: "dialog"
@@ -201,18 +211,18 @@ Controls.ResponsivePopup {
                     }
                     Controls.CineButton {
                         id: openButton
-                        Layout.fillWidth: root.compactLayout
-                        Layout.preferredWidth: 88
+                        Layout.fillWidth: root.width < 360
+                        Layout.preferredWidth: Math.max(88, implicitWidth)
                         Layout.preferredHeight: 34
                         styleVariant: "dialog"
                         colorVariant: "primary"
-                        btnText: qsTr("Open")
+                        btnText: root.actionText
                         focusPolicy: Qt.StrongFocus
                         enabled: root.canAccept()
                         onClicked: root.acceptUrl()
                     }
                 }
-                Item { Layout.preferredHeight: 10 }
+                Item { Layout.preferredHeight: 4 }
             }
         }
     }

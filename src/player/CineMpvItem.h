@@ -64,6 +64,8 @@ class CineMpvItem : public MpvAbstractItem
     Q_PROPERTY(int videoWidth READ videoWidth NOTIFY videoGeometryChanged)
     Q_PROPERTY(int videoHeight READ videoHeight NOTIFY videoGeometryChanged)
     Q_PROPERTY(double videoAspectRatio READ videoAspectRatio NOTIFY videoGeometryChanged)
+    // Mirrors mpv's "fullscreen" option so input.conf and scripts can drive the window.
+    Q_PROPERTY(bool fullscreen READ fullscreen WRITE setFullscreen NOTIFY fullscreenChanged)
 
 public:
     /**
@@ -223,6 +225,14 @@ public:
     int videoHeight() const;
     /** @brief Returns the rotation-adjusted video display aspect ratio. */
     double videoAspectRatio() const;
+
+    /** @brief Returns mpv's fullscreen option as last seen or set. */
+    bool fullscreen() const;
+    /**
+     * @brief Keeps mpv's fullscreen option in sync with the window without echoing a request.
+     * @param value The window's current fullscreen state.
+     */
+    void setFullscreen(bool value);
 
     /**
      * @brief Loads a media item into mpv.
@@ -416,6 +426,7 @@ Q_SIGNALS:
     /** @brief Emitted when the current file playback ends.
      *  @param reason End-of-file reason string from mpv (e.g. "eof", "stop", "error"). */
     void endFile(const QString& reason);
+    void playbackFinished();
     /** @brief Emitted when the video output is reconfigured (resolution change, etc.). */
     void videoReconfigured();
     /** @brief Emitted when a playback error occurs.
@@ -423,6 +434,10 @@ Q_SIGNALS:
     void playbackError(const QString& message);
     /** @brief Emitted for every property update received from libmpv. */
     void mpvPropertyChanged(const QString& property, const QVariant& value);
+    /** @brief Emitted when mpv (input.conf, a script or IPC) changes its fullscreen option. */
+    void fullscreenChanged();
+    /** @brief Emitted once when the mpv core shuts down, e.g. after a "quit" command. */
+    void shutdownRequested();
 
 private:
     /**
@@ -535,6 +550,7 @@ private:
     bool m_pause{true};
     /** @brief true when no media is loaded. */
     bool m_idle{true};
+    bool m_eofReached{false};
     /** @brief Current audio volume level (0..130). */
     int m_volume{100};
     /** @brief true when audio output is muted. */
@@ -557,6 +573,10 @@ private:
     int m_videoHeight{0};
     /** @brief Rotation-adjusted display aspect ratio reported by mpv. */
     double m_videoAspectRatio{0.0};
+    /** @brief mpv's fullscreen option, mirrored to the window by QML. */
+    bool m_fullscreen{false};
+    /** @brief true after the mpv core reported MPV_EVENT_SHUTDOWN. */
+    bool m_shutdown{false};
     /** @brief true when a loadFile() call is deferred until the renderer is ready. */
     bool m_hasPendingLoad{false};
     /** @brief Path stored for a deferred media load request. */

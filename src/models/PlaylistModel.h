@@ -77,6 +77,8 @@ public:
     Q_INVOKABLE void clear();
     /** @brief Moves an item from index @p from to index @p to. */
     Q_INVOKABLE void moveItem(int from, int to);
+    Q_INVOKABLE void shuffle();
+    Q_INVOKABLE void unshuffle();
     /** @brief Saves the playlist as an M3U file to the given destination. Returns true on success. */
     Q_INVOKABLE bool saveM3u(const QUrl& destination) const;
     /** @brief Returns the number of items whose name matches the given query. */
@@ -97,8 +99,12 @@ private:
         QString path;  ///< File path or URL to the media
         QString name;  ///< Display name of the media item
         bool local{true}; ///< True if the media file is on the local filesystem
+        quint64 identity{0};
     };
 
+    void reorder(bool shuffled);
     QList<Item> m_items;         ///< Internal list of playlist items
+    QList<quint64> m_originalOrder;
+    quint64 m_nextIdentity{0};
     int m_currentIndex{-1};      ///< Index of the currently playing item (-1 if none)
 };

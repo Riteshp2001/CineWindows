@@ -16,7 +16,10 @@ Switch {
         implicitWidth: 48
         implicitHeight: 28
         radius: 14
-        color: sw.checked ? "#3584e4" : Theme.switchTrackOff
+        color: sw.checked ? Theme.sliderFill : Theme.switchTrackOff
+        opacity: sw.enabled ? 1 : 0.5
+        border.width: sw.visualFocus ? Theme.focusRingWidth : 0
+        border.color: Theme.focusRing
         Behavior on color {
             ColorAnimation {
                 duration: Theme.motionFast

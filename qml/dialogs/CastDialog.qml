@@ -111,7 +111,7 @@ Controls.ResponsivePopup {
                 id: deviceRow
                 required property int index
                 required property var modelData
-                width: ListView.view.width
+                width: Math.max(0, ListView.view.width - Theme.scrollbarGutter)
                 height: 58
                 Accessible.name: modelData.name
                 HoverHandler { cursorShape: Qt.PointingHandCursor }

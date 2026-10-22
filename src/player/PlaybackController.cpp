@@ -34,6 +34,21 @@ PlaybackController::PlaybackController(QObject* parent)
     : QObject(parent)
 {}
 
+bool PlaybackController::playlistLoop() const
+{
+    return m_playlistLoop;
+}
+
+void PlaybackController::setPlaylistLoop(bool enabled)
+{
+    if (m_playlistLoop == enabled)
+        return;
+    m_playlistLoop = enabled;
+    if (m_player)
+        m_player->setMpvOption(QStringLiteral("loop-playlist"), QStringLiteral("no"));
+    Q_EMIT playlistLoopChanged();
+}
+
 CineMpvItem* PlaybackController::player() const
 {
     return m_player;
@@ -64,13 +79,33 @@ void PlaybackController::setPlayer(CineMpvItem* player)
     }
     if (m_fileLoadedConnection)
         disconnect(m_fileLoadedConnection);
+    if (m_endFileConnection)
+        disconnect(m_endFileConnection);
     if (m_rendererReadyConnection)
         disconnect(m_rendererReadyConnection);
+    if (m_volumeConnection)
+        disconnect(m_volumeConnection);
+    if (m_muteConnection)
+        disconnect(m_muteConnection);
     m_player = player;
     if (m_player)
     {
+        m_endFileConnection = connect(m_player, &CineMpvItem::playbackFinished, this, [this] {
+            if (m_playlist && m_playlist->count() > 0
+                && (m_playlist->currentIndex() + 1 < m_playlist->count() || m_playlistLoop))
+                playNext();
+        });
         m_rendererReadyConnection = connect(m_player, &CineMpvItem::rendererReadyChanged,
             this, &PlaybackController::applyYoutubeQuality);
+        // Remember volume and mute from every source (slider, wheel, remote, input.conf).
+        m_volumeConnection = connect(m_player, &CineMpvItem::volumeChanged, this, [this] {
+            if (m_player && m_settings)
+                m_settings->setVolume(m_player->volume());
+        });
+        m_muteConnection = connect(m_player, &CineMpvItem::muteChanged, this, [this] {
+            if (m_player && m_settings)
+                m_settings->setMuted(m_player->muted());
+        });
         // Wire fileLoaded handler to seek to the pending position after media loads
         m_fileLoadedConnection = connect(m_player, &CineMpvItem::fileLoaded, this, [this] {
             if (!m_player || m_pendingResumePath.isEmpty()
@@ -130,6 +165,24 @@ void PlaybackController::setSettings(SettingsManager* settings)
     {
         connect(m_settings, &SettingsManager::youtubeQualityChanged,
             this, &PlaybackController::applyYoutubeQuality);
+        connect(m_settings, &SettingsManager::saveVideoPositionChanged,
+            this, &PlaybackController::applyResumeOptions);
+        connect(m_settings, &SettingsManager::volumeChanged, this, [this]() {
+            if (m_player && m_settings)
+                m_player->setVolume(m_settings->volume());
+        });
+        connect(m_settings, &SettingsManager::mutedChanged, this, [this]() {
+            if (m_player && m_settings)
+                m_player->setMuted(m_settings->muted());
+        });
+        connect(m_settings, &SettingsManager::hwdecChanged, this, [this]() {
+            if (m_player && m_settings)
+                m_player->setMpvOption(QStringLiteral("hwdec"), m_settings->hwdec());
+        });
+        connect(m_settings, &SettingsManager::audioLanguagesChanged, this, [this]() {
+            if (m_player && m_settings)
+                m_player->setMpvOption(QStringLiteral("alang"), m_settings->audioLanguages());
+        });
         // Realtime: add/remove loudnorm audio filter via mpv af command
         connect(m_settings, &SettingsManager::normalizeVolumeChanged, this, [this]() {
             if (m_player && m_settings)
@@ -197,6 +250,23 @@ void PlaybackController::applyYoutubeQuality()
         m_player->setMpvOption(QStringLiteral("ytdl-format"), m_settings->youtubeFormat());
 }
 
+void PlaybackController::applyResumeOptions()
+{
+    if (!m_player || !m_settings)
+        return;
+    const bool remember = m_settings->saveVideoPosition();
+    m_player->setMpvOption(QStringLiteral("resume-playback"), remember);
+    m_player->setMpvOption(QStringLiteral("save-position-on-quit"), remember);
+}
+
+/** @brief Writes mpv's watch-later entry for the current file before it is replaced. */
+void PlaybackController::saveWatchLaterPosition()
+{
+    if (m_player && m_settings && m_settings->saveVideoPosition() && !m_player->idle()
+        && !m_player->currentPath().isEmpty())
+        m_player->runCommand({QStringLiteral("write-watch-later-config")});
+}
+
 /**
  * @brief Adds media paths to the playlist and starts playback from the first new entry.
  * @param paths One or more local/remote media paths.
@@ -255,6 +325,7 @@ void PlaybackController::playIndex(int index)
     }
 
     // Update playlist state and load the media file in mpv
+    saveWatchLaterPosition();
     m_playlist->setCurrentIndex(index);
     applyYoutubeQuality();
     m_player->loadFile(m_playlist->pathAt(index), QStringLiteral("replace"));
@@ -377,17 +448,9 @@ void PlaybackController::nudgeVolume(int delta)
  */
 void PlaybackController::togglePlaylistLoop()
 {
-    if (m_player)
-    {
-        // Query current mpv loop-playlist state and toggle it
-        const bool active = m_player->mpvOption(QStringLiteral("loop-playlist")).toString() == QStringLiteral("inf");
-        m_player->setMpvOption(QStringLiteral("loop-playlist"), active ? QStringLiteral("no") : QStringLiteral("inf"));
-        if (!active)
-        {
-            // Disable file loop when enabling playlist loop
-            m_player->setMpvOption(QStringLiteral("loop-file"), QStringLiteral("no"));
-        }
-    }
+    setPlaylistLoop(!m_playlistLoop);
+    if (m_player && m_playlistLoop)
+        m_player->setMpvOption(QStringLiteral("loop-file"), QStringLiteral("no"));
 }
 
 /**
@@ -396,6 +459,7 @@ void PlaybackController::togglePlaylistLoop()
  */
 void PlaybackController::toggleFileLoop()
 {
+    setPlaylistLoop(false);
     if (m_player)
     {
         // Query current mpv loop-file state and toggle it
@@ -415,10 +479,8 @@ void PlaybackController::toggleFileLoop()
  */
 void PlaybackController::shufflePlaylist()
 {
-    if (m_player)
-    {
-        m_player->runCommandAsync({QStringLiteral("playlist-shuffle")});
-    }
+    if (m_playlist)
+        m_playlist->shuffle();
 }
 
 /**
@@ -427,10 +489,8 @@ void PlaybackController::shufflePlaylist()
  */
 void PlaybackController::unshufflePlaylist()
 {
-    if (m_player)
-    {
-        m_player->runCommandAsync({QStringLiteral("playlist-unshuffle")});
-    }
+    if (m_playlist)
+        m_playlist->unshuffle();
 }
 
 /**
@@ -464,6 +524,7 @@ void PlaybackController::applySettings()
     }
 
     applyYoutubeQuality();
+    applyResumeOptions();
 
     // Core playback: volume, mute, hardware decoding
     m_player->setVolume(m_settings->volume());

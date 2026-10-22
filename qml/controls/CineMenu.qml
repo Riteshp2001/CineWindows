@@ -261,5 +261,5 @@ Menu {
     topPadding: 10
     bottomPadding: 10
     leftPadding: 7
-    rightPadding: 7
+    rightPadding: 7 + (menuContentHeight > availableHeight ? Theme.scrollbarGutter : 0)
 }

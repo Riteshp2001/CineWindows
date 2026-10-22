@@ -22,7 +22,11 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QRandomGenerator>
 #include <QTextStream>
+
+#include <algorithm>
+#include <limits>
 
 PlaylistModel::PlaylistModel(QObject* parent)
     : QAbstractListModel(parent)
@@ -132,7 +136,7 @@ void PlaylistModel::addPaths(const QStringList& paths, bool clearFirst)
         {
             continue;
         }
-        pending.append({path, MediaUtils::displayNameForPath(path), MediaUtils::isLocalPath(path)});
+        pending.append({path, MediaUtils::displayNameForPath(path), MediaUtils::isLocalPath(path), m_nextIdentity++});
     }
 
     if (pending.isEmpty())
@@ -205,6 +209,7 @@ void PlaylistModel::clear()
 
     beginResetModel();
     m_items.clear();
+    m_originalOrder.clear();
     m_currentIndex = -1;
     endResetModel();
 
@@ -284,4 +289,60 @@ int PlaylistModel::matchCount(const QString& query) const
         }
     }
     return count;
+}
+
+void PlaylistModel::shuffle()
+{
+    reorder(true);
+}
+
+void PlaylistModel::unshuffle()
+{
+    reorder(false);
+}
+
+void PlaylistModel::reorder(bool shuffled)
+{
+    if (m_items.size() < 2 || (!shuffled && m_originalOrder.isEmpty()))
+        return;
+    if (shuffled && m_originalOrder.isEmpty())
+    {
+        for (const Item& item : std::as_const(m_items))
+            m_originalOrder.append(item.identity);
+    }
+
+    const int previousIndex = m_currentIndex;
+    const bool hasCurrent = m_currentIndex >= 0 && m_currentIndex < m_items.size();
+    const quint64 currentIdentity = hasCurrent ? m_items.at(m_currentIndex).identity : 0;
+    beginResetModel();
+    if (shuffled)
+    {
+        std::shuffle(m_items.begin(), m_items.end(), *QRandomGenerator::global());
+    }
+    else
+    {
+        QHash<quint64, qsizetype> ranks;
+        for (qsizetype index = 0; index < m_originalOrder.size(); ++index)
+            ranks.insert(m_originalOrder.at(index), index);
+        std::stable_sort(m_items.begin(), m_items.end(), [&ranks](const Item& left, const Item& right) {
+            return ranks.value(left.identity, std::numeric_limits<qsizetype>::max())
+                < ranks.value(right.identity, std::numeric_limits<qsizetype>::max());
+        });
+        m_originalOrder.clear();
+    }
+    if (hasCurrent)
+    {
+        for (qsizetype index = 0; index < m_items.size(); ++index)
+        {
+            if (m_items.at(index).identity == currentIdentity)
+            {
+                m_currentIndex = static_cast<int>(index);
+                break;
+            }
+        }
+    }
+    endResetModel();
+    if (previousIndex != m_currentIndex)
+        Q_EMIT currentIndexChanged();
+    Q_EMIT playlistChanged();
 }

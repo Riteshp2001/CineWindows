@@ -35,7 +35,7 @@ ResponsivePopup {
     }
     modal: true
     dim: true
-    preferredWidth: 640
+    preferredWidth: 680
     preferredHeight: 640
     padding: 0
     focus: true
@@ -47,11 +47,11 @@ ResponsivePopup {
     property var mpvConfig: null
 
     onClosed: capturingId = ""
+    onOpened: searchField.forceActiveFocus()
 
     background: Rectangle {
-        radius: 16
+        radius: Theme.radius
         color: Theme.popover
-        opacity: 0.95
         border.color: Theme.popoverBorder
         border.width: 1
     }
@@ -74,8 +74,13 @@ ResponsivePopup {
     function actionsIn(category) {
         var out = []; // Actions matching the requested category
         var actions = KeyBindings.actions; // All action definitions from the registry
+        const query = searchField.text.trim().toLowerCase();
+        KeyBindings.revision;
         for (var i = 0; i < actions.length; ++i)
-            if (actions[i].category === category)
+            if (actions[i].category === category && (query.length === 0
+                    || actions[i].title.toLowerCase().includes(query)
+                    || category.toLowerCase().includes(query)
+                    || KeyBindings.sequenceFor(actions[i].id).toLowerCase().includes(query)))
                 out.push(actions[i]);
         return out;
     }
@@ -104,10 +109,10 @@ ResponsivePopup {
     component KeyChip: Rectangle {
         property string label: "" // Text displayed on the chip
         property bool active: false // Whether this chip is in capturing state
-        implicitWidth: Math.max(34, keyText.implicitWidth + 18)
+        implicitWidth: Math.max(42, keyText.implicitWidth + 20)
         implicitHeight: 26
         radius: 6
-        color: active ? Theme.accent : Theme.cardStrong
+        color: active ? Theme.accent : Theme.panelStrong
         border.color: active ? Theme.accent : Theme.separator
         Behavior on color {
             ColorAnimation {
@@ -127,8 +132,15 @@ ResponsivePopup {
     component BindRow: Item {
         id: bindRow
         required property var action // Action definition object for this row
+        readonly property bool stacked: root.width < 430
         width: parent ? parent.width : 0
-        height: root.compactLayout ? 70 : 40
+        height: stacked ? 68 : 44
+        Rectangle {
+            anchors.fill: parent
+            radius: Theme.radius
+            color: bindRow.capturing ? Theme.glassActive : editHover.hovered ? Theme.glassHover : "transparent"
+        }
+        HoverHandler { id: editHover }
 
         readonly property bool capturing: root.capturingId === action.id // Is this row actively capturing a chord?
         readonly property string sequence: KeyBindings.sequenceFor(action.id) // Current key chord for this action
@@ -142,10 +154,12 @@ ResponsivePopup {
 
         Text {
             anchors.left: parent.left
-            anchors.right: root.compactLayout ? parent.right : rowControls.left
-            anchors.rightMargin: root.compactLayout ? 0 : 16
-            anchors.top: root.compactLayout ? parent.top : undefined
-            anchors.verticalCenter: root.compactLayout ? undefined : parent.verticalCenter
+            anchors.leftMargin: 14
+            anchors.right: bindRow.stacked ? parent.right : rowControls.left
+            anchors.rightMargin: bindRow.stacked ? 14 : 16
+            anchors.top: bindRow.stacked ? parent.top : undefined
+            anchors.topMargin: bindRow.stacked ? 8 : 0
+            anchors.verticalCenter: bindRow.stacked ? undefined : parent.verticalCenter
             text: bindRow.action.title
             color: Theme.text
             font.pixelSize: 14
@@ -155,8 +169,10 @@ ResponsivePopup {
         Row {
             id: rowControls
             anchors.right: parent.right
-            anchors.bottom: root.compactLayout ? parent.bottom : undefined
-            anchors.verticalCenter: root.compactLayout ? undefined : parent.verticalCenter
+            anchors.rightMargin: 10
+            anchors.bottom: bindRow.stacked ? parent.bottom : undefined
+            anchors.bottomMargin: bindRow.stacked ? 6 : 0
+            anchors.verticalCenter: bindRow.stacked ? undefined : parent.verticalCenter
             spacing: 8
 
             // input.conf collision indicator.
@@ -182,14 +198,14 @@ ResponsivePopup {
                     parent: overrideBadge
                     visible: overrideHover.hovered
                     delay: 150
-                    text: qsTr("Also bound in input.conf → %1").arg(root.mpvConfig ? root.mpvConfig.commandFor(bindRow.sequence) : "")
+                    text: qsTr("Overridden by input.conf: %1").arg(root.mpvConfig ? root.mpvConfig.commandFor(bindRow.sequence) : "")
                 }
             }
 
             KeyChip {
                 anchors.verticalCenter: parent.verticalCenter
                 active: bindRow.capturing
-                label: bindRow.capturing ? qsTr("Press keys…") : bindRow.sequence
+                label: bindRow.capturing ? qsTr("Press keys...") : bindRow.sequence || qsTr("Unassigned")
             }
 
             // Reset-to-default (only when customized).
@@ -201,7 +217,7 @@ ResponsivePopup {
                 iconName: "edit-undo-symbolic"
                 buttonSize: 26
                 iconSize: 12
-                btnTooltip: qsTr("Reset")
+                btnTooltip: qsTr("Reset %1").arg(bindRow.action.title)
                 onClicked: KeyBindings.reset(bindRow.action.id)
             }
 
@@ -213,7 +229,7 @@ ResponsivePopup {
                 iconName: "document-edit-symbolic"
                 buttonSize: 26
                 iconSize: 12
-                btnTooltip: qsTr("Edit shortcut")
+                btnTooltip: qsTr("Edit %1").arg(bindRow.action.title)
                 checkable: true
                 checked: bindRow.capturing
                 checkedBackground: bindRow.capturing ? Theme.accent : "transparent"
@@ -235,11 +251,14 @@ ResponsivePopup {
     Item {
         id: captureCatcher
         focus: root.capturingId.length > 0
+        Keys.onShortcutOverride: function (event) { event.accepted = root.capturingId.length > 0; }
         Keys.onPressed: function (event) {
             if (root.capturingId.length === 0)
                 return;
             if (event.key === Qt.Key_Escape) {
                 root.capturingId = "";
+                conflictText.visible = false;
+                searchField.forceActiveFocus();
                 event.accepted = true;
                 return;
             }
@@ -260,13 +279,11 @@ ResponsivePopup {
         Text {
             id: titleLabel
             objectName: "shortcutsTitle"
-            x: root.compactLayout
-                ? resetAllBtn.x + resetAllBtn.width + 8
-                : Math.round((parent.width - implicitWidth) / 2)
-            y: Math.round((parent.height - height) / 2)
-            width: root.compactLayout
-                ? Math.max(0, closeBtn.x - x - 8)
-                : implicitWidth
+            anchors.left: resetAllBtn.right
+            anchors.leftMargin: 8
+            anchors.right: closeBtn.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
             text: qsTr("Keyboard Shortcuts")
             color: Theme.text
             font.pixelSize: 17
@@ -313,10 +330,39 @@ ResponsivePopup {
         }
     }
 
-    // Inline conflict warning.
+    TextField {
+        id: searchField
+        objectName: "shortcutSearch"
+        anchors.top: headerBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.topMargin: 16
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
+        height: 40
+        placeholderText: qsTr("Search shortcuts")
+        Accessible.name: qsTr("Search shortcuts")
+        color: Theme.text
+        placeholderTextColor: Theme.mutedText
+        selectByMouse: true
+        leftPadding: 12
+        rightPadding: 12
+        onTextChanged: {
+            root.capturingId = "";
+            conflictText.visible = false;
+            shortcutsFlickable.contentY = 0;
+        }
+        background: Rectangle {
+            radius: Theme.radius
+            color: Theme.cardStrong
+            border.color: searchField.activeFocus ? Theme.focusRing : Theme.separator
+            border.width: searchField.activeFocus ? Theme.focusRingWidth : 1
+        }
+    }
+
     Text {
         id: conflictText
-        anchors.top: headerBar.bottom
+        anchors.top: searchField.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.margins: 10
@@ -331,9 +377,9 @@ ResponsivePopup {
 
     Flickable {
         id: shortcutsFlickable
-        readonly property int scrollbarGutter: 14 // Width reserved for the vertical scrollbar
+        readonly property int scrollbarGutter: Theme.scrollbarGutter
 
-        anchors.top: conflictText.visible ? conflictText.bottom : headerBar.bottom
+        anchors.top: conflictText.visible ? conflictText.bottom : searchField.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -351,32 +397,60 @@ ResponsivePopup {
         Column {
             id: body
             width: shortcutsFlickable.contentWidth
-            spacing: 2
+            spacing: 18
 
             Repeater {
                 model: root.categories
                 Column {
                     id: catCol
                     required property var modelData // Category name from the repeater model
+                    readonly property var matchingActions: root.actionsIn(modelData)
+                    visible: matchingActions.length > 0
                     width: parent.width
-                    spacing: 2
+                    spacing: 8
 
                     Text {
                         text: catCol.modelData
-                        color: Theme.mutedText
+                        color: Theme.text
                         font.pixelSize: 12
                         font.bold: true
-                        topPadding: 12
+                        leftPadding: 12
                     }
 
-                    Repeater {
-                        model: root.actionsIn(catCol.modelData)
-                        BindRow {
-                            required property var modelData // Action object from the repeater model
-                            action: modelData
+                    Rectangle {
+                        width: parent.width
+                        height: sectionRows.implicitHeight + 8
+                        radius: Theme.radius
+                        color: Theme.card
+                        Column {
+                            id: sectionRows
+                            width: parent.width
+                            y: 4
+                            Repeater {
+                                model: catCol.matchingActions
+                                BindRow {
+                                    required property var modelData
+                                    action: modelData
+                                }
+                            }
                         }
                     }
                 }
+            }
+            Text {
+                width: parent.width
+                visible: {
+                    for (const category of root.categories) {
+                        if (root.actionsIn(category).length > 0)
+                            return false;
+                    }
+                    return true;
+                }
+                text: qsTr("No shortcuts found")
+                color: Theme.mutedText
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: Theme.fontSizeSmall
+                topPadding: 24
             }
         }
     }

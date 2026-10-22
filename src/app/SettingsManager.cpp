@@ -568,8 +568,9 @@ void SettingsManager::setCustomWindowFrame(bool value)
  */
 void SettingsManager::removeLegacyThumbnailScripts()
 {
-    QFile::remove(PathUtils::mpvConfigDir() + QStringLiteral("/scripts/thumbfast.lua"));
-    QFile::remove(PathUtils::mpvConfigDir() + QStringLiteral("/script-opts/thumbfast.conf"));
+    const QDir legacy(PathUtils::legacyMpvConfigDir());
+    QFile::remove(legacy.filePath(QStringLiteral("scripts/thumbfast.lua")));
+    QFile::remove(legacy.filePath(QStringLiteral("script-opts/thumbfast.conf")));
 }
 
 /**
@@ -618,12 +619,11 @@ void SettingsManager::saveWindowSize(int width, int height)
 }
 
 /**
- * @brief Opens the mpv user configuration directory in the platform file manager.
+ * @brief Opens the CineWindows mpv configuration directory in the platform file manager.
  */
 void SettingsManager::openConfigDirectory()
 {
-    // The user's standard mpv folder, where mpv.conf / input.conf / scripts live.
-    QDesktopServices::openUrl(QUrl::fromLocalFile(PathUtils::mpvUserConfigDir()));
+    QDesktopServices::openUrl(QUrl::fromLocalFile(PathUtils::mpvConfigDir()));
 }
 
 /**

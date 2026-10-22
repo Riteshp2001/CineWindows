@@ -47,6 +47,7 @@ QtObject {
     readonly property int spacingXs: 4
     readonly property int spacingSm: 8
     readonly property int spacingMd: 16
+    readonly property int scrollbarGutter: 16
     readonly property int spacingLg: 20
     /// Main application background color
     readonly property color background: isLight ? "#f4f5f7" : "#050506"
