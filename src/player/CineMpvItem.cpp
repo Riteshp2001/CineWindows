@@ -25,6 +25,10 @@
 #include <MpvController>
 
 #include <QDir>
+#include <QFile>
+#include <QProcess>
+#include <QSaveFile>
+#include <QStandardPaths>
 #include <QtGlobal>
 
 #include <algorithm>
@@ -76,6 +80,11 @@ CineMpvItem::~CineMpvItem()
     m_logClient = nullptr;
 }
 
+bool CineMpvItem::thumbfastAvailable() const
+{
+    return m_thumbfastAvailable;
+}
+
 void CineMpvItem::setupConnections()
 {
     connect(mpvController(), &MpvController::propertyChanged, this, &CineMpvItem::onPropertyChanged,
@@ -91,7 +100,11 @@ void CineMpvItem::setupConnections()
     }, Qt::QueuedConnection);
     connect(mpvController(), &MpvController::endFile, this, [this](const QString& reason) {
         if (reason == QStringLiteral("error"))
+        {
             qCWarning(cinePlayerLog).noquote() << "Media ended with an error" << m_currentPath;
+            if (!m_requestedPath.isEmpty() && !MediaUtils::isLocalPath(m_requestedPath))
+                m_retryPath = m_requestedPath;
+        }
         else
             qCInfo(cinePlayerLog).noquote() << "Media ended" << reason << m_currentPath;
         Q_EMIT endFile(reason);
@@ -157,6 +170,13 @@ void CineMpvItem::drainMpvLogMessages()
         const QString message = QString::fromUtf8(log->text ? log->text : "").trimmed();
         if (message.isEmpty())
             continue;
+        // Refused YouTube segments only log a warning and then run to EOF instead of failing the load.
+        if (prefix == QStringLiteral("timeline") && message.startsWith(QStringLiteral("failed to load segment"))
+            && m_retryPath.isEmpty() && !m_requestedPath.isEmpty() && !MediaUtils::isLocalPath(m_requestedPath))
+        {
+            m_retryPath = m_requestedPath;
+            Q_EMIT playbackError(tr("The server refused this stream. Checking for a newer yt-dlp to retry."));
+        }
 
         switch (log->log_level)
         {
@@ -183,12 +203,51 @@ void CineMpvItem::configureDefaults()
     setProperty(QStringLiteral("load-osd-console"), true);
     setProperty(QStringLiteral("keep-open"), true);
     setProperty(QStringLiteral("ytdl"), true);
-    const QString ytDlpPath = PathUtils::mediaToolPath(QStringLiteral("yt-dlp"));
-    if (!ytDlpPath.isEmpty())
+    configureYtDlp();
+    const QString mpvPath = PathUtils::mediaToolPath(QStringLiteral("mpv"));
+    bool standaloneMpvAvailable = false;
+    if (!mpvPath.isEmpty())
     {
-        command(QStringList{QStringLiteral("change-list"), QStringLiteral("script-opts"), QStringLiteral("append"),
-                            QStringLiteral("ytdl_hook-ytdl_path=%1")
-                                .arg(QDir::fromNativeSeparators(ytDlpPath))});
+        QProcess probe;
+        probe.start(mpvPath, {QStringLiteral("--version")});
+        standaloneMpvAvailable = probe.waitForStarted(1500) && probe.waitForFinished(1500)
+            && probe.exitStatus() == QProcess::NormalExit && probe.exitCode() == 0;
+        if (!standaloneMpvAvailable)
+            qCWarning(cineMpvLog) << "Thumbfast disabled because standalone mpv failed its startup probe:" << mpvPath;
+    }
+    if (standaloneMpvAvailable && !qEnvironmentVariableIsSet("CINEWINDOWS_DISABLE_THUMBFAST"))
+    {
+        const QString runtimeDirectory = QDir(PathUtils::mpvConfigDir()).filePath(QStringLiteral("runtime"));
+        const QString scriptPath = QDir(runtimeDirectory).filePath(QStringLiteral("cinewindows-thumbfast.lua"));
+        QFile resource(QStringLiteral(":/cinewindows/thumbfast/thumbfast.lua"));
+        if (QDir().mkpath(runtimeDirectory) && resource.open(QIODevice::ReadOnly))
+        {
+            const QByteArray script = resource.readAll();
+            QSaveFile scriptFile(scriptPath);
+            if (scriptFile.open(QIODevice::WriteOnly) && scriptFile.write(script) == script.size()
+                && scriptFile.commit())
+            {
+                for (const QString& option : {QStringLiteral("thumbfast-max_width=174"),
+                                              QStringLiteral("thumbfast-max_height=96"),
+                                              QStringLiteral("thumbfast-network=yes"),
+                                              QStringLiteral("thumbfast-quit_after_inactivity=60"),
+                                              QStringLiteral("thumbfast-mpv_path=%1").arg(QDir::toNativeSeparators(mpvPath))})
+                {
+                    command({QStringLiteral("change-list"), QStringLiteral("script-opts"), QStringLiteral("append"),
+                             option});
+                }
+                const QVariant loadResult = commandBlocking({QStringLiteral("load-script"), scriptPath});
+                if (loadResult.metaType() == QMetaType::fromType<ErrorReturn>())
+                {
+                    qCWarning(cineMpvLog) << "Thumbfast script failed to load:"
+                                          << MpvController::getError(loadResult.value<ErrorReturn>().error);
+                }
+                else
+                {
+                    m_thumbfastAvailable = true;
+                }
+            }
+        }
     }
     setProperty(QStringLiteral("volume-max"), 200);
     setProperty(QStringLiteral("screenshot-directory"), PathUtils::screenshotsDir());
@@ -227,6 +286,37 @@ void CineMpvItem::configureDefaults()
                         QStringLiteral("aid")});
     command(QStringList{QStringLiteral("change-list"), QStringLiteral("watch-later-options"), QStringLiteral("remove"),
                         QStringLiteral("volume")});
+}
+
+void CineMpvItem::configureYtDlp()
+{
+    const QString ytDlpPath = PathUtils::mediaToolPath(QStringLiteral("yt-dlp"));
+    if (!ytDlpPath.isEmpty())
+    {
+        command(QStringList{QStringLiteral("change-list"), QStringLiteral("script-opts"), QStringLiteral("append"),
+                            QStringLiteral("ytdl_hook-ytdl_path=%1")
+                                .arg(QDir::fromNativeSeparators(ytDlpPath))});
+    }
+    // yt-dlp needs a JavaScript runtime for full YouTube support but only looks for deno itself.
+    if (!QStandardPaths::findExecutable(QStringLiteral("deno")).isEmpty())
+        return;
+    for (const QString& runtime : {QStringLiteral("node"), QStringLiteral("bun")})
+    {
+        const QString runtimePath = QStandardPaths::findExecutable(runtime);
+        if (runtimePath.isEmpty())
+            continue;
+        command(QStringList{QStringLiteral("change-list"), QStringLiteral("ytdl-raw-options"),
+                            QStringLiteral("append"),
+                            QStringLiteral("js-runtimes=%1:%2").arg(runtime, QDir::toNativeSeparators(runtimePath))});
+        return;
+    }
+}
+
+void CineMpvItem::applyUpdatedYtDlp()
+{
+    configureYtDlp();
+    if (!m_retryPath.isEmpty())
+        loadFile(m_retryPath);
 }
 
 void CineMpvItem::onPropertyChanged(const QString& property, const QVariant& value)
@@ -579,6 +669,8 @@ void CineMpvItem::flushPendingLoad()
 
 void CineMpvItem::loadFileNow(const QString& path, const QString& mode)
 {
+    m_requestedPath = path;
+    m_retryPath.clear();
     // lavfi-complex graphs contain track IDs from the current file and must not
     // survive into a replacement load. AdvancedPlaybackController reapplies the
     // selected visualization after the new file reports fileLoaded.

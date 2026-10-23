@@ -707,6 +707,14 @@ void MpvConfig::loadScripts(const LoaderOptions& options)
 void MpvConfig::loadScript(const QString& path)
 {
     const QFileInfo info(path);
+    const bool thumbfastScript = info.fileName().compare(QStringLiteral("thumbfast.lua"), Qt::CaseInsensitive) == 0
+        || (info.isDir() && info.fileName().compare(QStringLiteral("thumbfast"), Qt::CaseInsensitive) == 0);
+    if (thumbfastScript)
+    {
+        qCInfo(cinePlayerLog).noquote()
+            << "Ignoring external thumbfast script; CineWindows uses its managed preview integration";
+        return;
+    }
     if (!info.exists())
     {
         qCWarning(cinePlayerLog).noquote() << "mpv script not found:" << QDir::toNativeSeparators(path);

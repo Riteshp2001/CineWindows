@@ -291,6 +291,7 @@ set(CINEWINDOWS_SOURCES
     src/services/TmdbMetadataService.cpp src/services/TmdbMetadataService.h
     src/services/UpdateService.cpp src/services/UpdateService.h
     src/services/YouTubeSearchService.cpp src/services/YouTubeSearchService.h
+    src/services/YtDlpUpdater.cpp src/services/YtDlpUpdater.h
     src/utils/MediaUtils.cpp src/utils/MediaUtils.h
     src/utils/PathUtils.cpp src/utils/PathUtils.h
     src/window/WindowCornerPreference.cpp src/window/WindowCornerPreference.h
@@ -321,6 +322,7 @@ endif()
 qt_add_executable(CineWindows
     src/main.cpp
     resources/cinewindows.qrc
+    resources/thumbfast.qrc
     ${CINEWINDOWS_WINDOWS_RC}
     ${CINEWINDOWS_MACOS_ICON_FILE}
 )
@@ -388,6 +390,7 @@ if(CINEWINDOWS_BUILD_TESTS)
     add_test(NAME CineWindowsConfigTests COMMAND CineWindowsConfigTests)
     add_executable(CineWindowsPlaybackTests
         tests/PlaybackTests.cpp
+        resources/thumbfast.qrc
         src/player/CineMpvItem.cpp src/player/CineMpvItem.h
         src/player/ThumbnailController.cpp src/player/ThumbnailController.h
         src/utils/MediaUtils.cpp

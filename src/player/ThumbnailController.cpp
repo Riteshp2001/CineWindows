@@ -26,6 +26,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QJsonDocument>
 #include <QPainter>
 #include <QPainterPath>
 #include <QQuickWindow>
@@ -98,6 +99,19 @@ CineMpvItem* ThumbnailController::player() const
     return m_player;
 }
 
+bool ThumbnailController::thumbfastMode() const
+{
+    return m_thumbfastMode;
+}
+
+void ThumbnailController::setThumbfastMode(bool enabled)
+{
+    if (m_thumbfastMode == enabled)
+        return;
+    m_thumbfastMode = enabled;
+    Q_EMIT thumbfastModeChanged();
+}
+
 /**
  * @brief Assigns the player and emits playerChanged().
  * @param player Pointer to the CineMpvItem to assign.
@@ -158,6 +172,61 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
     const QSize physicalSize(static_cast<int>(std::round(width * dpr)), static_cast<int>(std::round(height * dpr)));
     const QSize sourceSize = physicalSize.width() > 512 || physicalSize.height() > 512
         ? physicalSize.scaled(QSize(512, 512), Qt::KeepAspectRatio) : physicalSize;
+    const bool networkSource = !MediaUtils::isLocalPath(path)
+        || path.startsWith(QStringLiteral("\\\\")) || path.startsWith(QStringLiteral("//"));
+
+    if (m_thumbfastNetworkPath != path)
+    {
+        m_thumbfastNetworkPath = path;
+        m_thumbfastNetworkContext.clear();
+        m_thumbfastUsableForPath = m_player->thumbfastAvailable();
+        if (networkSource && m_thumbfastUsableForPath)
+        {
+            QVariantMap context;
+            for (const char* option : {"user-agent", "referrer", "cookies", "cookies-file", "http-header-fields",
+                                       "http-proxy", "tls-verify", "tls-ca-file", "tls-cert-file",
+                                       "tls-key-file", "rtsp-transport"})
+            {
+                const QVariant value = m_player->mpvOption(QString::fromLatin1(option));
+                if (value.isValid())
+                    context.insert(QString::fromLatin1(option), value);
+            }
+            const bool hasCredentials = context.value(QStringLiteral("cookies")).toBool()
+                || !context.value(QStringLiteral("cookies-file")).toString().isEmpty()
+                || !context.value(QStringLiteral("http-header-fields")).toStringList().isEmpty()
+                || !context.value(QStringLiteral("referrer")).toString().isEmpty()
+                || !context.value(QStringLiteral("http-proxy")).toString().isEmpty()
+                || (context.contains(QStringLiteral("tls-verify"))
+                    && !context.value(QStringLiteral("tls-verify")).toBool())
+                || !context.value(QStringLiteral("tls-ca-file")).toString().isEmpty()
+                || !context.value(QStringLiteral("tls-cert-file")).toString().isEmpty()
+                || !context.value(QStringLiteral("tls-key-file")).toString().isEmpty();
+            if (hasCredentials)
+                m_thumbfastUsableForPath = false;
+            else
+                m_thumbfastNetworkContext = QJsonDocument::fromVariant(context).toJson(QJsonDocument::Compact);
+        }
+    }
+    setThumbfastMode(m_thumbfastUsableForPath);
+
+    if (m_thumbfastMode)
+    {
+        m_path = path;
+        m_time = time;
+        m_second = second;
+        m_posX = physicalX;
+        m_posY = physicalY;
+        m_active = true;
+        m_idleTimer.stop();
+        QStringList request{QStringLiteral("script-message"), QStringLiteral("thumb"),
+                            QString::number(time, 'f', 3), QString::number(physicalX),
+                            QString::number(physicalY)};
+        if (networkSource)
+            request.append(QString::fromUtf8(m_thumbfastNetworkContext));
+        m_player->runCommandAsync(request);
+        Q_EMIT thumbnailReady(m_time);
+        return;
+    }
 
     const bool workerShapeChanged = m_path != path || m_workerSize != sourceSize;
 
@@ -252,6 +321,11 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
 void ThumbnailController::clear()
 {
     THUMBNAIL_LOG << "ThumbnailController::clear";
+    if (m_player && m_thumbfastMode)
+        m_player->runCommandAsync({QStringLiteral("script-message"), QStringLiteral("clear")});
+    setThumbfastMode(false);
+    m_thumbfastNetworkPath.clear();
+    m_thumbfastNetworkContext.clear();
     m_active = false;
     m_pendingSeek = false;
     m_seekPeriodTimer.stop();

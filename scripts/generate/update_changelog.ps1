@@ -40,6 +40,15 @@ if ($referenceMatch.Success) {
     $updated = $updated.TrimEnd() + "`n$reference`n"
 }
 
+$releaseReferences = [regex]::Matches($updated, '(?m)^\[([0-9]+\.[0-9]+\.[0-9]+)\]:[^\r\n]*(?:\r?\n|$)')
+for ($index = $releaseReferences.Count - 1; $index -ge 0; $index--) {
+    $releaseVersion = [regex]::Escape($releaseReferences[$index].Groups[1].Value)
+    if (-not [regex]::IsMatch($updated, "(?m)^## \[$releaseVersion\] - ")) {
+        $referenceSpan = $releaseReferences[$index]
+        $updated = $updated.Remove($referenceSpan.Index, $referenceSpan.Length)
+    }
+}
+
 if ($Check) {
     if ($updated -ne $original) {
         throw "CHANGELOG.md is not synchronized with packaging/releases/$Version.md."

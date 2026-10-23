@@ -56,6 +56,7 @@ extern "C" {
 #include "app/StartupShell.h"
 #include "player/CineMpvItem.h"
 #include "player/IpcServer.h"
+#include "services/YtDlpUpdater.h"
 #include "utils/PathUtils.h"
 
 #include <limits>
@@ -279,6 +280,8 @@ int main(int argc, char* argv[])
     // Initialise mpv environment and ensure the config directory exists
     PathUtils::setupMpvEnvironment();
     PathUtils::appConfigDir();
+    YtDlpUpdater ytDlpUpdater;
+    ytDlpUpdater.checkForUpdate();
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
     loadTranslator(app);
@@ -331,7 +334,7 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
     // Start IPC server and/or CLI reader once the QML engine has created the player
-    QTimer::singleShot(0, [&engine, cliMode, ipcPort]() {
+    QTimer::singleShot(0, [&engine, &ytDlpUpdater, cliMode, ipcPort]() {
         CineMpvItem* player = nullptr;
         const auto rootObjects = engine.rootObjects();
         for (QObject* root : rootObjects)
@@ -345,6 +348,14 @@ int main(int argc, char* argv[])
             qCCritical(cineAppLog) << "QML root did not expose a CineMpvItem";
             return;
         }
+
+        QObject::connect(&ytDlpUpdater, &YtDlpUpdater::updated, player, &CineMpvItem::applyUpdatedYtDlp);
+        QObject::connect(player, &CineMpvItem::playbackError, &ytDlpUpdater,
+                         [&ytDlpUpdater] { ytDlpUpdater.checkForUpdate(true); });
+        QObject::connect(player, &CineMpvItem::endFile, &ytDlpUpdater, [&ytDlpUpdater](const QString& reason) {
+            if (reason == QStringLiteral("error"))
+                ytDlpUpdater.checkForUpdate(true);
+        });
 
         // Launch the TCP JSON IPC server if --ipc-server was given
         if (ipcPort > 0)

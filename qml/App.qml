@@ -1577,6 +1577,10 @@ ApplicationWindow {
                 if (reason === "error")
                     toastText.showMessage(qsTr("Unable to play this media. Check the URL or update yt-dlp."));
             }
+            onPlaybackError: function (message) {
+                bufferingSpinner.visible = false;
+                toastText.showMessage(message);
+            }
 
             onPauseChanged: {
                 window.showPlaybackOsd(player.pause);

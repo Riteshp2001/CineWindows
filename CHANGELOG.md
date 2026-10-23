@@ -4,20 +4,27 @@ All notable changes to CineWindows are documented here. Downloadable packages
 and their checksums are available from
 [GitHub Releases](https://github.com/Riteshp2001/CineWindows/releases).
 
-## [0.0.4] - 2026-10-23
+## [0.0.4] - 2026-10-24
 
-CineWindows 0.0.4 improves timeline preview responsiveness and web-stream handling.
+CineWindows 0.0.4 fixes stale YouTube extraction and improves timeline previews.
+
+## Fixes
+
+- Checks the official yt-dlp release and installs a newer copy only after SHA-256 verification.
+- Configures an available JavaScript runtime for yt-dlp and retries a failed YouTube stream after an update.
+- Reports refused media streams instead of leaving a black player that silently reaches EOF.
+- Prevents yt-dlp from intercepting localhost playback fixtures in regression tests.
 
 ## Improvements
 
-- Thumbnail previews use mpv event notifications instead of frequent polling and keep completed frames cached.
-- Network previews inherit the player's cookies, request headers, proxy, and TLS settings.
-- QML metadata now includes MpvQt's anonymous base type on supported older ECM builds.
+- Integrates upstream thumbfast for timeline previews when standalone mpv is available.
+- Retains the in-process thumbnail worker for authenticated network streams and when standalone mpv is unavailable.
+- Fixes QML type metadata generation for the embedded mpv player.
 
 ## Verification
 
 - Covers local previews, HTTP byte ranges, cookies, request headers, redirects, and cached-frame delivery.
-- Compares first-frame latency against upstream thumbfast using the same 1080p H.264 fixture.
+- Verifies thumbfast local previews and the authenticated in-process fallback using a real standalone mpv worker.
 - Runs playback and configuration regression tests with the bundled mpv library.
 
 Previews require seekable media. Live streams without timeline seeking and protected media that disallow seeking may not provide hover thumbnails.

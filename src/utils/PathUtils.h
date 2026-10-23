@@ -28,6 +28,9 @@ namespace PathUtils {
  */
 QString appConfigDir();
 
+/** @brief Returns the app-maintained tools folder, such as the auto-updated yt-dlp copy. */
+QString managedToolsDir();
+
 /**
  * @brief Returns the CineWindows-specific mpv configuration directory, creating it if needed.
  * @return Absolute path such as %APPDATA%/CineWindows/mpv (or portable_config next to the executable).

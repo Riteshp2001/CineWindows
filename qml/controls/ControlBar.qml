@@ -609,7 +609,7 @@ Item {
             width: root._thumbWidth
             height: root._thumbHeight
             radius: 8
-            color: Theme.videoBackground
+            color: thumbnailer.thumbfastMode ? "transparent" : Theme.videoBackground
             border.color: Theme.popoverBorder
             border.width: 1
             clip: true
@@ -618,6 +618,7 @@ Item {
                 id: thumbnailer
                 anchors.fill: parent
                 player: root.player
+                visible: !thumbnailer.thumbfastMode
                 onThumbnailCleared: root.thumbnailVisible = false
             }
         }

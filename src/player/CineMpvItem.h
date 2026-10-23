@@ -68,6 +68,7 @@ class CineMpvItem : public MpvAbstractItem
     Q_PROPERTY(int playlistPosition READ playlistPosition NOTIFY playlistPositionChanged)
     Q_PROPERTY(int playlistCount READ playlistCount NOTIFY playlistCountChanged)
     Q_PROPERTY(bool rendererReady READ rendererReady NOTIFY rendererReadyChanged)
+    Q_PROPERTY(bool thumbfastAvailable READ thumbfastAvailable CONSTANT)
     Q_PROPERTY(int videoWidth READ videoWidth NOTIFY videoGeometryChanged)
     Q_PROPERTY(int videoHeight READ videoHeight NOTIFY videoGeometryChanged)
     Q_PROPERTY(double videoAspectRatio READ videoAspectRatio NOTIFY videoGeometryChanged)
@@ -102,6 +103,7 @@ public:
      * @thread Safe to call from the Qt main thread.
      */
     QString currentPath() const;
+    bool thumbfastAvailable() const;
 
     /**
      * @brief Returns the current playback position in seconds.
@@ -320,6 +322,9 @@ public:
     Q_INVOKABLE void setTrackDisabled(const QString& property);
     Q_INVOKABLE void savePlaybackPosition();
 
+    /** @brief Switches to a newly installed yt-dlp and retries a network load it previously failed. */
+    void applyUpdatedYtDlp();
+
     /**
      * @brief Sets an arbitrary mpv option to the given value.
      *
@@ -473,6 +478,7 @@ private:
      * @thread Must be called on the Qt main thread.
      */
     void configureDefaults();
+    void configureYtDlp();
 
     /**
      * @brief Handles an observed mpv property change and updates the corresponding member.
@@ -571,6 +577,7 @@ private:
     int m_playlistCount{0};
     /** @brief true once the mpv render context is fully initialised. */
     bool m_rendererReady{false};
+    bool m_thumbfastAvailable{false};
     /** @brief Dedicated client handle used only for libmpv log events. */
     mpv_handle* m_logClient{nullptr};
     /** @brief Polls the dedicated libmpv client without cross-thread callbacks. */
@@ -591,4 +598,7 @@ private:
     QString m_pendingLoadPath;
     /** @brief Load mode stored for a deferred media load request. */
     QString m_pendingLoadMode;
+    QString m_requestedPath;
+    /** @brief Network media that failed to stream and is retried after a yt-dlp update. */
+    QString m_retryPath;
 };

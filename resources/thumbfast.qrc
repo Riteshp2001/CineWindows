@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/cinewindows">
+        <file alias="thumbfast/thumbfast.lua">../third_party/thumbfast/thumbfast.lua</file>
+    </qresource>
+</RCC>

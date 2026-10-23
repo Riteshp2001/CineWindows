@@ -29,11 +29,14 @@ private Q_SLOTS:
         QTest::addColumn<bool>("cookieProtected");
         QTest::addColumn<bool>("headerProtected");
         QTest::addColumn<bool>("redirected");
-        QTest::newRow("local") << false << false << false << false;
-        QTest::newRow("http-range") << true << false << false << false;
-        QTest::newRow("http-cookie") << true << true << false << false;
-        QTest::newRow("http-headers") << true << false << true << false;
-        QTest::newRow("http-redirect") << true << false << true << true;
+        QTest::addColumn<bool>("thumbfast");
+        QTest::newRow("local") << false << false << false << false << false;
+        QTest::newRow("http-range") << true << false << false << false << false;
+        QTest::newRow("http-cookie") << true << true << false << false << false;
+        QTest::newRow("http-headers") << true << false << true << false << false;
+        QTest::newRow("http-redirect") << true << false << true << true << false;
+        QTest::newRow("thumbfast-local") << false << false << false << false << true;
+        QTest::newRow("thumbfast-http-cookie") << true << true << false << false << true;
     }
 
     void thumbnails()
@@ -42,6 +45,11 @@ private Q_SLOTS:
         QFETCH(bool, cookieProtected);
         QFETCH(bool, headerProtected);
         QFETCH(bool, redirected);
+        QFETCH(bool, thumbfast);
+        if (thumbfast)
+            qunsetenv("CINEWINDOWS_DISABLE_THUMBFAST");
+        else
+            qputenv("CINEWINDOWS_DISABLE_THUMBFAST", "1");
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());
@@ -136,7 +144,10 @@ private Q_SLOTS:
         player.setSize(QSizeF(640, 360));
         window.show();
         QTRY_VERIFY_WITH_TIMEOUT(player.rendererReady(), 15000);
+        if (thumbfast && !player.thumbfastAvailable())
+            QSKIP("A standalone mpv executable is required for this integration row");
         player.setMpvOption("ao", "null");
+        player.setMpvOption("ytdl", "no");
         player.setMpvOption("cookies", cookieProtected);
         player.setMpvOption("cookies-file", cookiesPath);
         if (headerProtected)
@@ -165,6 +176,28 @@ private Q_SLOTS:
         clock.start();
         measureFrameLatency = true;
         thumbnails.request(source, 5.0, 0, 0, 174, 98);
+        QCOMPARE(thumbnails.thumbfastMode(), thumbfast && !cookieProtected);
+        if (thumbnails.thumbfastMode())
+        {
+            QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, 15000);
+            const QDir tempDirectory(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+            QElapsedTimer frameWait;
+            frameWait.start();
+            while (tempDirectory.entryList({QStringLiteral("thumbfast.out*.bgra")}, QDir::Files).isEmpty()
+                   && frameWait.elapsed() < 10000)
+                QTest::qWait(50);
+            QVERIFY2(!tempDirectory.entryList({QStringLiteral("thumbfast.out*.bgra")}, QDir::Files).isEmpty(),
+                     "thumbfast did not write a raw frame");
+            const QFileInfoList frames = tempDirectory.entryInfoList(
+                {QStringLiteral("thumbfast.out*.bgra")}, QDir::Files, QDir::Time);
+            QVERIFY(!frames.isEmpty());
+            QVERIFY(frames.first().size() > 0);
+            QCOMPARE(rejectedRequests, 0);
+            QVERIFY(player.pause());
+            QCOMPARE(QDir::fromNativeSeparators(player.currentPath()), QDir::fromNativeSeparators(source));
+            thumbnails.clear();
+            return;
+        }
         QTRY_VERIFY_WITH_TIMEOUT(firstFrameLatencyMs >= 0, 15000);
         qInfo() << QTest::currentDataTag() << "cold first-frame ms:" << firstFrameLatencyMs;
         QTRY_VERIFY_WITH_TIMEOUT(ready.count() >= 2, 5000);
@@ -199,8 +232,61 @@ private Q_SLOTS:
         thumbnails.clear();
     }
 
+    void thumbfastIntegration()
+    {
+        if (PathUtils::mediaToolPath(QStringLiteral("mpv")).isEmpty())
+            QSKIP("A standalone mpv executable is required for this integration test");
+
+        qunsetenv("CINEWINDOWS_DISABLE_THUMBFAST");
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());
+        PathUtils::setupMpvEnvironment();
+
+        QByteArray video("YUV4MPEG2 W64 H36 F2:1 Ip A1:1 C420jpeg\n");
+        for (int frame = 0; frame < 60; ++frame)
+        {
+            video += "FRAME\n";
+            video += QByteArray(64 * 36, static_cast<char>(40 + frame * 2));
+            video += QByteArray(32 * 18 * 2, static_cast<char>(128));
+        }
+        const QString mediaPath = directory.filePath("thumbfast.y4m");
+        QFile media(mediaPath);
+        QVERIFY(media.open(QIODevice::WriteOnly));
+        QCOMPARE(media.write(video), qint64(video.size()));
+        media.close();
+
+        QQuickWindow window;
+        window.resize(640, 360);
+        CineMpvItem player(window.contentItem());
+        player.setSize(QSizeF(640, 360));
+        window.show();
+        QTRY_VERIFY_WITH_TIMEOUT(player.rendererReady(), 15000);
+        QVERIFY(player.thumbfastAvailable());
+        player.setMpvOption("ao", "null");
+        player.setMpvOption("ytdl", "no");
+        QSignalSpy loaded(&player, &CineMpvItem::fileLoaded);
+        player.loadFile(mediaPath);
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 1, 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(player.videoWidth() > 0, 15000);
+        player.setPause(true);
+
+        ThumbnailController thumbnails;
+        thumbnails.setPlayer(&player);
+        QSignalSpy ready(&thumbnails, &ThumbnailController::thumbnailReady);
+        const QString thumbnailPath = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+                                          .filePath(QStringLiteral("thumbfast.out%1.bgra")
+                                                        .arg(QCoreApplication::applicationPid()));
+        QFile::remove(thumbnailPath);
+        thumbnails.request(mediaPath, 5.0, 120, 80, 174, 96);
+        QCOMPARE(ready.count(), 1);
+        QTRY_VERIFY_WITH_TIMEOUT(QFileInfo(thumbnailPath).size() > 0, 10000);
+        thumbnails.clear();
+    }
+
     void subtitlesAndResume()
     {
+        qputenv("CINEWINDOWS_DISABLE_THUMBFAST", "1");
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());

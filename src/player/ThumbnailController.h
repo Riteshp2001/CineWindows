@@ -20,6 +20,7 @@
 
 #include <atomic>
 
+#include <QByteArray>
 #include <QCache>
 #include <QElapsedTimer>
 #include <QImage>
@@ -47,14 +48,13 @@ class ThumbnailController : public QQuickPaintedItem
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(CineMpvItem* player READ player WRITE setPlayer NOTIFY playerChanged)
+    Q_PROPERTY(bool thumbfastMode READ thumbfastMode NOTIFY thumbfastModeChanged)
 
 public:
     /**
      * @brief Constructs a thumbnail controller attached to a QQuickItem parent.
      * @param parent Optional QQuickItem parent for Qt parent-child ownership.
-     * @usecase Called by QML engine when ThumbnailController is declared in a .qml file.
-     * @sideeffects Creates internal timers but does not start them; no mpv worker is spawned yet.
-     * @thread Must be called on the Qt main / GUI thread (QQuickItem requirement).
+     * @thread Must be called on the Qt main thread.
      */
     explicit ThumbnailController(QQuickItem* parent = nullptr);
 
@@ -73,6 +73,7 @@ public:
      * @thread Safe to call from any thread since the pointer is set once and only changed via the setter (main thread).
      */
     CineMpvItem* player() const;
+    bool thumbfastMode() const;
 
     /**
      * @brief Sets the player that receives thumbnail overlay commands.
@@ -126,6 +127,7 @@ Q_SIGNALS:
      * @thread Emitted on the Qt main thread.
      */
     void playerChanged();
+    void thumbfastModeChanged();
 
     /**
      * @brief Emitted when a thumbnail frame has been successfully captured.
@@ -172,6 +174,7 @@ private:
     void drainEvents();
     void requestScreenshot();
     void finishCapture();
+    void setThumbfastMode(bool enabled);
 
     /**
      * @brief Creates and starts the background mpv worker process if it does not already exist.
@@ -202,6 +205,10 @@ private:
     QTimer m_idleTimer;
     QString m_path;                 /**< Media path requested by the most recent call to request(). */
     QString m_sourcePath;
+    QString m_thumbfastNetworkPath;
+    QByteArray m_thumbfastNetworkContext;
+    bool m_thumbfastUsableForPath{false};
+    bool m_thumbfastMode{false};
     QString m_loadedPath;           /**< Media path that is currently loaded in the mpv worker. */
     double m_time{0.0};             /**< Target timestamp (seconds) for the current thumbnail request. */
     double m_captureTime{0.0};      /**< Actual timestamp (seconds) of the captured frame from mpv. */

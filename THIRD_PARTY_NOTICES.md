@@ -71,3 +71,12 @@ Attribution: Solar icons by 480 Design, licensed under CC BY 4.0. The SVGs were 
 - CineWindows status: source-reference submodule only; RinUI is not loaded, imported, linked, or deployed at runtime.
 
 The pinned source is retained in `third_party/RinUI` for design and implementation reference. Future adaptations must copy the necessary code or assets into CineWindows-owned resources, preserve attribution for copied or substantially derived material, remove RinUI runtime/theme/Python/import-path dependencies, and add an immediate production consumer and relevant tests in the same change. The submodule must not become a runtime or packaging dependency.
+
+## thumbfast
+
+- Project: thumbfast
+- Repository: https://github.com/po5/thumbfast
+- Pinned revision: `0f711de3138c9bd6718209d819ac54022c23ded2`
+- Copyright: po5 contributors
+- License: Mozilla Public License 2.0; see `third_party/thumbfast/LICENSE`
+- CineWindows status: modified to inherit network request settings, loaded when a standalone mpv executable is available; the in-process thumbnail worker remains the fallback.

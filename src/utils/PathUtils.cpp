@@ -96,6 +96,7 @@ QString mediaToolPath(const QString& executableName)
     const QString overrideDir = qEnvironmentVariable("CINEWINDOWS_MEDIA_TOOLS_DIR");
     if (!overrideDir.isEmpty())
         searchDirs.append(QDir::fromNativeSeparators(overrideDir));
+    searchDirs.append(managedToolsDir());
     searchDirs.append(appDir);
     searchDirs.append(QDir(appDir).filePath(QStringLiteral("tools")));
     searchDirs.append(QDir(appDir).filePath(QStringLiteral("../.deps/media-tools/bin")));
@@ -122,6 +123,11 @@ QString appConfigDir()
     }
     const QString base = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     return ensureDir(base.isEmpty() ? QDir::homePath() + QStringLiteral("/.config/CineWindows") : base);
+}
+
+QString managedToolsDir()
+{
+    return ensureDir(QDir(appConfigDir()).filePath(QStringLiteral("tools")));
 }
 
 /**
