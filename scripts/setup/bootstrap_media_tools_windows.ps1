@@ -36,11 +36,16 @@ $headers = @{
     "User-Agent" = "CineWindows-media-tools-bootstrap"
     "X-GitHub-Api-Version" = "2022-11-28"
 }
+$apiHeaders = $headers.Clone()
+$githubToken = if ($env:GH_TOKEN) { $env:GH_TOKEN } else { $env:GITHUB_TOKEN }
+if ($githubToken) {
+    $apiHeaders.Authorization = "Bearer $githubToken"
+}
 
 function Get-ReleaseAsset {
     param([string]$Repository, [string]$AssetName)
 
-    $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$Repository/releases/latest"
+    $release = Invoke-RestMethod -Headers $apiHeaders -Uri "https://api.github.com/repos/$Repository/releases/latest"
     $asset = $release.assets | Where-Object Name -eq $AssetName | Select-Object -First 1
     if (-not $asset) {
         throw "Latest $Repository release has no $AssetName asset."

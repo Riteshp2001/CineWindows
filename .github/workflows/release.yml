@@ -79,6 +79,8 @@ jobs:
           key: native-media-${{ runner.os }}-${{ env.QT_VERSION }}-v1.2.0-${{ hashFiles('scripts/setup/bootstrap_libmpv_windows.ps1', 'scripts/setup/bootstrap_media_tools_windows.ps1', 'scripts/setup/bootstrap_mpvqt_windows.ps1') }}
 
       - name: Bootstrap standalone media binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
           if (-not (Test-Path ".deps\libmpv-static\bin\libmpv-2.dll")) {
@@ -267,6 +269,7 @@ jobs:
       - name: Package AppImage
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
+          GH_TOKEN: ${{ github.token }}
         run: |
           chmod +x scripts/package/deploy_linux.sh
           bash scripts/package/deploy_linux.sh "build/release" "packaging/linux/artifacts"

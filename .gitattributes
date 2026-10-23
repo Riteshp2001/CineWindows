@@ -13,6 +13,8 @@
 # Author:  Ritesh Pandit
 # The minified bundle contains whitespace inside JavaScript template literals.
 resources/remote/dist/companion.js -whitespace
+resources/remote/index.html text eol=lf
+resources/remote/dist/index.html text eol=lf
 
 # Shell scripts must stay LF even on Windows checkouts
 scripts/*.sh text eol=lf

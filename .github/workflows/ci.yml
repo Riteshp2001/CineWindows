@@ -127,6 +127,8 @@ jobs:
           key: native-media-${{ runner.os }}-${{ env.QT_VERSION }}-v1.2.0-${{ hashFiles('scripts/setup/bootstrap_libmpv_windows.ps1', 'scripts/setup/bootstrap_mpvqt_windows.ps1') }}
 
       - name: Bootstrap standalone libmpv
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
           if (-not (Test-Path ".deps\libmpv-static\bin\libmpv-2.dll")) {

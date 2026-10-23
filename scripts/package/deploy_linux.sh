@@ -56,29 +56,36 @@ download_verified() {
     local asset_url="$1"
     local destination="$2"
     local expected_sha256="$3"
+    local github_token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    local -a headers=(
+        --header "Accept: application/octet-stream"
+        --header "X-GitHub-Api-Version: 2022-11-28"
+    )
+    if [ -n "$github_token" ]; then
+        headers+=(--header "Authorization: Bearer ${github_token}")
+    fi
 
     echo "==> Downloading ${destination}..."
     curl --fail --location --retry 3 \
-        --header "Accept: application/octet-stream" \
-        --header "X-GitHub-Api-Version: 2022-11-28" \
+        "${headers[@]}" \
         "$asset_url" --output "$destination"
     echo "${expected_sha256}  ${destination}" | sha256sum --check --status
     chmod +x "$destination"
 }
 
-# Pin immutable GitHub release asset IDs and verify their published digests.
+# Pin release assets and verify their SHA-256 digests.
 download_verified \
-    "https://api.github.com/repos/linuxdeploy/linuxdeploy/releases/assets/538917371" \
+    "https://api.github.com/repos/linuxdeploy/linuxdeploy/releases/assets/313839329" \
     linuxdeploy \
-    "36a2d7e274d12e1050d0e9ecfe11d339ed54720b2bec464c286d53f8b07f5c62"
+    "c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d"
 download_verified \
     "https://api.github.com/repos/linuxdeploy/linuxdeploy-plugin-qt/releases/assets/525032210" \
     linuxdeploy-plugin-qt \
     "cfc1055b2b9dbc08412b579f20990b7b41a17b61beaa5847dc9477c96c9e9617"
 download_verified \
-    "https://api.github.com/repos/linuxdeploy/linuxdeploy-plugin-appimage/releases/assets/538914683" \
+    "https://api.github.com/repos/linuxdeploy/linuxdeploy-plugin-appimage/releases/assets/228937581" \
     linuxdeploy-plugin-appimage \
-    "0441769ab38009504d2678c38cd7e526955388dd30a215b4a20afaa5471652f2"
+    "992d502a248e14ab185448ddf6f6e7d25558cb84d4623c354c3af350c25fccb3"
 
 echo "==> Creating AppDir..."
 mkdir -p "${APPDIR}/usr/bin"

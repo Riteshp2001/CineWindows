@@ -60,12 +60,17 @@ $headers = @{
     "User-Agent" = "CineWindows-libmpv-bootstrap"
     "X-GitHub-Api-Version" = "2022-11-28"
 }
+$apiHeaders = $headers.Clone()
+$githubToken = if ($env:GH_TOKEN) { $env:GH_TOKEN } else { $env:GITHUB_TOKEN }
+if ($githubToken) {
+    $apiHeaders.Authorization = "Bearer $githubToken"
+}
 $releaseUri = if ($ReleaseTag) {
     "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/tags/$ReleaseTag"
 } else {
     "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest"
 }
-$release = Invoke-RestMethod -Headers $headers -Uri $releaseUri
+$release = Invoke-RestMethod -Headers $apiHeaders -Uri $releaseUri
 $asset = $release.assets |
     Where-Object { $_.name -like "mpv-dev-$Architecture-*.7z" } |
     Select-Object -First 1
