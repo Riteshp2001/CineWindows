@@ -16,7 +16,7 @@
 #
 cmake_minimum_required(VERSION 3.25)
 
-project(CineWindows VERSION 0.0.3 LANGUAGES CXX)
+project(CineWindows VERSION 0.0.4 LANGUAGES CXX)
 
 set(CINEWINDOWS_APP_ID "com.gyrolet.CineWindows")
 set(CINEWINDOWS_DISPLAY_NAME "CineWindows" CACHE STRING "Application display name")
@@ -389,6 +389,7 @@ if(CINEWINDOWS_BUILD_TESTS)
     add_executable(CineWindowsPlaybackTests
         tests/PlaybackTests.cpp
         src/player/CineMpvItem.cpp src/player/CineMpvItem.h
+        src/player/ThumbnailController.cpp src/player/ThumbnailController.h
         src/utils/MediaUtils.cpp
         src/utils/PathUtils.cpp
         src/app/LoggingCategories.cpp
@@ -398,7 +399,7 @@ if(CINEWINDOWS_BUILD_TESTS)
     )
     target_include_directories(CineWindowsPlaybackTests PRIVATE src ${Libmpv_INCLUDE_DIRS})
     target_link_libraries(CineWindowsPlaybackTests PRIVATE
-        Qt6::Test Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick MpvQt::MpvQt ${Libmpv_LIBRARIES}
+        Qt6::Test Qt6::Core Qt6::Gui Qt6::Network Qt6::Qml Qt6::Quick MpvQt::MpvQt ${Libmpv_LIBRARIES}
     )
     target_compile_definitions(CineWindowsPlaybackTests PRIVATE
         CINEWINDOWS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"

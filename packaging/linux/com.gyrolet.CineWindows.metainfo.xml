@@ -34,6 +34,12 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.0.4" date="2026-10-23">
+      <description>
+        <p>Improves timeline preview speed and support for cookie and header-authenticated web streams.</p>
+        <p>Fixes QML type metadata generation for the embedded mpv player.</p>
+      </description>
+    </release>
     <release version="0.0.3" date="2026-10-23">
       <description>
         <p>Fixes subtitle disabling and flushes saved playback positions before closing.</p>

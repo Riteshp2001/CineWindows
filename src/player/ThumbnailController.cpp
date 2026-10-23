@@ -46,7 +46,8 @@
 namespace {
 constexpr int kSeekPeriodMs = 30;
 constexpr int kPollIntervalMs = 16;
-constexpr int kMaxPollAttempts = 320;
+constexpr int kLocalCaptureTimeoutMs = 5000;
+constexpr int kNetworkCaptureTimeoutMs = 15000;
 constexpr int kExactSeekDelayTicks = 5;
 constexpr int kBytesPerPixel = 4;
 
@@ -70,6 +71,7 @@ ThumbnailController::ThumbnailController(QQuickItem* parent)
     m_seekPeriodTimer.setInterval(kSeekPeriodMs);
     connect(&m_seekPeriodTimer, &QTimer::timeout, this, &ThumbnailController::onSeekPeriodTimeout);
 
+    m_pollTimer.setSingleShot(true);
     m_pollTimer.setInterval(kPollIntervalMs);
     connect(&m_pollTimer, &QTimer::timeout, this, &ThumbnailController::pollOutput);
     m_frameCache.setMaxCost(8 * 1024 * 1024);
@@ -173,6 +175,12 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
 
     if (workerShapeChanged)
     {
+        if (!m_player->mpvOption(QStringLiteral("seekable")).toBool())
+        {
+            clear();
+            destroyWorker();
+            return;
+        }
         destroyWorker();
         m_loadedPath.clear();
         m_workerSize = sourceSize;
@@ -185,6 +193,8 @@ void ThumbnailController::request(const QString& path, double time, int posX, in
         m_cachedVid = -1;
         m_cachedRotate = 0;
         m_sourcePath = path;
+        m_networkSource = !MediaUtils::isLocalPath(path)
+            || path.startsWith(QStringLiteral("\\\\")) || path.startsWith(QStringLiteral("//"));
         if (m_player)
         {
             QVariant vidVar = m_player->mpvOption(QStringLiteral("vid"));
@@ -314,6 +324,16 @@ bool ThumbnailController::ensureWorker()
         return false;
     }
 
+    mpv_set_wakeup_callback(m_mpv, [](void* context) {
+        auto* controller = static_cast<ThumbnailController*>(context);
+        if (controller->m_eventDrainQueued.exchange(true, std::memory_order_acq_rel))
+            return;
+        QMetaObject::invokeMethod(controller, [controller] {
+            controller->m_eventDrainQueued.store(false, std::memory_order_release);
+            controller->drainEvents();
+        }, Qt::QueuedConnection);
+    }, this);
+
     setOption(m_mpv, "config", "no");
     setOption(m_mpv, "msg-level", "all=no");
     setOption(m_mpv, "idle", "yes");
@@ -331,8 +351,9 @@ bool ThumbnailController::ensureWorker()
     setOption(m_mpv, "demuxer-max-bytes", "128KiB");
     setOption(m_mpv, "vd-lavc-skiploopfilter", "all");
     setOption(m_mpv, "vd-lavc-software-fallback", "1");
+    setOption(m_mpv, "vd-lavc-fast", "yes");
     setOption(m_mpv, "vd-lavc-threads", "2");
-    setOption(m_mpv, "zimg-sw", "no");
+    setOption(m_mpv, "sws-allow-zimg", "no");
     setOption(m_mpv, "sws-scaler", "fast-bilinear");
 
     // Performance and silence settings from thumbfast
@@ -346,17 +367,21 @@ bool ThumbnailController::ensureWorker()
     setOption(m_mpv, "ao", "null");
 
     // Sync active video track from player
-    if (m_cachedVid > 0)
+    if (m_cachedVid > 0 && m_sourcePath == m_path)
         setOption(m_mpv, "vid", QByteArray::number(m_cachedVid).constData());
     setOption(m_mpv, "video-rotate", QByteArray::number(m_cachedRotate).constData());
-    if (m_player && !MediaUtils::isLocalPath(m_path))
+    if (m_player && m_networkSource)
     {
-        for (const char* option : {"user-agent", "referrer"})
+        for (const char* option : {"user-agent", "referrer", "cookies-file", "http-proxy",
+                                   "tls-ca-file", "tls-cert-file", "tls-key-file", "rtsp-transport"})
         {
             const QByteArray value = m_player->mpvOption(QString::fromLatin1(option)).toString().toUtf8();
             if (!value.isEmpty())
                 setOption(m_mpv, option, value.constData());
         }
+        setOption(m_mpv, "cookies", m_player->mpvOption(QStringLiteral("cookies")).toBool() ? "yes" : "no");
+        setOption(m_mpv, "tls-verify", m_player->mpvOption(QStringLiteral("tls-verify")).toBool() ? "yes" : "no");
+        setOption(m_mpv, "network-timeout", "15");
         const QStringList headers = m_player->mpvOption(QStringLiteral("http-header-fields")).toStringList();
         QList<QByteArray> encodedHeaders;
         QList<mpv_node> values;
@@ -421,7 +446,7 @@ void ThumbnailController::performSeek(bool fast)
     m_inFlight = true;
     m_frameAvailable = false;
     m_screenshotPending = false;
-    m_pollAttempts = 0;
+    m_captureTimer.start();
 
     THUMBNAIL_LOG << "ThumbnailController::performSeek time:" << m_time;
 
@@ -457,7 +482,7 @@ void ThumbnailController::performSeek(bool fast)
         }
     }
 
-    m_pollTimer.start();
+    m_pollTimer.start(m_networkSource ? kNetworkCaptureTimeoutMs : kLocalCaptureTimeoutMs);
 }
 
 /**
@@ -493,16 +518,17 @@ void ThumbnailController::onSeekPeriodTimeout()
  */
 void ThumbnailController::pollOutput()
 {
-    drainEvents();
-
-    if (m_inFlight && m_frameAvailable && !m_screenshotPending)
-        requestScreenshot();
-
-    if (m_inFlight && ++m_pollAttempts > kMaxPollAttempts)
+    if (m_inFlight && m_captureTimer.elapsed()
+        > (m_networkSource ? kNetworkCaptureTimeoutMs : kLocalCaptureTimeoutMs))
     {
         qCWarning(cinePlayerLog) << "Thumbnail capture timed out";
         clear();
         destroyWorker();
+    }
+    else if (m_inFlight)
+    {
+        const int timeout = m_networkSource ? kNetworkCaptureTimeoutMs : kLocalCaptureTimeoutMs;
+        m_pollTimer.start(qMax(1, timeout - static_cast<int>(m_captureTimer.elapsed())));
     }
 }
 
@@ -686,8 +712,10 @@ void ThumbnailController::destroyWorker()
         return;
     }
 
+    mpv_set_wakeup_callback(m_mpv, nullptr, nullptr);
     mpv_terminate_destroy(m_mpv);
     m_mpv = nullptr;
+    m_eventDrainQueued.store(false, std::memory_order_release);
 }
 
 /**

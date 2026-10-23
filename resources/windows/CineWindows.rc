@@ -39,11 +39,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "CineWindows"
             VALUE "FileDescription", "CineWindows media player"
-            VALUE "FileVersion", "0.0.3"
+            VALUE "FileVersion", "0.0.4"
             VALUE "InternalName", "CineWindows"
             VALUE "OriginalFilename", "CineWindows.exe"
             VALUE "ProductName", "CineWindows"
-            VALUE "ProductVersion", "0.0.3"
+            VALUE "ProductVersion", "0.0.4"
         END
     END
     BLOCK "VarFileInfo"

@@ -11,6 +11,7 @@
 #include "mpvqt_export.h"
 
 #include <QtQuick/QQuickFramebufferObject>
+#include <QtQml/qqmlregistration.h>
 
 #include <mpv/client.h>
 #include <mpv/render_gl.h>
@@ -59,6 +60,7 @@ struct MpvResourceManager {
 class MPVQT_EXPORT MpvAbstractItem : public QQuickFramebufferObject
 {
     Q_OBJECT
+    QML_ANONYMOUS
 public:
     explicit MpvAbstractItem(QQuickItem *parent = nullptr);
     ~MpvAbstractItem();

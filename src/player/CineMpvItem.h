@@ -25,6 +25,13 @@
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
+struct MpvAbstractItemForeign
+{
+    Q_GADGET
+    QML_FOREIGN(MpvAbstractItem)
+    QML_ANONYMOUS
+};
+
 /**
  * @class CineMpvItem
  * @brief QML-accessible mpv video player item based on MpvAbstractItem.

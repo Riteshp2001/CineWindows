@@ -1,15 +1,21 @@
 #include "player/CineMpvItem.h"
+#include "player/ThumbnailController.h"
 #include "utils/PathUtils.h"
 
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
+#include <QElapsedTimer>
+#include <QHostAddress>
 #include <QJSEngine>
 #include <QQuickWindow>
+#include <QPainter>
 #include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QtTest>
 
 class PlaybackTests : public QObject
@@ -17,6 +23,182 @@ class PlaybackTests : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void thumbnails_data()
+    {
+        QTest::addColumn<bool>("network");
+        QTest::addColumn<bool>("cookieProtected");
+        QTest::addColumn<bool>("headerProtected");
+        QTest::addColumn<bool>("redirected");
+        QTest::newRow("local") << false << false << false << false;
+        QTest::newRow("http-range") << true << false << false << false;
+        QTest::newRow("http-cookie") << true << true << false << false;
+        QTest::newRow("http-headers") << true << false << true << false;
+        QTest::newRow("http-redirect") << true << false << true << true;
+    }
+
+    void thumbnails()
+    {
+        QFETCH(bool, network);
+        QFETCH(bool, cookieProtected);
+        QFETCH(bool, headerProtected);
+        QFETCH(bool, redirected);
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());
+        PathUtils::setupMpvEnvironment();
+        QByteArray video("YUV4MPEG2 W64 H36 F2:1 Ip A1:1 C420jpeg\n");
+        for (int frame = 0; frame < 60; ++frame)
+        {
+            video += "FRAME\n";
+            video += QByteArray(64 * 36, static_cast<char>(40 + frame * 2));
+            video += QByteArray(32 * 18 * 2, static_cast<char>(128));
+        }
+        const QString generatedMediaPath = directory.filePath("preview.y4m");
+        if (network || qEnvironmentVariableIsEmpty("CINEWINDOWS_THUMBNAIL_TEST_MEDIA"))
+        {
+            QFile media(generatedMediaPath);
+            QVERIFY(media.open(QIODevice::WriteOnly));
+            QCOMPARE(media.write(video), qint64(video.size()));
+            media.close();
+        }
+        const QString mediaPath = network ? generatedMediaPath
+            : qEnvironmentVariable("CINEWINDOWS_THUMBNAIL_TEST_MEDIA", generatedMediaPath);
+        QVERIFY(QFile::exists(mediaPath));
+
+        int rejectedRequests = 0;
+        QTcpServer server;
+        connect(&server, &QTcpServer::newConnection, &server, [&] {
+            while (server.hasPendingConnections())
+            {
+                QTcpSocket* socket = server.nextPendingConnection();
+                connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+                connect(socket, &QTcpSocket::readyRead, socket, [&, socket] {
+                    QByteArray request = socket->property("request").toByteArray() + socket->readAll();
+                    socket->setProperty("request", request);
+                    if (!request.contains("\r\n\r\n") || socket->property("responded").toBool())
+                        return;
+                    socket->setProperty("responded", true);
+                    if (request.startsWith("GET /redirect ") || request.startsWith("HEAD /redirect "))
+                    {
+                        socket->write("HTTP/1.1 302 Found\r\nLocation: /preview.y4m\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        socket->disconnectFromHost();
+                        return;
+                    }
+                    if ((cookieProtected && !request.contains("cine_preview=allowed"))
+                        || (headerProtected && (!request.contains("User-Agent: CineWindows-preview-test")
+                            || !request.contains("Referer: http://preview.example/")
+                            || !request.contains("X-Cine-Preview: allowed"))))
+                    {
+                        ++rejectedRequests;
+                        socket->write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        socket->disconnectFromHost();
+                        return;
+                    }
+                    const QRegularExpression range("^Range:\\s*bytes=(\\d+)-(\\d*)",
+                        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+                    const auto match = range.match(QString::fromLatin1(request));
+                    const qint64 start = match.hasMatch() ? match.captured(1).toLongLong() : 0;
+                    const qint64 last = match.hasMatch() && !match.captured(2).isEmpty()
+                        ? qMin(match.captured(2).toLongLong(), qint64(video.size() - 1)) : video.size() - 1;
+                    if (start > last || start >= video.size())
+                    {
+                        socket->write("HTTP/1.1 416 Range Not Satisfiable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        socket->disconnectFromHost();
+                        return;
+                    }
+                    const QByteArray payload = video.mid(start, last - start + 1);
+                    QByteArray response = match.hasMatch() ? "HTTP/1.1 206 Partial Content\r\n" : "HTTP/1.1 200 OK\r\n";
+                    response += "Accept-Ranges: bytes\r\nContent-Type: application/octet-stream\r\n";
+                    response += "Content-Length: " + QByteArray::number(payload.size()) + "\r\n";
+                    if (match.hasMatch())
+                        response += "Content-Range: bytes " + QByteArray::number(start) + "-"
+                            + QByteArray::number(last) + "/" + QByteArray::number(video.size()) + "\r\n";
+                    response += "Connection: close\r\n\r\n";
+                    socket->write(response);
+                    if (!request.startsWith("HEAD "))
+                        socket->write(payload);
+                    socket->disconnectFromHost();
+                });
+            }
+        });
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        const QString source = network
+            ? QString("http://127.0.0.1:%1/%2").arg(server.serverPort()).arg(redirected ? "redirect" : "preview.y4m") : mediaPath;
+        const QString cookiesPath = directory.filePath("cookies.txt");
+        QFile cookies(cookiesPath);
+        QVERIFY(cookies.open(QIODevice::WriteOnly));
+        QVERIFY(cookies.write("# Netscape HTTP Cookie File\n127.0.0.1\tFALSE\t/\tFALSE\t4102444800\tcine_preview\tallowed\n") > 0);
+        cookies.close();
+
+        QQuickWindow window;
+        window.resize(640, 360);
+        CineMpvItem player(window.contentItem());
+        player.setSize(QSizeF(640, 360));
+        window.show();
+        QTRY_VERIFY_WITH_TIMEOUT(player.rendererReady(), 15000);
+        player.setMpvOption("ao", "null");
+        player.setMpvOption("cookies", cookieProtected);
+        player.setMpvOption("cookies-file", cookiesPath);
+        if (headerProtected)
+        {
+            player.setMpvOption("user-agent", "CineWindows-preview-test");
+            player.setMpvOption("referrer", "http://preview.example/");
+            player.setMpvOption("http-header-fields", QStringList{"X-Cine-Preview: allowed"});
+        }
+        QSignalSpy loaded(&player, &CineMpvItem::fileLoaded);
+        player.loadFile(source);
+        QTRY_VERIFY_WITH_TIMEOUT(loaded.count() == 1, 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(player.videoWidth() > 0, 15000);
+        player.setPause(true);
+
+        ThumbnailController thumbnails;
+        thumbnails.setSize(QSizeF(174, 98));
+        thumbnails.setPlayer(&player);
+        QSignalSpy ready(&thumbnails, &ThumbnailController::thumbnailReady);
+        QElapsedTimer clock;
+        qint64 firstFrameLatencyMs = -1;
+        bool measureFrameLatency = false;
+        connect(&thumbnails, &ThumbnailController::thumbnailReady, &thumbnails, [&](double) {
+            if (measureFrameLatency && firstFrameLatencyMs < 0)
+                firstFrameLatencyMs = clock.elapsed();
+        });
+        clock.start();
+        measureFrameLatency = true;
+        thumbnails.request(source, 5.0, 0, 0, 174, 98);
+        QTRY_VERIFY_WITH_TIMEOUT(firstFrameLatencyMs >= 0, 15000);
+        qInfo() << QTest::currentDataTag() << "cold first-frame ms:" << firstFrameLatencyMs;
+        QTRY_VERIFY_WITH_TIMEOUT(ready.count() >= 2, 5000);
+        QTest::qWait(500);
+        for (const double seekTime : {15.0, 25.0, 10.0})
+        {
+            const int previousReadyCount = ready.count();
+            firstFrameLatencyMs = -1;
+            clock.restart();
+            thumbnails.request(source, seekTime, 0, 0, 174, 98);
+            QTRY_VERIFY_WITH_TIMEOUT(firstFrameLatencyMs >= 0, 15000);
+            qInfo() << QTest::currentDataTag() << "warm first-frame ms at" << seekTime << ":"
+                    << firstFrameLatencyMs;
+            QTRY_VERIFY_WITH_TIMEOUT(ready.count() >= previousReadyCount + 2, 5000);
+            QTest::qWait(500);
+        }
+        QImage image(174, 98, QImage::Format_ARGB32);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        thumbnails.paint(&painter);
+        painter.end();
+        QVERIFY(qAlpha(image.pixel(87, 49)) > 0);
+        thumbnails.clear();
+        ready.clear();
+        clock.restart();
+        thumbnails.request(source, 5.0, 0, 0, 174, 98);
+        QCOMPARE(ready.count(), 1);
+        qInfo() << QTest::currentDataTag() << "cached thumbnail ms:" << clock.elapsed();
+        QCOMPARE(rejectedRequests, 0);
+        QVERIFY(player.pause());
+        QCOMPARE(QDir::fromNativeSeparators(player.currentPath()), QDir::fromNativeSeparators(source));
+        thumbnails.clear();
+    }
+
     void subtitlesAndResume()
     {
         QTemporaryDir directory;

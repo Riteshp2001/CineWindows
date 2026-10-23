@@ -18,7 +18,10 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <QCache>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QPointer>
 #include <QQuickPaintedItem>
@@ -212,7 +215,9 @@ private:
     QSize m_workerSize;             /**< Actual output resolution reported by the worker. */
     QSize m_frameSize;              /**< Dimensions of the most recently captured frame. */
     bool m_haveFrame{false};        /**< True when a valid frame has been captured and is ready for display. */
-    int m_pollAttempts{0};          /**< Number of poll iterations since the last seek, used for timeout detection. */
+    QElapsedTimer m_captureTimer;
+    std::atomic_bool m_eventDrainQueued{false};
+    bool m_networkSource{false};
     int m_seekPeriodCounter{0};     /**< Counter incremented each seek period tick, used to throttle fast seeks. */
     bool m_allowFastSeek{true};     /**< When true, the next seek may use fast (non-exact) mode. */
     QImage m_currentImage;          /**< Cached thumbnail frame data, drawn by paint(). */

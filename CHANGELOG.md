@@ -4,6 +4,26 @@ All notable changes to CineWindows are documented here. Downloadable packages
 and their checksums are available from
 [GitHub Releases](https://github.com/Riteshp2001/CineWindows/releases).
 
+## [0.0.4] - 2026-10-23
+
+CineWindows 0.0.4 improves timeline preview responsiveness and web-stream handling.
+
+## Improvements
+
+- Thumbnail previews use mpv event notifications instead of frequent polling and keep completed frames cached.
+- Network previews inherit the player's cookies, request headers, proxy, and TLS settings.
+- QML metadata now includes MpvQt's anonymous base type on supported older ECM builds.
+
+## Verification
+
+- Covers local previews, HTTP byte ranges, cookies, request headers, redirects, and cached-frame delivery.
+- Compares first-frame latency against upstream thumbfast using the same 1080p H.264 fixture.
+- Runs playback and configuration regression tests with the bundled mpv library.
+
+Previews require seekable media. Live streams without timeline seeking and protected media that disallow seeking may not provide hover thumbnails.
+
+[Compare changes since v0.0.3](https://github.com/Riteshp2001/CineWindows/compare/v0.0.3...v0.0.4)
+
 ## [0.0.3] - 2026-10-23
 
 CineWindows 0.0.3 fixes subtitle selection and makes playback-position saving
@@ -201,3 +221,4 @@ asset attribution.
 [0.0.1]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.1
 [0.0.2]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.2
 [0.0.3]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.3
+[0.0.4]: https://github.com/Riteshp2001/CineWindows/releases/tag/v0.0.4

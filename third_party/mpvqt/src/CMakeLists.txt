@@ -13,14 +13,16 @@ set_target_properties(MpvQt PROPERTIES
     EXPORT_NAME MpvQt
 )
 
-if(${ECM_VERSION} VERSION_GREATER_EQUAL "6.27")
-    qt_extract_metatypes(MpvQt OUTPUT_FILES METATYPES_FILE)
-    get_filename_component(METATYPES_FILE_NAME ${METATYPES_FILE} NAME)
-    target_sources(MpvQt
-        INTERFACE
-            $<INSTALL_INTERFACE:${KDE_INSTALL_QTMETATYPESDIR}/${METATYPES_FILE_NAME}>
-    )
+qt_extract_metatypes(MpvQt OUTPUT_FILES METATYPES_FILE)
+get_filename_component(METATYPES_FILE_NAME ${METATYPES_FILE} NAME)
+if(NOT DEFINED KDE_INSTALL_QTMETATYPESDIR)
+    set(KDE_INSTALL_QTMETATYPESDIR "${KDE_INSTALL_DATADIR}/qt6/metatypes")
 endif()
+target_sources(MpvQt
+    INTERFACE
+        $<BUILD_INTERFACE:${METATYPES_FILE}>
+        $<INSTALL_INTERFACE:${KDE_INSTALL_QTMETATYPESDIR}/${METATYPES_FILE_NAME}>
+)
 
 target_sources(MpvQt
     PRIVATE
@@ -52,9 +54,7 @@ ecm_generate_headers(MpvQt_HEADERS
 )
 
 install(TARGETS MpvQt EXPORT MpvQtTargets ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
-if(${ECM_VERSION} VERSION_GREATER_EQUAL "6.27")
-    install(FILES ${METATYPES_FILE} DESTINATION ${KDE_INSTALL_QTMETATYPESDIR})
-endif()
+install(FILES ${METATYPES_FILE} DESTINATION ${KDE_INSTALL_QTMETATYPESDIR})
 
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/mpvqt_export.h
@@ -66,7 +66,7 @@ install(FILES
 install(FILES
     "${PROJECT_BINARY_DIR}/MpvQtConfig.cmake"
     "${PROJECT_BINARY_DIR}/MpvQtConfigVersion.cmake"
-    "${CMAKE_SOURCE_DIR}/cmake/FindLibmpv.cmake"
+    "${PROJECT_SOURCE_DIR}/cmake/FindLibmpv.cmake"
     DESTINATION "${CMAKECONFIG_INSTALL_DIR}"
     COMPONENT Devel
 )
