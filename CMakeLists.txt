@@ -392,7 +392,13 @@ if(CINEWINDOWS_BUILD_TESTS)
         tests/PlaybackTests.cpp
         resources/thumbfast.qrc
         src/player/CineMpvItem.cpp src/player/CineMpvItem.h
+        src/player/PlaybackController.cpp src/player/PlaybackController.h
         src/player/ThumbnailController.cpp src/player/ThumbnailController.h
+        src/models/PlaylistModel.cpp
+        src/models/FileBrowserModel.cpp
+        src/app/SettingsManager.cpp
+        src/services/LibraryDatabase.cpp
+        src/services/MediaLibraryService.cpp
         src/utils/MediaUtils.cpp
         src/utils/PathUtils.cpp
         src/app/LoggingCategories.cpp
@@ -402,7 +408,7 @@ if(CINEWINDOWS_BUILD_TESTS)
     )
     target_include_directories(CineWindowsPlaybackTests PRIVATE src ${Libmpv_INCLUDE_DIRS})
     target_link_libraries(CineWindowsPlaybackTests PRIVATE
-        Qt6::Test Qt6::Core Qt6::Gui Qt6::Network Qt6::Qml Qt6::Quick MpvQt::MpvQt ${Libmpv_LIBRARIES}
+        Qt6::Test Qt6::Core Qt6::Gui Qt6::Network Qt6::Qml Qt6::Quick Qt6::Sql Qt6::Concurrent MpvQt::MpvQt ${Libmpv_LIBRARIES}
     )
     target_compile_definitions(CineWindowsPlaybackTests PRIVATE
         CINEWINDOWS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"

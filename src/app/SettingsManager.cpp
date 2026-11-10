@@ -62,6 +62,36 @@ SettingsManager::SettingsManager(QObject* parent)
     load();
 }
 
+QStringList SettingsManager::hiddenPlaces() const
+{
+    return m_hiddenPlaces;
+}
+
+void SettingsManager::setHiddenPlaces(const QStringList& paths)
+{
+    QStringList unique = paths;
+    unique.removeDuplicates();
+    if (m_hiddenPlaces == unique)
+        return;
+    m_hiddenPlaces = unique;
+    saveValue(QStringLiteral("library/hiddenPlaces"), unique);
+    Q_EMIT hiddenPlacesChanged();
+}
+
+bool SettingsManager::restrictBrowsingToLibrary() const
+{
+    return m_restrictBrowsingToLibrary;
+}
+
+void SettingsManager::setRestrictBrowsingToLibrary(bool restricted)
+{
+    if (m_restrictBrowsingToLibrary == restricted)
+        return;
+    m_restrictBrowsingToLibrary = restricted;
+    saveValue(QStringLiteral("library/restrictBrowsingToLibrary"), restricted);
+    Q_EMIT restrictBrowsingToLibraryChanged();
+}
+
 /**
  * @brief Creates and returns the singleton SettingsManager instance.
  * @param engine   QML engine (unused; retained for QML type-system registration).
@@ -102,6 +132,8 @@ void SettingsManager::load()
     }
     m_saveVideoPosition = settings.value(QStringLiteral("session/saveVideoPosition"), m_saveVideoPosition).toBool();
     m_saveSession = settings.value(QStringLiteral("session/saveSession"), m_saveSession).toBool();
+    m_hiddenPlaces = settings.value(QStringLiteral("library/hiddenPlaces")).toStringList();
+    m_restrictBrowsingToLibrary = settings.value(QStringLiteral("library/restrictBrowsingToLibrary"), false).toBool();
     m_thumbnailPreview = settings.value(QStringLiteral("ui/thumbnailPreview"), m_thumbnailPreview).toBool();
     m_showRemaining = settings.value(QStringLiteral("ui/showRemaining"), m_showRemaining).toBool();
     m_subtitleFont = settings.value(QStringLiteral("subtitles/font"), m_subtitleFont).toString();

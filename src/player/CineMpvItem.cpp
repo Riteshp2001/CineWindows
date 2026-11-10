@@ -33,6 +33,10 @@
 
 #include <algorithm>
 
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#endif
+
 CineMpvItem::CineMpvItem(QQuickItem* parent)
     : MpvAbstractItem(parent)
 {
@@ -58,6 +62,16 @@ CineMpvItem::CineMpvItem(QQuickItem* parent)
     setupConnections();
     setupMpvLogging();
     configureDefaults();
+
+#ifdef Q_OS_WIN
+    m_displayInhibitTimer.setInterval(30000);
+    connect(&m_displayInhibitTimer, &QTimer::timeout, this, &CineMpvItem::updateDisplaySleepInhibition);
+    connect(this, &CineMpvItem::pauseChanged, this, &CineMpvItem::updateDisplaySleepInhibition);
+    connect(this, &CineMpvItem::idleChanged, this, &CineMpvItem::updateDisplaySleepInhibition);
+    connect(this, &CineMpvItem::videoGeometryChanged, this, &CineMpvItem::updateDisplaySleepInhibition);
+    connect(this, &CineMpvItem::playbackFinished, this, &CineMpvItem::updateDisplaySleepInhibition);
+    connect(this, &QQuickItem::visibleChanged, this, &CineMpvItem::updateDisplaySleepInhibition);
+#endif
 
     connect(this, &MpvAbstractItem::ready, this, [this]() {
         if (m_rendererReady)
@@ -577,6 +591,21 @@ void CineMpvItem::resetVideoGeometry()
     m_videoAspectRatio = 0.0;
     Q_EMIT videoGeometryChanged();
 }
+
+#ifdef Q_OS_WIN
+void CineMpvItem::updateDisplaySleepInhibition()
+{
+    if (m_pause || m_idle || m_eofReached || m_shutdown || m_videoWidth <= 0 || !isVisible())
+    {
+        m_displayInhibitTimer.stop();
+        return;
+    }
+    if (!m_displayInhibitTimer.isActive())
+        m_displayInhibitTimer.start();
+    if (SetThreadExecutionState(ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED) == 0)
+        qCWarning(cinePlayerLog) << "Could not reset the Windows display idle timer";
+}
+#endif
 
 void CineMpvItem::setPosition(double value)
 {

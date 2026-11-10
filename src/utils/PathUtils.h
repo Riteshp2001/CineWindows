@@ -22,6 +22,8 @@
 
 namespace PathUtils {
 
+bool isPathWithinDirectory(const QString& path, const QString& directory);
+
 /**
  * @brief Returns the application configuration directory path.
  * @return Absolute path to the CineWindows config directory.

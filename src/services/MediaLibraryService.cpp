@@ -22,6 +22,7 @@
 #include "player/CineMpvItem.h"
 #include "services/LibraryDatabase.h"
 #include "utils/MediaUtils.h"
+#include "utils/PathUtils.h"
 
 #include <QDateTime>
 #include <QDirIterator>
@@ -30,6 +31,8 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QtConcurrentRun>
+
+#include <algorithm>
 
 namespace {
 void logQueryFailure(const char* operation, const QSqlQuery& query)
@@ -112,6 +115,7 @@ QVariantList MediaLibraryService::history() const { return m_history; }
 QVariantList MediaLibraryService::favorites() const { return m_favorites; }
 QVariantList MediaLibraryService::library() const { return m_library; }
 QVariantList MediaLibraryService::roots() const { return m_roots; }
+QVariantList MediaLibraryService::excludedFolders() const { return m_excludedFolders; }
 QVariantMap MediaLibraryService::statistics() const { return m_statistics; }
 bool MediaLibraryService::indexing() const { return m_indexing; }
 int MediaLibraryService::scannedCount() const { return m_scannedCount; }
@@ -160,6 +164,7 @@ void MediaLibraryService::refresh()
 {
     if (!m_database.isOpen())
         return;
+    updateRoots();
     // Shared column list: includes a sub-query to check favourite status.
     const QString fields = QStringLiteral(
         "m.media_id, m.locator, COALESCE(NULLIF(m.tmdb_title, ''), NULLIF(m.media_title, ''), m.display_name) AS title, "
@@ -175,6 +180,9 @@ void MediaLibraryService::refresh()
                                                  "ORDER BY f.added_at_ms DESC").arg(fields));
     m_library = queryCollection(QStringLiteral("SELECT DISTINCT %1 FROM media_items m JOIN library_entries le ON le.media_id=m.media_id "
                                                "ORDER BY title COLLATE NOCASE").arg(fields));
+    m_library.erase(std::remove_if(m_library.begin(), m_library.end(), [this](const QVariant& value) {
+        return isExcluded(value.toMap().value(QStringLiteral("path")).toString());
+    }), m_library.end());
 
     // Compute aggregate statistics in a single query.
     QSqlQuery statisticsQuery(m_database);
@@ -195,7 +203,6 @@ void MediaLibraryService::refresh()
     }
 
     m_history = LibraryDatabase::playbackHistory(m_database);
-    updateRoots();
     Q_EMIT collectionsChanged();
 }
 
@@ -215,17 +222,74 @@ void MediaLibraryService::updateRoots()
         logQueryFailure("Could not query library roots:", query);
     }
     // Only emit rootsChanged when the list actually changes (avoids spurious signal storms).
-    if (roots != m_roots)
+    QVariantList exclusions;
+    QSqlQuery excluded(m_database);
+    if (excluded.exec(QStringLiteral("SELECT locator FROM library_exclusions ORDER BY locator COLLATE NOCASE")))
+    {
+        while (excluded.next())
+            exclusions.append(QVariantMap{{QStringLiteral("path"), excluded.value(0)}});
+    }
+    else
+        logQueryFailure("Could not query excluded folders:", excluded);
+    if (roots != m_roots || exclusions != m_excludedFolders)
     {
         m_roots = roots;
+        m_excludedFolders = exclusions;
         Q_EMIT rootsChanged();
     }
+}
+
+bool MediaLibraryService::isExcluded(const QString& path) const
+{
+    return std::any_of(m_excludedFolders.cbegin(), m_excludedFolders.cend(), [&path](const QVariant& value) {
+        return PathUtils::isPathWithinDirectory(path, value.toMap().value(QStringLiteral("path")).toString());
+    });
+}
+
+bool MediaLibraryService::addExcludedFolder(const QUrl& folder)
+{
+    if (folder.isEmpty() || (!folder.isLocalFile() && !folder.scheme().isEmpty()) || !m_database.isOpen())
+        return false;
+    const QString path = QDir(folder.isLocalFile() ? folder.toLocalFile() : folder.toString()).canonicalPath();
+    if (path.isEmpty())
+        return false;
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral("INSERT OR IGNORE INTO library_exclusions(locator_key, locator, added_at_ms) VALUES(?, ?, ?)"));
+    query.addBindValue(LibraryDatabase::locatorKey(path));
+    query.addBindValue(path);
+    query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+    if (!query.exec())
+    {
+        logQueryFailure("Could not exclude a folder:", query);
+        return false;
+    }
+    refresh();
+    rescanAll();
+    return true;
+}
+
+void MediaLibraryService::removeExcludedFolder(const QString& path)
+{
+    if (!m_database.isOpen())
+        return;
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral("DELETE FROM library_exclusions WHERE locator_key=?"));
+    query.addBindValue(LibraryDatabase::locatorKey(path));
+    if (!query.exec())
+    {
+        logQueryFailure("Could not remove a folder exclusion:", query);
+        return;
+    }
+    refresh();
+    rescanAll();
 }
 
 /** @copydoc MediaLibraryService::addRoot */
 bool MediaLibraryService::addRoot(const QUrl& folder)
 {
-    const QString path = folder.isLocalFile() ? folder.toLocalFile() : folder.toString();
+    if (folder.isEmpty() || (!folder.isLocalFile() && !folder.scheme().isEmpty()))
+        return false;
+    const QString path = QDir(folder.isLocalFile() ? folder.toLocalFile() : folder.toString()).canonicalPath();
     // Only accept existing directories with an open database.
     if (!QFileInfo(path).isDir() || !m_database.isOpen())
         return false;
@@ -255,19 +319,26 @@ void MediaLibraryService::removeRoot(const QString& path)
     query.prepare(QStringLiteral("DELETE FROM library_roots WHERE locator_key=?"));
     query.addBindValue(LibraryDatabase::locatorKey(path));
     if (!query.exec())
+    {
         logQueryFailure("Could not remove a library root:", query);
+        return;
+    }
     else
         qCInfo(cineLibraryLog).noquote() << "Removed library root" << QDir::toNativeSeparators(path);
     // Refresh collections to remove entries that belonged only to this root.
     refresh();
+    rescanAll();
 }
 
 /** @copydoc MediaLibraryService::rescanAll */
 void MediaLibraryService::rescanAll()
 {
-    if (m_indexing || m_roots.isEmpty())
+    if (!m_database.isOpen())
         return;
     const QVariantList rootsSnapshot = m_roots;
+    QStringList excludedPaths;
+    for (const QVariant& value : m_excludedFolders)
+        excludedPaths.append(value.toMap().value(QStringLiteral("path")).toString());
     // Bump generation so stale async results (from a previously cancelled scan) are ignored.
     const int generation = ++m_scanGeneration;
     m_scannedCount = 0;
@@ -375,25 +446,42 @@ void MediaLibraryService::rescanAll()
     });
 
     // Background thread: walk every root directory recursively collecting media files.
-    watcher->setFuture(QtConcurrent::run([rootsSnapshot] {
+    watcher->setFuture(QtConcurrent::run([rootsSnapshot, excludedPaths] {
         QVariantList files;
+        const auto excluded = [&excludedPaths](const QString& path) {
+            return std::any_of(excludedPaths.cbegin(), excludedPaths.cend(), [&path](const QString& folder) {
+                return PathUtils::isPathWithinDirectory(path, folder);
+            });
+        };
         for (const QVariant& rootValue : rootsSnapshot)
         {
             const QString root = rootValue.toMap().value(QStringLiteral("path")).toString();
-            QDirIterator iterator(root, QDir::Files | QDir::Readable | QDir::NoDotAndDotDot,
-                                  QDirIterator::Subdirectories);
-            while (iterator.hasNext())
+            if (excluded(root))
+                continue;
+            QStringList folders{root};
+            while (!folders.isEmpty())
             {
-                const QString path = iterator.next();
-                // Skip non-media files and subtitle files.
-                if (!MediaUtils::isMediaFile(path) || MediaUtils::isSubtitleFile(path))
-                    continue;
-                const QFileInfo info = iterator.fileInfo();
-                files.append(QVariantMap{{QStringLiteral("root"), root},
-                                         {QStringLiteral("path"), info.absoluteFilePath()},
-                                         {QStringLiteral("name"), info.fileName()},
-                                         {QStringLiteral("size"), info.size()},
-                                         {QStringLiteral("modified"), info.lastModified().toMSecsSinceEpoch()}});
+                QDirIterator iterator(folders.takeLast(), QDir::AllDirs | QDir::Files | QDir::Readable | QDir::NoDotAndDotDot);
+                while (iterator.hasNext())
+                {
+                    const QString path = iterator.next();
+                    if (excluded(path))
+                        continue;
+                    const QFileInfo info = iterator.fileInfo();
+                    if (info.isDir())
+                    {
+                        if (!info.isSymLink())
+                            folders.append(path);
+                        continue;
+                    }
+                    if (!MediaUtils::isMediaFile(path) || MediaUtils::isSubtitleFile(path))
+                        continue;
+                    files.append(QVariantMap{{QStringLiteral("root"), root},
+                                             {QStringLiteral("path"), info.absoluteFilePath()},
+                                             {QStringLiteral("name"), info.fileName()},
+                                             {QStringLiteral("size"), info.size()},
+                                             {QStringLiteral("modified"), info.lastModified().toMSecsSinceEpoch()}});
+                }
             }
         }
         return files;

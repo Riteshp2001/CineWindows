@@ -19,6 +19,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QStringList>
 #include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -39,6 +40,12 @@ class FileBrowserModel : public QAbstractListModel
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    Q_PROPERTY(QStringList includedFolders READ includedFolders WRITE setIncludedFolders NOTIFY folderRulesChanged)
+    Q_PROPERTY(QStringList excludedFolders READ excludedFolders WRITE setExcludedFolders NOTIFY folderRulesChanged)
+    Q_PROPERTY(bool foldersRestricted READ foldersRestricted WRITE setFoldersRestricted NOTIFY folderRulesChanged)
+    Q_PROPERTY(QStringList hiddenPlaces READ hiddenPlaces WRITE setHiddenPlaces NOTIFY placesChanged)
+    Q_PROPERTY(QVariantList visiblePlaces READ places NOTIFY placesChanged)
+    Q_PROPERTY(QVariantList availablePlaces READ availablePlaces NOTIFY placesChanged)
 
 public:
     /** @brief Custom roles exposed to QML for file browser data access. */
@@ -57,6 +64,15 @@ public:
 
     /** @brief Constructs a FileBrowserModel with the given parent, defaults to the Movies folder. */
     explicit FileBrowserModel(QObject* parent = nullptr);
+    QStringList includedFolders() const;
+    void setIncludedFolders(const QStringList& paths);
+    QStringList excludedFolders() const;
+    void setExcludedFolders(const QStringList& paths);
+    bool foldersRestricted() const;
+    void setFoldersRestricted(bool restricted);
+    QStringList hiddenPlaces() const;
+    void setHiddenPlaces(const QStringList& paths);
+    QVariantList availablePlaces() const;
     /** @brief Returns the number of file entries in the current folder. */
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     /** @brief Returns file entry data for the given role at the specified index. */
@@ -111,6 +127,8 @@ Q_SIGNALS:
     void errorStringChanged();
     /** @brief Emitted when the entry count changes. */
     void countChanged();
+    void folderRulesChanged();
+    void placesChanged();
 
 private:
     /** @brief Internal data structure for a single filesystem entry. */
@@ -131,6 +149,8 @@ private:
     void setLoading(bool loading);
     /** @brief Sets the error string and emits errorStringChanged. */
     void setErrorString(const QString& errorString);
+    bool isPathAllowed(const QString& path) const;
+    void applyFolderRules();
 
     QList<Entry> m_entries;           ///< Current list of file/directory entries
     QString m_currentPath;            ///< Currently displayed folder path
@@ -141,4 +161,8 @@ private:
     bool m_loading{false};            ///< Whether an async load operation is in progress
     int m_generation{0};              ///< Monotonically increasing counter to discard stale loads
     QTimer m_searchTimer;              ///< Debounces directory rescans while the user types
+    QStringList m_includedFolders;
+    QStringList m_excludedFolders;
+    QStringList m_hiddenPlaces;
+    bool m_foldersRestricted{false};
 };

@@ -20,6 +20,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import CineWindows
 
@@ -241,7 +242,20 @@ Item {
     }
 
     function openMedia(path, position) {
-        controller.openPathAt(path, position || 0, true);
+        if (position === undefined || position === null)
+            controller.openPaths([path], true);
+        else
+            controller.openPathAt(path, position || 0, true);
+    }
+
+    function setPlaceVisible(path, visible) {
+        const hidden = SettingsManager.hiddenPlaces.slice();
+        const index = hidden.indexOf(String(path));
+        if (visible && index !== -1)
+            hidden.splice(index, 1);
+        else if (!visible && index === -1)
+            hidden.push(String(path));
+        SettingsManager.hiddenPlaces = hidden;
     }
 
     function clearCurrentCollection() {
@@ -292,13 +306,14 @@ Item {
                     { key: "browse", label: qsTr("Browse"), icon: "cine-folder-symbolic" },
                     { key: "library", label: qsTr("Library"), icon: "cine-playlist-symbolic" },
                     { key: "favorites", label: qsTr("Favorites"), icon: "cine-heart-symbolic" },
-                    { key: "recent", label: qsTr("Recent"), icon: "cine-history-symbolic" },
-                    { key: "history", label: qsTr("History"), icon: "cine-view-list-symbolic" }
+                    { key: "recent", label: qsTr("History"), icon: "cine-history-symbolic" }
                 ]
 
                 delegate: AbstractButton {
                     id: navButton
                     required property var modelData
+                    readonly property bool selected: root.section === modelData.key
+                        || (modelData.key === "recent" && root.section === "history")
                     width: parent.width
                     height: 44
                     hoverEnabled: true
@@ -309,13 +324,13 @@ Item {
                     onClicked: root.requestSection(modelData.key)
                     background: Rectangle {
                         radius: Theme.radius
-                        color: root.section === navButton.modelData.key
+                        color: navButton.selected
                                ? Qt.alpha(Theme.accent, 0.16)
                                : navButton.hovered ? Theme.cardHover : "transparent"
                         border.width: navButton.visualFocus ? Theme.focusRingWidth : 0
                         border.color: Theme.focusRing
                         Rectangle {
-                            visible: root.section === navButton.modelData.key
+                            visible: navButton.selected
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 3
@@ -333,8 +348,8 @@ Item {
                             width: 18
                             height: 18
                             name: navButton.modelData.icon
-                            filled: navButton.hovered || navButton.down || navButton.activeFocus || root.section === navButton.modelData.key
-                            tint: root.section === navButton.modelData.key ? Theme.accent : Theme.mutedText
+                            filled: navButton.hovered || navButton.down || navButton.activeFocus || navButton.selected
+                            tint: navButton.selected ? Theme.accent : Theme.mutedText
                         }
                         Text {
                             visible: !root.compact
@@ -342,7 +357,7 @@ Item {
                             text: navButton.modelData.label
                             color: Theme.text
                             font.pixelSize: Theme.fontSizeSmall
-                            font.bold: root.section === navButton.modelData.key
+                            font.bold: navButton.selected
                         }
                     }
                     CineTooltip {
@@ -360,7 +375,7 @@ Item {
             Item { visible: !root.compact; width: 1; height: 8 }
 
             Text {
-                visible: !root.compact
+                visible: !root.compact && root.fileBrowser && root.fileBrowser.visiblePlaces.length > 0
                 leftPadding: 12
                 text: qsTr("PLACES")
                 color: Theme.mutedText
@@ -369,7 +384,7 @@ Item {
             }
 
             Repeater {
-                model: root.fileBrowser ? root.fileBrowser.places() : []
+                model: root.fileBrowser ? root.fileBrowser.visiblePlaces : []
                 delegate: AbstractButton {
                     id: placeButton
                     required property var modelData
@@ -414,15 +429,15 @@ Item {
 
             ItemDelegate {
                 id: addLibraryButton
-                objectName: "addLibraryFolderRow"
+                objectName: "manageLibraryFoldersRow"
                 visible: !root.compact
                 width: parent.width
                 height: 42
                 hoverEnabled: true
                 focusPolicy: Qt.TabFocus
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
-                Accessible.name: qsTr("Add Library Folder")
-                onClicked: root.addLibraryFolderRequested()
+                Accessible.name: qsTr("Manage Folders")
+                onClicked: folderSettingsDialog.open()
                 background: Rectangle {
                     objectName: "addLibraryFolderBackground"
                     radius: Theme.radius
@@ -434,13 +449,13 @@ Item {
                     CineIcon {
                         Layout.preferredWidth: 18
                         Layout.preferredHeight: 18
-                        name: "cine-list-add-symbolic"
+                        name: "cine-folder-symbolic"
                         filled: addLibraryButton.hovered || addLibraryButton.down || addLibraryButton.activeFocus
                         tint: Theme.accent
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Add Library Folder")
+                        text: qsTr("Manage Folders")
                         color: Theme.text
                         font.pixelSize: Theme.fontSizeCaption
                         font.bold: true
@@ -464,7 +479,7 @@ Item {
             objectName: "mediaHubToolbar"
             readonly property bool hasSearch: root.section !== "home"
             readonly property bool narrow: width < 620
-                                                   || (root.section === "history" && width < 900)
+                                                   || (root.section === "history" && width < 950)
                                                    || (root.section === "library" && width < 820)
             readonly property bool stacked: root.compact && hasSearch
             anchors.top: parent.top
@@ -487,7 +502,7 @@ Item {
                     text: root.section === "home" ? qsTr("Media Hub")
                         : root.section === "library" ? qsTr("Media Library")
                         : root.section === "favorites" ? qsTr("Favorites")
-                        : root.section === "history" ? qsTr("History") : qsTr("Recent Files")
+                        : qsTr("History")
                     color: Theme.text
                     font.pixelSize: root.metrics.fontHeading
                     font.bold: true
@@ -666,6 +681,11 @@ Item {
                 metrics: root.metrics
 
                 CineMenuItem {
+                    visible: root.section === "browse" || root.section === "library"
+                    text: qsTr("Manage Folders")
+                    onTriggered: folderSettingsDialog.open()
+                }
+                CineMenuItem {
                     objectName: "forwardMoreAction"
                     visible: root.section === "browse" && root.compact
                     text: qsTr("Forward")
@@ -792,7 +812,7 @@ Item {
                                    : Math.round((parent.height - height) / 2)
                 width: 36; height: 36; buttonSize: 36
                 metrics: root.metrics
-                visible: root.playerActive && root.section !== "browse" && root.section !== "history"
+                visible: root.playerActive
                 iconName: "cine-playback-start-symbolic"
                 btnTooltip: qsTr("Return to player")
                 onClicked: root.closeRequested()
@@ -807,9 +827,47 @@ Item {
             color: Theme.separator
         }
 
+        TabBar {
+            id: historyViewTabs
+            objectName: "historyViewTabs"
+            anchors.top: toolbar.bottom
+            anchors.topMargin: root.metrics.spacingSm
+            x: root.compact ? root.metrics.spacingSm : Theme.libraryContentMargin
+            width: Math.max(0, Math.min(360, parent.width - 2 * x))
+            height: visible ? 36 : 0
+            visible: root.section === "recent" || root.section === "history"
+            currentIndex: root.section === "history" ? 1 : 0
+            background: Rectangle { color: Theme.panelStrong; radius: 6 }
+            Repeater {
+                model: [qsTr("Recent Files"), qsTr("All Visits")]
+                delegate: TabButton {
+                    id: historyViewTab
+                    required property string modelData
+                    required property int index
+                    width: historyViewTabs.width / 2
+                    height: 36
+                    text: modelData
+                    onClicked: root.requestSection(index === 0 ? "recent" : "history")
+                    background: Rectangle {
+                        radius: 6
+                        color: historyViewTab.checked ? Theme.cardHover : "transparent"
+                    }
+                    contentItem: Text {
+                        text: historyViewTab.text
+                        color: historyViewTab.checked ? Theme.text : Theme.mutedText
+                        font.pixelSize: Theme.fontSizeCaption
+                        font.bold: historyViewTab.checked
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+        }
+
         Item {
             id: contentBody
-            anchors.top: toolbar.bottom
+            anchors.top: historyViewTabs.visible ? historyViewTabs.bottom : toolbar.bottom
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
@@ -984,7 +1042,7 @@ Item {
                         focusPolicy: Qt.TabFocus
                         Accessible.name: name
                         Accessible.description: isDirectory ? qsTr("Folder") : qsTr("Media file")
-                        onClicked: isDirectory ? root.fileBrowser.navigateTo(url) : root.openMedia(path, 0)
+                        onClicked: isDirectory ? root.fileBrowser.navigateTo(url) : root.openMedia(path)
                         function updateThumbnail() {
                             thumbnailUrl = videoFile && root.thumbnailService
                                 ? root.thumbnailService.thumbnailFor(path) : "";
@@ -1416,6 +1474,199 @@ Item {
                 anchors.centerIn: parent
                 visible: (root.fileBrowser && root.fileBrowser.loading && root.section === "browse")
                     || (root.mediaLibrary && root.mediaLibrary.indexing && root.section === "library")
+            }
+        }
+    }
+
+    FolderDialog {
+        id: excludeFolderDialog
+        title: qsTr("Exclude Folder")
+        onAccepted: {
+            if (!root.mediaLibrary || !root.mediaLibrary.addExcludedFolder(selectedFolder))
+                folderRulesError.text = qsTr("Could not exclude folder");
+        }
+    }
+
+    Dialog {
+        id: folderSettingsDialog
+        objectName: "folderSettingsDialog"
+        parent: root
+        popupType: Popup.Item
+        modal: true
+        focus: true
+        title: qsTr("Folders and Places")
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2)
+        width: Math.max(0, Math.min(560, root.width - 32))
+        height: Math.max(0, Math.min(600, root.height - 32))
+        padding: 16
+        standardButtons: Dialog.Close
+        palette.windowText: Theme.text
+        palette.text: Theme.text
+        palette.buttonText: Theme.text
+        palette.button: Theme.cardStrong
+        palette.highlight: Theme.accent
+        onOpened: folderRulesError.text = ""
+        background: Rectangle {
+            color: Theme.panel
+            border.color: Theme.separator
+            radius: 8
+        }
+        contentItem: CineScrollView {
+            id: folderSettingsScroll
+            contentWidth: availableWidth
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ColumnLayout {
+                width: folderSettingsScroll.availableWidth
+                spacing: 12
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Included Folders")
+                        color: Theme.text
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.bold: true
+                    }
+                    CineButton {
+                        width: 36; height: 36; buttonSize: 36
+                        iconName: "cine-list-add-symbolic"
+                        btnTooltip: qsTr("Add Library Folder")
+                        onClicked: root.addLibraryFolderRequested()
+                    }
+                    CineButton {
+                        width: 36; height: 36; buttonSize: 36
+                        iconName: "cine-refresh-symbolic"
+                        btnTooltip: qsTr("Rescan Library")
+                        enabled: root.mediaLibrary && !root.mediaLibrary.indexing
+                        onClicked: root.mediaLibrary.rescanAll()
+                    }
+                }
+                Repeater {
+                    model: root.mediaLibrary ? root.mediaLibrary.roots : []
+                    delegate: RowLayout {
+                        id: includedFolderRow
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            text: includedFolderRow.modelData.path
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSizeCaption
+                            elide: Text.ElideMiddle
+                        }
+                        CineButton {
+                            width: 36; height: 36; buttonSize: 36
+                            iconName: "cine-close-symbolic"
+                            btnTooltip: qsTr("Remove Included Folder")
+                            onClicked: root.mediaLibrary.removeRoot(includedFolderRow.modelData.path)
+                        }
+                    }
+                }
+                Text {
+                    visible: !root.mediaLibrary || root.mediaLibrary.roots.length === 0
+                    text: qsTr("None")
+                    color: Theme.mutedText
+                    font.pixelSize: Theme.fontSizeCaption
+                }
+                Switch {
+                    id: restrictBrowsingSwitch
+                    Layout.fillWidth: true
+                    text: qsTr("Only browse included folders")
+                    checked: SettingsManager.restrictBrowsingToLibrary
+                    onToggled: SettingsManager.restrictBrowsingToLibrary = checked
+                    contentItem: Text {
+                        leftPadding: restrictBrowsingSwitch.indicator.width + restrictBrowsingSwitch.spacing
+                        text: restrictBrowsingSwitch.text
+                        color: Theme.text
+                        font.pixelSize: Theme.fontSizeSmall
+                        verticalAlignment: Text.AlignVCenter
+                        wrapMode: Text.WordWrap
+                    }
+                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Theme.separator }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Excluded Folders")
+                        color: Theme.text
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.bold: true
+                    }
+                    CineButton {
+                        width: 36; height: 36; buttonSize: 36
+                        iconName: "cine-list-add-symbolic"
+                        btnTooltip: qsTr("Exclude Folder")
+                        onClicked: excludeFolderDialog.open()
+                    }
+                }
+                Repeater {
+                    model: root.mediaLibrary ? root.mediaLibrary.excludedFolders : []
+                    delegate: RowLayout {
+                        id: excludedFolderRow
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            text: excludedFolderRow.modelData.path
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSizeCaption
+                            elide: Text.ElideMiddle
+                        }
+                        CineButton {
+                            width: 36; height: 36; buttonSize: 36
+                            iconName: "cine-close-symbolic"
+                            btnTooltip: qsTr("Remove Excluded Folder")
+                            onClicked: root.mediaLibrary.removeExcludedFolder(excludedFolderRow.modelData.path)
+                        }
+                    }
+                }
+                Text {
+                    visible: !root.mediaLibrary || root.mediaLibrary.excludedFolders.length === 0
+                    text: qsTr("None")
+                    color: Theme.mutedText
+                    font.pixelSize: Theme.fontSizeCaption
+                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Theme.separator }
+                Text {
+                    text: qsTr("Places")
+                    color: Theme.text
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.bold: true
+                }
+                Repeater {
+                    model: root.fileBrowser ? root.fileBrowser.availablePlaces : []
+                    delegate: CheckBox {
+                        id: placeOption
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: modelData.name
+                        checked: SettingsManager.hiddenPlaces.indexOf(String(modelData.path)) === -1
+                        onToggled: root.setPlaceVisible(modelData.path, checked)
+                        contentItem: Text {
+                            leftPadding: placeOption.indicator.width + placeOption.spacing
+                            text: placeOption.text
+                            color: Theme.text
+                            font.pixelSize: Theme.fontSizeSmall
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+                Text {
+                    id: folderRulesError
+                    Layout.fillWidth: true
+                    visible: text.length > 0
+                    color: Theme.danger
+                    font.pixelSize: Theme.fontSizeCaption
+                    wrapMode: Text.WordWrap
+                }
             }
         }
     }

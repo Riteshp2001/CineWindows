@@ -582,6 +582,10 @@ private:
     mpv_handle* m_logClient{nullptr};
     /** @brief Polls the dedicated libmpv client without cross-thread callbacks. */
     QTimer m_logDrainTimer;
+#ifdef Q_OS_WIN
+    void updateDisplaySleepInhibition();
+    QTimer m_displayInhibitTimer;
+#endif
     /** @brief Rotation-adjusted display width reported by mpv. */
     int m_videoWidth{0};
     /** @brief Rotation-adjusted display height reported by mpv. */

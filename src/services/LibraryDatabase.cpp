@@ -111,7 +111,7 @@ bool initialize(QSqlDatabase& database, QString* error)
     }
     schemaVersion = query.value(0).toInt();
     query.finish();
-    if (schemaVersion >= 2)
+    if (schemaVersion >= 3)
         return true;
 
     if (!exec(query, QStringLiteral("BEGIN IMMEDIATE"), error))
@@ -123,7 +123,7 @@ bool initialize(QSqlDatabase& database, QString* error)
     }
     schemaVersion = query.value(0).toInt();
     query.finish();
-    if (schemaVersion >= 2)
+    if (schemaVersion >= 3)
     {
         database.rollback();
         return true;
@@ -150,6 +150,8 @@ bool initialize(QSqlDatabase& database, QString* error)
         QStringLiteral("CREATE TABLE IF NOT EXISTS library_roots ("
                        "root_id INTEGER PRIMARY KEY, locator TEXT NOT NULL, locator_key TEXT NOT NULL UNIQUE, "
                        "added_at_ms INTEGER NOT NULL, last_scan_at_ms INTEGER, enabled INTEGER NOT NULL DEFAULT 1)"),
+        QStringLiteral("CREATE TABLE IF NOT EXISTS library_exclusions ("
+                   "locator_key TEXT PRIMARY KEY, locator TEXT NOT NULL, added_at_ms INTEGER NOT NULL)"),
         QStringLiteral("CREATE TABLE IF NOT EXISTS library_entries ("
                        "root_id INTEGER NOT NULL REFERENCES library_roots(root_id) ON DELETE CASCADE, "
                        "media_id INTEGER NOT NULL REFERENCES media_items(media_id) ON DELETE CASCADE, "
@@ -195,11 +197,11 @@ bool initialize(QSqlDatabase& database, QString* error)
                 return false;
             }
         }
-        if (!exec(query, QStringLiteral("PRAGMA user_version = 2"), error))
-        {
-            database.rollback();
-            return false;
-        }
+    }
+    if (!exec(query, QStringLiteral("PRAGMA user_version = 3"), error))
+    {
+        database.rollback();
+        return false;
     }
     if (!database.commit())
     {

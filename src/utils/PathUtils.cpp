@@ -74,6 +74,29 @@ void ensureMpvSubdirs(const QString& path)
 
 namespace PathUtils {
 
+bool isPathWithinDirectory(const QString& path, const QString& directory)
+{
+    if (path.isEmpty() || directory.isEmpty())
+        return false;
+    const auto normalizedPath = [](const QString& value) {
+        const QFileInfo info(QDir::fromNativeSeparators(value));
+        const QString canonical = info.canonicalFilePath();
+        return QDir::cleanPath(canonical.isEmpty() ? info.absoluteFilePath() : canonical);
+    };
+    const QString candidate = normalizedPath(path);
+    QString root = normalizedPath(directory);
+#ifdef Q_OS_WIN
+    constexpr Qt::CaseSensitivity sensitivity = Qt::CaseInsensitive;
+#else
+    constexpr Qt::CaseSensitivity sensitivity = Qt::CaseSensitive;
+#endif
+    if (candidate.compare(root, sensitivity) == 0)
+        return true;
+    if (!root.endsWith(QLatin1Char('/')))
+        root += QLatin1Char('/');
+    return candidate.startsWith(root, sensitivity);
+}
+
 /**
  * @brief Resolves a bundled media tool before falling back to the system PATH.
  * @param executableName Tool name with or without the Windows .exe suffix.

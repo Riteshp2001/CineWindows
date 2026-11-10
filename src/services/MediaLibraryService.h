@@ -39,6 +39,7 @@ class MediaLibraryService : public QObject
     Q_PROPERTY(QVariantList favorites READ favorites NOTIFY collectionsChanged)
     Q_PROPERTY(QVariantList library READ library NOTIFY collectionsChanged)
     Q_PROPERTY(QVariantList roots READ roots NOTIFY rootsChanged)
+    Q_PROPERTY(QVariantList excludedFolders READ excludedFolders NOTIFY rootsChanged)
     Q_PROPERTY(QVariantMap statistics READ statistics NOTIFY collectionsChanged)
     Q_PROPERTY(bool indexing READ indexing NOTIFY indexingChanged)
     Q_PROPERTY(int scannedCount READ scannedCount NOTIFY scanProgressChanged)
@@ -72,6 +73,9 @@ public:
 
     /** @return Configured library root folders with their last-scan timestamps. */
     QVariantList roots() const;
+    QVariantList excludedFolders() const;
+    Q_INVOKABLE bool addExcludedFolder(const QUrl& folder);
+    Q_INVOKABLE void removeExcludedFolder(const QString& path);
 
     /** @return Aggregate statistics (unique media, play count, watched ms, completions). */
     QVariantMap statistics() const;
@@ -100,7 +104,7 @@ public:
     Q_INVOKABLE void removeRoot(const QString& path);
 
     /** Start a concurrent scan of all library roots for media files.
-        Already running or empty-root scans are no-ops. */
+        A new scan supersedes results from an older in-flight scan. */
     Q_INVOKABLE void rescanAll();
 
     /** Check whether a path is in the favourites table.
@@ -148,6 +152,7 @@ private:
     void checkpointPlayback();
     void updateRoots();
     void setIndexing(bool indexing);
+    bool isExcluded(const QString& path) const;
 
     CineMpvItem* m_player{nullptr};            ///< Attached mpv player instance.
     QSqlDatabase m_database;                    ///< Open SQLite library database handle.
@@ -157,6 +162,7 @@ private:
     QVariantList m_favorites;                   ///< Cached favourites collection.
     QVariantList m_library;                     ///< Cached library-items collection.
     QVariantList m_roots;                       ///< Cached library-root folders.
+    QVariantList m_excludedFolders;
     QVariantMap m_statistics;                   ///< Cached aggregate statistics.
     QTimer m_checkpointTimer;                   ///< Periodic timer (15 s) for persisting position.
     QElapsedTimer m_watchClock;                 ///< Elapsed-time accumulator for the active file.

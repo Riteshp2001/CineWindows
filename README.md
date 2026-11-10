@@ -78,7 +78,9 @@ CineWindows delivers a polished, native viewing experience with hardware-acceler
 - **Playlist drawer** with drag-to-reorder, shuffle, save/load
 - **Preferences dialog** for all playback, subtitle, and UI settings
 - **Multi-language support** (50+ translations via Qt Linguist)
-- **Media Hub** with filesystem browsing, library indexing, favorites, recents, thumbnails, history, and local watch statistics
+- **Media Hub** with filesystem browsing, library indexing, favorites, thumbnails, a unified History with Recent Files and All Visits, and local watch statistics
+- **Folder controls** for included/excluded library folders, optional library-only browsing, and customizable Places
+- **Playback resume** enabled by default, with the existing preference available to opt out
 - **Light/dark palettes**, custom accent color, and reduced-motion support
 - **Advanced playback** with equalizer presets, audio visualization, 3D conversion, HDR tone mapping, PiP, and mini-player modes
 - **Optional integrations** for YouTube search, OpenSubtitles, DLNA casting, and a paired LAN companion remote
@@ -323,7 +325,7 @@ All shortcuts are **fully remappable** via `Preferences → Shortcuts` or by edi
 ## ⚙️ CI/CD
 
 | Workflow | Platform | Trigger | Artifacts |
-|----------|----------|---------|-----------| 
+|----------|----------|---------|-----------|
 | **CI** | Windows, Linux, macOS | Push/PR to main | Native and Flatpak builds |
 | **Release** | Windows | Tag `v*` | NSIS installer + portable ZIP |
 | **Release** | Linux | Tag `v*` | AppImage + Flatpak bundle |

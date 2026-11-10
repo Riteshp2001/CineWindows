@@ -112,12 +112,12 @@ void PlaybackController::setPlayer(CineMpvItem* player)
                 || m_player->currentPath() != m_pendingResumePath)
                 return;
             // Clamp position to valid range, leaving 1s margin at end
-            const double duration = m_player->duration();
+            const double duration = m_player->mpvOption(QStringLiteral("duration")).toDouble();
             const double position = duration > 0.0
                 ? qBound(0.0, m_pendingResumePosition, qMax(0.0, duration - 1.0))
                 : qMax(0.0, m_pendingResumePosition);
-            if (position > 0.0)
-                m_player->setPosition(position);
+            m_player->runCommandAsync({QStringLiteral("seek"), QString::number(position, 'f', 3),
+                                       QStringLiteral("absolute+exact")});
             m_pendingResumePath.clear();
             m_pendingResumePosition = 0.0;
         });
@@ -264,7 +264,7 @@ void PlaybackController::saveWatchLaterPosition()
 {
     if (m_player && m_settings && m_settings->saveVideoPosition() && !m_player->idle()
         && !m_player->currentPath().isEmpty())
-        m_player->runCommand({QStringLiteral("write-watch-later-config")});
+        m_player->savePlaybackPosition();
 }
 
 /**
@@ -325,6 +325,8 @@ void PlaybackController::playIndex(int index)
     }
 
     // Update playlist state and load the media file in mpv
+    m_pendingResumePath.clear();
+    m_pendingResumePosition = 0.0;
     saveWatchLaterPosition();
     m_playlist->setCurrentIndex(index);
     applyYoutubeQuality();
@@ -344,12 +346,12 @@ void PlaybackController::playIndex(int index)
  */
 void PlaybackController::playIndexAt(int index, double position)
 {
-    if (!m_playlist || index < 0 || index >= m_playlist->count())
+    if (!m_playlist || !m_player || index < 0 || index >= m_playlist->count())
         return;
+    playIndex(index);
     // Store resume info for the fileLoaded handler to consume
     m_pendingResumePath = m_playlist->pathAt(index);
     m_pendingResumePosition = std::isfinite(position) ? qMax(0.0, position) : 0.0;
-    playIndex(index);
 }
 
 /**
@@ -406,6 +408,9 @@ void PlaybackController::stop()
 {
     if (m_player)
     {
+        saveWatchLaterPosition();
+        m_pendingResumePath.clear();
+        m_pendingResumePosition = 0.0;
         m_player->runCommandAsync({QStringLiteral("stop")});
     }
 }

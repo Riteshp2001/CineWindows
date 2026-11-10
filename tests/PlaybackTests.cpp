@@ -1,5 +1,11 @@
+#include "app/SettingsManager.h"
+#include "models/FileBrowserModel.h"
+#include "models/PlaylistModel.h"
 #include "player/CineMpvItem.h"
+#include "player/PlaybackController.h"
 #include "player/ThumbnailController.h"
+#include "services/LibraryDatabase.h"
+#include "services/MediaLibraryService.h"
 #include "utils/PathUtils.h"
 
 #include <QDataStream>
@@ -9,10 +15,15 @@
 #include <QElapsedTimer>
 #include <QHostAddress>
 #include <QJSEngine>
+#include <QQmlComponent>
+#include <QQmlEngine>
 #include <QQuickWindow>
 #include <QPainter>
 #include <QRegularExpression>
+#include <QSettings>
+#include <QScopedPointer>
 #include <QSignalSpy>
+#include <QSqlQuery>
 #include <QTemporaryDir>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -23,6 +34,99 @@ class PlaybackTests : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void folderRules()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());
+        const QString root = directory.filePath("Media");
+        const QString excluded = root + "/Private";
+        const QString sibling = root + "/Private-backup";
+        QVERIFY(QDir().mkpath(excluded));
+        QVERIFY(QDir().mkpath(sibling));
+        const QStringList mediaPaths{root + "/allowed.mp4", excluded + "/hidden.mp4", sibling + "/keep.mp4"};
+        for (const QString& path : mediaPaths)
+        {
+            QFile media(path);
+            QVERIFY(media.open(QIODevice::WriteOnly));
+        }
+
+        FileBrowserModel browser;
+        browser.setIncludedFolders({root});
+        browser.setFoldersRestricted(true);
+        browser.setExcludedFolders({excluded});
+        browser.navigateTo(QUrl::fromLocalFile(root));
+        QTRY_VERIFY(!browser.loading());
+        QCOMPARE(browser.rowCount(), 2);
+        QVERIFY(!browser.canGoUp());
+        browser.navigateTo(QUrl::fromLocalFile(excluded));
+        QCOMPARE(browser.currentFolder(), QUrl::fromLocalFile(root));
+        QVERIFY(!browser.errorString().isEmpty());
+        browser.navigateTo(QUrl::fromLocalFile(sibling));
+        QTRY_VERIFY(!browser.loading());
+        QCOMPARE(browser.rowCount(), 1);
+        browser.navigateBack();
+        QCOMPARE(browser.currentFolder(), QUrl::fromLocalFile(root));
+        browser.setHiddenPlaces({root});
+        QCOMPARE(browser.places().size(), 0);
+        QCOMPARE(browser.availablePlaces().size(), 1);
+        browser.setHiddenPlaces({});
+        QCOMPARE(browser.places().size(), 1);
+        browser.setExcludedFolders({root});
+        QVERIFY(browser.currentFolder().isEmpty());
+        QCOMPARE(browser.rowCount(), 0);
+        browser.setExcludedFolders({excluded});
+        browser.setIncludedFolders({});
+        QVERIFY(browser.currentFolder().isEmpty());
+        QCOMPARE(browser.rowCount(), 0);
+
+        MediaLibraryService library;
+        library.initialize();
+        QVERIFY(library.addRoot(QUrl::fromLocalFile(root)));
+        QVERIFY(library.addExcludedFolder(QUrl::fromLocalFile(excluded)));
+        QTRY_VERIFY(!library.indexing());
+        QCOMPARE(library.library().size(), 2);
+        for (const QVariant& value : library.library())
+            QVERIFY(!PathUtils::isPathWithinDirectory(value.toMap().value("path").toString(), excluded));
+        MediaLibraryService reloaded;
+        reloaded.initialize();
+        QCOMPARE(reloaded.excludedFolders().size(), 1);
+        QCOMPARE(reloaded.excludedFolders().first().toMap().value("path").toString(), excluded);
+        library.removeExcludedFolder(excluded);
+        QTRY_VERIFY(!library.indexing());
+        QCOMPARE(library.library().size(), 3);
+        library.rescanAll();
+        library.removeRoot(root);
+        QTRY_VERIFY(!library.indexing());
+        QVERIFY(library.library().isEmpty());
+        QVERIFY(library.roots().isEmpty());
+    }
+
+    void librarySchemaMigration()
+    {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());
+        auto database = LibraryDatabase::open("folder-rules-migration");
+        QVERIFY(database.isOpen());
+        QSqlQuery query(database);
+        QVERIFY(query.exec("INSERT INTO app_meta(key, value) VALUES('migration-marker', 'preserved')"));
+        QVERIFY(query.exec("DROP TABLE library_exclusions"));
+        QVERIFY(query.exec("PRAGMA user_version = 2"));
+        QVERIFY(LibraryDatabase::initialize(database));
+        QVERIFY(query.exec("SELECT value FROM app_meta WHERE key='migration-marker'"));
+        QVERIFY(query.next());
+        QCOMPARE(query.value(0).toString(), QString("preserved"));
+        QVERIFY(query.exec("SELECT locator FROM library_exclusions"));
+        query.finish();
+        QVERIFY(query.exec("PRAGMA user_version"));
+        QVERIFY(query.next());
+        QCOMPARE(query.value(0).toInt(), 3);
+        query.finish();
+        QVERIFY(LibraryDatabase::initialize(database));
+        database.close();
+    }
+
     void thumbnails_data()
     {
         QTest::addColumn<bool>("network");
@@ -162,6 +266,52 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(player.videoWidth() > 0, 15000);
         player.setPause(true);
 
+        if (!network && !thumbfast && qEnvironmentVariableIsEmpty("CINEWINDOWS_THUMBNAIL_TEST_MEDIA"))
+        {
+            connect(&window, &QQuickWindow::widthChanged, &player, [&window, &player] {
+                player.setWidth(window.width());
+            });
+            connect(&window, &QQuickWindow::heightChanged, &player, [&window, &player] {
+                player.setHeight(window.height());
+            });
+            const auto videoColor = [&window] {
+                const QImage image = window.grabWindow();
+                return image.isNull() ? QColor() : image.pixelColor(image.width() / 2, image.height() / 2);
+            };
+            QTRY_VERIFY(videoColor().isValid() && videoColor().value() > 16);
+            const QColor baseline = videoColor();
+            const auto frameMatches = [&videoColor, baseline] {
+                const QColor current = videoColor();
+                return current.isValid() && qAbs(current.red() - baseline.red()) <= 8
+                    && qAbs(current.green() - baseline.green()) <= 8
+                    && qAbs(current.blue() - baseline.blue()) <= 8;
+            };
+            QQmlEngine engine;
+            QQmlComponent component(&engine);
+            component.setData("import QtQuick\nRectangle { width: 160; height: 40; clip: true; color: '#222222'; "
+                              "Text { anchors.centerIn: parent; text: 'Volume: 75%'; color: 'white' } }", QUrl());
+            QScopedPointer<QObject> object(component.create());
+            auto* overlay = qobject_cast<QQuickItem*>(object.data());
+            QVERIFY2(overlay, qPrintable(component.errorString()));
+            overlay->setParentItem(window.contentItem());
+            for (const bool shown : {true, false, true, false})
+            {
+                overlay->setVisible(shown);
+                QTRY_VERIFY(frameMatches());
+            }
+            window.showFullScreen();
+            player.setFullscreen(true);
+            QTRY_COMPARE(window.visibility(), QWindow::FullScreen);
+            QTRY_VERIFY(frameMatches());
+            overlay->setVisible(true);
+            QTRY_VERIFY(frameMatches());
+            overlay->setVisible(false);
+            window.showNormal();
+            player.setFullscreen(false);
+            QTRY_COMPARE(window.visibility(), QWindow::Windowed);
+            QTRY_VERIFY(frameMatches());
+        }
+
         ThumbnailController thumbnails;
         thumbnails.setSize(QSizeF(174, 98));
         thumbnails.setPlayer(&player);
@@ -289,6 +439,14 @@ private Q_SLOTS:
         qputenv("CINEWINDOWS_DISABLE_THUMBFAST", "1");
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, directory.filePath("settings"));
+        SettingsManager settings;
+        QVERIFY(settings.saveVideoPosition());
+        settings.setSaveVideoPosition(false);
+        SettingsManager optedOutSettings;
+        QVERIFY(!optedOutSettings.saveVideoPosition());
+        settings.setSaveVideoPosition(true);
         qputenv("CINEWINDOWS_DATA_DIR", directory.path().toUtf8());
         PathUtils::setupMpvEnvironment();
 
@@ -322,12 +480,17 @@ private Q_SLOTS:
         window.show();
         QTRY_VERIFY_WITH_TIMEOUT(player.rendererReady(), 15000);
         player.setMpvOption("ao", "null");
-        player.setMpvOption("resume-playback", true);
+        PlaylistModel playlist;
+        PlaybackController controller;
+        controller.setPlayer(&player);
+        controller.setPlaylist(&playlist);
+        controller.setSettings(&settings);
+        controller.applySettings();
         player.setMpvOption("save-position-on-quit", false);
         const QString resumeDirectory = directory.filePath("watch_later");
         player.setMpvOption("watch-later-dir", resumeDirectory);
         QSignalSpy loaded(&player, &CineMpvItem::fileLoaded);
-        player.loadFile(mediaPath);
+        controller.openPaths({mediaPath}, true);
         QTRY_VERIFY_WITH_TIMEOUT(loaded.count() == 1, 15000);
         QTRY_VERIFY(player.duration() > 40);
         player.setPause(true);
@@ -352,7 +515,8 @@ private Q_SLOTS:
 
         player.setPosition(12.5);
         QTRY_VERIFY(qAbs(player.position() - 12.5) < 0.5);
-        player.savePlaybackPosition();
+        controller.stop();
+        QTRY_VERIFY(player.idle());
         const QDir saved(resumeDirectory);
         const QStringList entries = saved.entryList(QDir::Files | QDir::NoDotAndDotDot);
         bool savedPosition = false;
@@ -364,11 +528,12 @@ private Q_SLOTS:
         }
         QVERIFY(savedPosition);
 
-        player.commandBlocking({"stop"});
-        QTRY_VERIFY(player.idle());
-        player.loadFile(mediaPath);
+        controller.openPaths({mediaPath}, true);
         QTRY_VERIFY_WITH_TIMEOUT(loaded.count() == 2, 15000);
         QTRY_VERIFY(player.position() >= 12.0);
+        controller.openPathAt(mediaPath, 0.0);
+        QTRY_VERIFY_WITH_TIMEOUT(loaded.count() == 3, 15000);
+        QTRY_VERIFY(player.position() < 1.0);
     }
 };
 
@@ -379,6 +544,7 @@ int main(int argc, char* argv[])
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication application(argc, argv);
     application.setApplicationName("CineWindowsPlaybackTests");
+    application.setOrganizationName("CineWindowsTests");
     PlaybackTests tests;
     return QTest::qExec(&tests, argc, argv);
 }

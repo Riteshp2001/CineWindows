@@ -43,6 +43,16 @@ int main(int argc, char* argv[])
 
     QTemporaryDir temporary;
     check(temporary.isValid(), "isolated data folder");
+    const QString mediaRoot = temporary.filePath("Media");
+    check(QDir().mkpath(mediaRoot + "/child"), "folder rule fixture");
+    check(PathUtils::isPathWithinDirectory(mediaRoot, mediaRoot), "folder rule includes root");
+    check(PathUtils::isPathWithinDirectory(mediaRoot + "/child", mediaRoot + "/"), "folder rule includes descendants");
+    check(!PathUtils::isPathWithinDirectory(mediaRoot + "-backup/movie.mp4", mediaRoot), "folder rule rejects prefix sibling");
+    check(!PathUtils::isPathWithinDirectory(mediaRoot + "/../outside", mediaRoot), "folder rule normalizes parent traversal");
+    check(!PathUtils::isPathWithinDirectory(mediaRoot, QString()), "empty folder rule does not match");
+#ifdef Q_OS_WIN
+    check(PathUtils::isPathWithinDirectory(mediaRoot.toUpper(), mediaRoot.toLower()), "Windows folder rules ignore case");
+#endif
     qputenv("CINEWINDOWS_DATA_DIR", temporary.path().toUtf8());
     if (!QFileInfo(QCoreApplication::applicationDirPath() + "/portable_config").isDir())
     {

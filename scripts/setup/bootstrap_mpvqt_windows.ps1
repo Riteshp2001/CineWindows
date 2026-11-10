@@ -186,11 +186,31 @@ if (-not (Test-Path $srcDir)) {
 # Qt 6.8 uses Q_LOGGING_CATEGORY instead — patch the source.
 $mpvRendererFile = Join-Path $srcDir "src/mpvrenderer.cpp"
 if (Test-Path $mpvRendererFile) {
-    $content = Get-Content $mpvRendererFile -Raw
+    $content = Get-Content $mpvRendererFile -Raw -Encoding UTF8
+    $originalContent = $content
     if ($content -match 'Q_STATIC_LOGGING_CATEGORY') {
         $content = $content -replace 'Q_STATIC_LOGGING_CATEGORY', 'static Q_LOGGING_CATEGORY'
-        Set-Content -Path $mpvRendererFile -Value $content -NoNewline
         Write-Host "Patched mpvrenderer.cpp: Q_STATIC_LOGGING_CATEGORY -> static Q_LOGGING_CATEGORY (Qt 6.8 compat)"
+    }
+    $renderEntry = '    QOpenGLFramebufferObject *fbo = framebufferObject();'
+    $guardedRenderEntry = @'
+    QQuickOpenGLUtils::resetOpenGLState();
+    QOpenGLFramebufferObject *fbo = framebufferObject();
+    if (!m_mpvResourceManager || !m_mpvResourceManager->mpvRenderContext || !fbo) {
+        return;
+    }
+'@
+    if (-not $content.Contains($guardedRenderEntry)) {
+        if (-not $content.Contains($renderEntry)) {
+            throw "Cannot apply the MpvQt OpenGL state fix to $mpvRendererFile."
+        }
+        $content = $content.Replace($renderEntry, $guardedRenderEntry)
+    }
+    $content = $content.Replace('m_isFramebufferReady = true;',
+        'm_isFramebufferReady = m_mpvResourceManager->mpvRenderContext != nullptr;')
+    if ($content -ne $originalContent) {
+        Set-Content -Path $mpvRendererFile -Value $content -NoNewline -Encoding UTF8
+        Write-Host "Applied MpvQt OpenGL state and render-context guards."
     }
 }
 

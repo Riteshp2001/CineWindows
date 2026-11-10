@@ -129,8 +129,36 @@ export LD_LIBRARY_PATH="$(pwd)/${BUILD_DIR}/x64/lib${LD_LIBRARY_PATH:+:${LD_LIBR
 export EXTRA_QT_MODULES="${EXTRA_QT_MODULES:+${EXTRA_QT_MODULES};}waylandcompositor"
 export EXTRA_PLATFORM_PLUGINS="${EXTRA_PLATFORM_PLUGINS:+${EXTRA_PLATFORM_PLUGINS};}libqwayland-egl.so;libqwayland-generic.so"
 
+PIPEWIRE_LIB_DIR="$(pkg-config --variable=libdir libpipewire-0.3)"
+PIPEWIRE_LIBRARY="${PIPEWIRE_LIB_DIR}/libpipewire-0.3.so.0"
+CXX_LIBRARY="$("${CXX:-g++}" -print-file-name=libstdc++.so.6)"
+if [ ! -f "${PIPEWIRE_LIBRARY}" ] || [ ! -f "${CXX_LIBRARY}" ]; then
+    echo "ERROR: PipeWire and the C++ runtime must be installed before packaging."
+    exit 1
+fi
+
+mkdir -p "${APPDIR}/usr/lib/pipewire-0.3" "${APPDIR}/usr/share/pipewire" "${APPDIR}/apprun-hooks"
+cp /usr/share/pipewire/client.conf "${APPDIR}/usr/share/pipewire/"
+cp packaging/linux/pipewire-hook.sh "${APPDIR}/apprun-hooks/pipewire.sh"
+PIPEWIRE_DEPLOY_ARGS=()
+for module in protocol-native client-node client-device adapter metadata session-manager; do
+    source="${PIPEWIRE_LIB_DIR}/pipewire-0.3/libpipewire-module-${module}.so"
+    destination="${APPDIR}/usr/lib/pipewire-0.3/$(basename "${source}")"
+    cp -L "${source}" "${destination}"
+    PIPEWIRE_DEPLOY_ARGS+=(--deploy-deps-only "${destination}")
+done
+for plugin in support/libspa-support.so audioconvert/libspa-audioconvert.so; do
+    destination="${APPDIR}/usr/lib/spa-0.2/${plugin}"
+    mkdir -p "$(dirname "${destination}")"
+    cp -L "${PIPEWIRE_LIB_DIR}/spa-0.2/${plugin}" "${destination}"
+    PIPEWIRE_DEPLOY_ARGS+=(--deploy-deps-only "${destination}")
+done
+
 echo "==> Running linuxdeploy with Qt/QML deployment..."
 ./linuxdeploy --appdir "${APPDIR}" \
+    --library "${PIPEWIRE_LIBRARY}" \
+    --library "${CXX_LIBRARY}" \
+    "${PIPEWIRE_DEPLOY_ARGS[@]}" \
     --plugin qt \
     --desktop-file "${APPDIR}/usr/share/applications/${APP_ID}.desktop" \
     --icon-file "${APPDIR}/usr/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
@@ -153,6 +181,26 @@ if ! find "${APPDIR}" -type f -name 'libmpv.so*' -print -quit | grep -q .; then
     echo "ERROR: libmpv was not deployed into the AppDir."
     exit 1
 fi
+
+if ! find "${APPDIR}" -type f -name 'libpipewire-0.3.so*' -print -quit | grep -q .; then
+    echo "ERROR: libpipewire was not deployed into the AppDir."
+    exit 1
+fi
+
+echo "==> Checking the glibc 2.35 compatibility baseline..."
+while IFS= read -r -d '' elf; do
+    if ! readelf --file-header "${elf}" >/dev/null 2>&1; then
+        continue
+    fi
+    required_glibc="$(readelf --version-info --wide "${elf}" \
+        | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' \
+        | sed 's/GLIBC_//' | sort -V | tail -n 1 || true)"
+    if [ -n "${required_glibc}" ] \
+        && [ "$(printf '%s\n' 2.35 "${required_glibc}" | sort -V | tail -n 1)" != "2.35" ]; then
+        echo "ERROR: ${elf} requires glibc ${required_glibc}. Build and package on Ubuntu 22.04 (glibc 2.35)."
+        exit 1
+    fi
+done < <(find "${APPDIR}" -type f -print0)
 
 echo "==> Creating AppImage..."
 export LDAI_OUTPUT="${APP_NAME}-x86_64.AppImage"

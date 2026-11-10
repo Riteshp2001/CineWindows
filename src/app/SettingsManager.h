@@ -23,6 +23,7 @@
 #include <QObject>
 #include <QSize>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 
 class QJSEngine;
@@ -107,6 +108,8 @@ class SettingsManager : public QObject
     /** @brief Whether non-essential interface motion should be disabled. */
     Q_PROPERTY(bool reduceMotion READ reduceMotion WRITE setReduceMotion NOTIFY reduceMotionChanged)
     Q_PROPERTY(bool customWindowFrame READ customWindowFrame WRITE setCustomWindowFrame NOTIFY customWindowFrameChanged)
+    Q_PROPERTY(QStringList hiddenPlaces READ hiddenPlaces WRITE setHiddenPlaces NOTIFY hiddenPlacesChanged)
+    Q_PROPERTY(bool restrictBrowsingToLibrary READ restrictBrowsingToLibrary WRITE setRestrictBrowsingToLibrary NOTIFY restrictBrowsingToLibraryChanged)
 
 public:
     /**
@@ -114,6 +117,11 @@ public:
      * @param parent Optional QObject parent.
      */
     explicit SettingsManager(QObject* parent = nullptr);
+
+    QStringList hiddenPlaces() const;
+    void setHiddenPlaces(const QStringList& paths);
+    bool restrictBrowsingToLibrary() const;
+    void setRestrictBrowsingToLibrary(bool restricted);
 
     /**
      * @brief Creates the singleton instance used by the QML engine.
@@ -330,6 +338,8 @@ Q_SIGNALS:
     /** @brief Emitted when the reduce-motion preference changes. */
     void reduceMotionChanged();
     void customWindowFrameChanged();
+    void hiddenPlacesChanged();
+    void restrictBrowsingToLibraryChanged();
 
 private:
     /** @brief Loads all settings from persistent storage into member variables. */
@@ -349,7 +359,7 @@ private:
     bool m_normalizeVolume{false};               ///< Whether volume normalisation is active.
     QString m_hwdec{QStringLiteral("auto-safe")}; ///< Hardware decoding backend identifier.
     int m_youtubeQuality{0};
-    bool m_saveVideoPosition{false};             ///< Whether to remember video playback position.
+    bool m_saveVideoPosition{true};              ///< Whether to remember video playback position.
     bool m_saveSession{false};                   ///< Whether to restore session on startup.
     bool m_thumbnailPreview{true};               ///< Whether to show thumbnail previews.
     bool m_showRemaining{false};                 ///< Whether to show remaining instead of elapsed time.
@@ -369,4 +379,6 @@ private:
     QString m_accentColor{QStringLiteral("#10c7d1")};   ///< Application accent colour.
     bool m_reduceMotion{false};                         ///< Whether reduced motion is preferred.
     bool m_customWindowFrame{false};
+    QStringList m_hiddenPlaces;
+    bool m_restrictBrowsingToLibrary{false};
 };

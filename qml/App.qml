@@ -674,6 +674,10 @@ ApplicationWindow {
     }
     FileBrowserModel {
         id: fileBrowserModel
+        includedFolders: mediaLibrary.roots.map(function (folder) { return String(folder.path); })
+        excludedFolders: mediaLibrary.excludedFolders.map(function (folder) { return String(folder.path); })
+        foldersRestricted: SettingsManager.restrictBrowsingToLibrary
+        hiddenPlaces: SettingsManager.hiddenPlaces
     }
     MediaLibraryService {
         id: mediaLibrary

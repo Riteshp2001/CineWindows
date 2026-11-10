@@ -19,12 +19,28 @@
 #include "models/FileBrowserModel.h"
 
 #include "utils/MediaUtils.h"
+#include "utils/PathUtils.h"
 
 #include <QDir>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QStandardPaths>
 #include <QtConcurrentRun>
+
+#include <algorithm>
+
+namespace {
+bool pathAllowed(const QString& path, const QStringList& included, const QStringList& excluded, bool restricted)
+{
+    if (path.isEmpty() || std::any_of(excluded.cbegin(), excluded.cend(), [&path](const QString& folder) {
+            return PathUtils::isPathWithinDirectory(path, folder);
+        }))
+        return false;
+    return !restricted || std::any_of(included.cbegin(), included.cend(), [&path](const QString& folder) {
+        return PathUtils::isPathWithinDirectory(path, folder);
+    });
+}
+}
 
 /** @brief Constructs a FileBrowserModel, defaulting to the Movies folder or home directory. */
 FileBrowserModel::FileBrowserModel(QObject* parent)
@@ -83,7 +99,82 @@ QHash<int, QByteArray> FileBrowserModel::roleNames() const
             {MediaRole, "isMedia"}, {SizeRole, "size"}, {ModifiedRole, "modified"}, {IconRole, "iconName"}};
 }
 
-QUrl FileBrowserModel::currentFolder() const { return QUrl::fromLocalFile(m_currentPath); }
+QStringList FileBrowserModel::includedFolders() const { return m_includedFolders; }
+QStringList FileBrowserModel::excludedFolders() const { return m_excludedFolders; }
+QStringList FileBrowserModel::hiddenPlaces() const { return m_hiddenPlaces; }
+bool FileBrowserModel::foldersRestricted() const { return m_foldersRestricted; }
+
+void FileBrowserModel::setIncludedFolders(const QStringList& paths)
+{
+    if (m_includedFolders == paths)
+        return;
+    m_includedFolders = paths;
+    applyFolderRules();
+}
+
+void FileBrowserModel::setExcludedFolders(const QStringList& paths)
+{
+    if (m_excludedFolders == paths)
+        return;
+    m_excludedFolders = paths;
+    applyFolderRules();
+}
+
+void FileBrowserModel::setFoldersRestricted(bool restricted)
+{
+    if (m_foldersRestricted == restricted)
+        return;
+    m_foldersRestricted = restricted;
+    applyFolderRules();
+}
+
+void FileBrowserModel::setHiddenPlaces(const QStringList& paths)
+{
+    if (m_hiddenPlaces == paths)
+        return;
+    m_hiddenPlaces = paths;
+    Q_EMIT placesChanged();
+}
+
+bool FileBrowserModel::isPathAllowed(const QString& path) const
+{
+    return pathAllowed(path, m_includedFolders, m_excludedFolders, m_foldersRestricted);
+}
+
+void FileBrowserModel::applyFolderRules()
+{
+    const auto disallowed = [this](const QString& path) { return !isPathAllowed(path); };
+    m_backHistory.erase(std::remove_if(m_backHistory.begin(), m_backHistory.end(), disallowed), m_backHistory.end());
+    m_forwardHistory.erase(std::remove_if(m_forwardHistory.begin(), m_forwardHistory.end(), disallowed), m_forwardHistory.end());
+    if (!isPathAllowed(m_currentPath))
+    {
+        QString replacement;
+        QStringList candidates = m_includedFolders;
+        if (!m_foldersRestricted)
+        {
+            candidates.append(QStandardPaths::writableLocation(QStandardPaths::MoviesLocation));
+            candidates.append(QDir::homePath());
+            for (const QFileInfo& drive : QDir::drives())
+                candidates.append(drive.absoluteFilePath());
+        }
+        for (const QString& candidate : candidates)
+        {
+            if (QFileInfo(candidate).isDir() && isPathAllowed(candidate))
+            {
+                replacement = QDir::cleanPath(QFileInfo(candidate).absoluteFilePath());
+                break;
+            }
+        }
+        m_currentPath = replacement;
+        Q_EMIT currentFolderChanged();
+    }
+    Q_EMIT folderRulesChanged();
+    Q_EMIT placesChanged();
+    Q_EMIT navigationStateChanged();
+    load(m_currentPath);
+}
+
+QUrl FileBrowserModel::currentFolder() const { return m_currentPath.isEmpty() ? QUrl() : QUrl::fromLocalFile(m_currentPath); }
 QString FileBrowserModel::displayPath() const { return QDir::toNativeSeparators(m_currentPath); }
 QString FileBrowserModel::searchText() const { return m_searchText; }
 
@@ -104,8 +195,10 @@ bool FileBrowserModel::canGoForward() const { return !m_forwardHistory.isEmpty()
 /** @brief Returns true if the current folder has a parent directory above root. */
 bool FileBrowserModel::canGoUp() const
 {
-    const QDir directory(m_currentPath);
-    return directory.exists() && directory.absolutePath() != QDir(directory.absolutePath()).rootPath();
+    if (m_currentPath.isEmpty())
+        return false;
+    QDir directory(m_currentPath);
+    return directory.exists() && directory.cdUp() && isPathAllowed(directory.absolutePath());
 }
 bool FileBrowserModel::loading() const { return m_loading; }
 QString FileBrowserModel::errorString() const { return m_errorString; }
@@ -121,6 +214,11 @@ void FileBrowserModel::navigateTo(const QUrl& folder)
         return;
     }
     const QString clean = QDir::cleanPath(info.absoluteFilePath());
+    if (!isPathAllowed(clean))
+    {
+        setErrorString(tr("Folder is excluded by the current folder rules"));
+        return;
+    }
     // If already at the target folder, just refresh
     if (clean == m_currentPath)
     {
@@ -188,21 +286,45 @@ QVariantMap FileBrowserModel::get(int row) const
 /** @brief Returns a list of standard system places (Home, Videos, Music, Downloads, drives). */
 QVariantList FileBrowserModel::places() const
 {
+    QVariantList result = availablePlaces();
+    result.erase(std::remove_if(result.begin(), result.end(), [this](const QVariant& value) {
+        const QString path = value.toMap().value(QStringLiteral("path")).toString();
+        return std::any_of(m_hiddenPlaces.cbegin(), m_hiddenPlaces.cend(), [&path](const QString& hidden) {
+            return PathUtils::isPathWithinDirectory(path, hidden) && PathUtils::isPathWithinDirectory(hidden, path);
+        });
+    }), result.end());
+    return result;
+}
+
+QVariantList FileBrowserModel::availablePlaces() const
+{
     QVariantList result;
-    // Add standard QStandardPaths locations
-    const auto add = [&result](const QString& name, QStandardPaths::StandardLocation location) {
-        const QString path = QStandardPaths::writableLocation(location);
-        if (!path.isEmpty() && QFileInfo(path).isDir())
-            result.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("url"), QUrl::fromLocalFile(path)}});
+    const auto addPath = [this, &result](const QString& name, const QString& path) {
+        if (path.isEmpty() || !QFileInfo(path).isDir() || !isPathAllowed(path))
+            return;
+        for (const QVariant& value : result)
+        {
+            const QString existing = value.toMap().value(QStringLiteral("path")).toString();
+            if (PathUtils::isPathWithinDirectory(path, existing) && PathUtils::isPathWithinDirectory(existing, path))
+                return;
+        }
+        result.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("path"), path},
+                                  {QStringLiteral("url"), QUrl::fromLocalFile(path)}});
     };
-    add(tr("Home"), QStandardPaths::HomeLocation);
-    add(tr("Videos"), QStandardPaths::MoviesLocation);
-    add(tr("Music"), QStandardPaths::MusicLocation);
-    add(tr("Downloads"), QStandardPaths::DownloadLocation);
-    // Append available drives
-    for (const QFileInfo& drive : QDir::drives())
-        result.append(QVariantMap{{QStringLiteral("name"), QDir::toNativeSeparators(drive.absoluteFilePath())},
-                                  {QStringLiteral("url"), QUrl::fromLocalFile(drive.absoluteFilePath())}});
+    for (const QString& path : m_includedFolders)
+    {
+        const QString name = QFileInfo(path).fileName();
+        addPath(name.isEmpty() ? QDir::toNativeSeparators(path) : name, path);
+    }
+    if (!m_foldersRestricted)
+    {
+        addPath(tr("Home"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
+        addPath(tr("Videos"), QStandardPaths::writableLocation(QStandardPaths::MoviesLocation));
+        addPath(tr("Music"), QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
+        addPath(tr("Downloads"), QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
+        for (const QFileInfo& drive : QDir::drives())
+            addPath(QDir::toNativeSeparators(drive.absoluteFilePath()), drive.absoluteFilePath());
+    }
     return result;
 }
 
@@ -216,6 +338,19 @@ void FileBrowserModel::load(const QString& path)
     const QString search = m_searchText;
     setLoading(true);
     setErrorString({});
+    if (!isPathAllowed(path))
+    {
+        beginResetModel();
+        m_entries.clear();
+        endResetModel();
+        setErrorString(tr("No folders match the current folder rules"));
+        setLoading(false);
+        Q_EMIT countChanged();
+        return;
+    }
+    const QStringList included = m_includedFolders;
+    const QStringList excluded = m_excludedFolders;
+    const bool restricted = m_foldersRestricted;
 
     // Spawn asynchronous directory scan
     auto* watcher = new QFutureWatcher<QList<Entry>>(this);
@@ -233,7 +368,7 @@ void FileBrowserModel::load(const QString& path)
         setLoading(false);
         Q_EMIT countChanged();
     });
-    watcher->setFuture(QtConcurrent::run([path, search]() -> QList<Entry> {
+    watcher->setFuture(QtConcurrent::run([path, search, included, excluded, restricted]() -> QList<Entry> {
         QList<Entry> entries;
         const QDir directory(path);
         const QFileInfoList infos = directory.entryInfoList(
@@ -241,6 +376,8 @@ void FileBrowserModel::load(const QString& path)
             QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
         for (const QFileInfo& info : infos)
         {
+            if (!pathAllowed(info.absoluteFilePath(), included, excluded, restricted))
+                continue;
             // Only include directories and supported media files (not subtitles)
             const bool media = info.isFile() && MediaUtils::isMediaFile(info.absoluteFilePath())
                 && !MediaUtils::isSubtitleFile(info.absoluteFilePath());
