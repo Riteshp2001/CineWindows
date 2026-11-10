@@ -257,6 +257,7 @@ private Q_SLOTS:
             QSKIP("A standalone mpv executable is required for this integration row");
         player.setMpvOption("ao", "null");
         player.setMpvOption("ytdl", "no");
+        player.setMpvOption("hwdec", "no");
         player.setMpvOption("cookies", cookieProtected);
         player.setMpvOption("cookies-file", cookiesPath);
         QCOMPARE(player.mpvOption("cookies").toBool(), cookieProtected);
@@ -284,6 +285,8 @@ private Q_SLOTS:
                 const QImage image = window.grabWindow();
                 return image.isNull() ? QColor() : image.pixelColor(image.width() / 2, image.height() / 2);
             };
+            player.setMpvOption("pause", false);
+            player.runCommandAsync({"seek", "1.0", "absolute+exact"});
             QTRY_VERIFY2(videoColor().isValid() && videoColor().value() > 16,
                 qPrintable(QStringLiteral("No presented video frame: color=%1 video-pts=%2 vo-configured=%3")
                     .arg(videoColor().name(QColor::HexArgb), player.mpvOption("video-pts").toString(),
@@ -498,8 +501,7 @@ private Q_SLOTS:
         controller.setSettings(&settings);
         controller.applySettings();
         player.setMpvOption("save-position-on-quit", false);
-        const QString resumeDirectory = directory.filePath("watch_later");
-        player.setMpvOption("watch-later-dir", resumeDirectory);
+        const QString resumeDirectory = QDir(PathUtils::mpvConfigDir()).filePath("watch_later");
         QSignalSpy loaded(&player, &CineMpvItem::fileLoaded);
         controller.openPaths({mediaPath}, true);
         QTRY_VERIFY_WITH_TIMEOUT(loaded.count() == 1, 15000);
