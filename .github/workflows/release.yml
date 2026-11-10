@@ -416,11 +416,23 @@ jobs:
       - macos-dmg
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: write
 
     steps:
       - name: Check out
         uses: actions/checkout@v7
+
+      - name: Require successful CI for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusion="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml \
+            --commit "${GITHUB_SHA}" --limit 1 --json conclusion --jq '.[0].conclusion')"
+          if [[ "${conclusion}" != "success" ]]; then
+            echo "ERROR: CI for ${GITHUB_SHA} must pass before publishing (current conclusion: ${conclusion:-pending})."
+            exit 1
+          fi
 
       - name: Resolve release tag
         id: release

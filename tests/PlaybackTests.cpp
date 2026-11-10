@@ -271,7 +271,6 @@ private Q_SLOTS:
         player.loadFile(source);
         QTRY_VERIFY_WITH_TIMEOUT(loaded.count() == 1, 15000);
         QTRY_VERIFY_WITH_TIMEOUT(player.videoWidth() > 0, 15000);
-        player.setPause(true);
 
         if (!network && !thumbfast && qEnvironmentVariableIsEmpty("CINEWINDOWS_THUMBNAIL_TEST_MEDIA"))
         {
@@ -285,7 +284,11 @@ private Q_SLOTS:
                 const QImage image = window.grabWindow();
                 return image.isNull() ? QColor() : image.pixelColor(image.width() / 2, image.height() / 2);
             };
-            QTRY_VERIFY(videoColor().isValid() && videoColor().value() > 16);
+            QTRY_VERIFY2(videoColor().isValid() && videoColor().value() > 16,
+                qPrintable(QStringLiteral("No presented video frame: color=%1 video-pts=%2 vo-configured=%3")
+                    .arg(videoColor().name(QColor::HexArgb), player.mpvOption("video-pts").toString(),
+                         player.mpvOption("vo-configured").toString())));
+            player.setPause(true);
             const QColor baseline = videoColor();
             const auto frameMatches = [&videoColor, baseline] {
                 const QColor current = videoColor();
@@ -319,6 +322,7 @@ private Q_SLOTS:
             QTRY_VERIFY(frameMatches());
         }
 
+        player.setPause(true);
         ThumbnailController thumbnails;
         thumbnails.setSize(QSizeF(174, 98));
         thumbnails.setPlayer(&player);
