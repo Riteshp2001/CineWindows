@@ -34,6 +34,14 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.0.5" date="2026-11-10">
+      <description>
+        <p>Remembers playback positions by default and saves resume state before stopping or replacing media.</p>
+        <p>Adds included and excluded folders, optional library-only browsing, customizable Places, and unified History navigation.</p>
+        <p>Improves Windows OpenGL rendering and prevents display-idle dimming during active video playback.</p>
+        <p>Bundles PipeWire client dependencies in AppImages on a pinned glibc baseline and updates audited companion dependencies.</p>
+      </description>
+    </release>
     <release version="0.0.4" date="2026-10-24">
       <description>
         <p>Updates yt-dlp securely and retries refused YouTube streams using the current extractor.</p>

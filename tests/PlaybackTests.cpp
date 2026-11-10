@@ -202,6 +202,7 @@ private Q_SLOTS:
                             || !request.contains("X-Cine-Preview: allowed"))))
                     {
                         ++rejectedRequests;
+                        qWarning().noquote() << "Rejected preview fixture request:" << request;
                         socket->write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
                         socket->disconnectFromHost();
                         return;
@@ -254,6 +255,8 @@ private Q_SLOTS:
         player.setMpvOption("ytdl", "no");
         player.setMpvOption("cookies", cookieProtected);
         player.setMpvOption("cookies-file", cookiesPath);
+        QCOMPARE(player.mpvOption("cookies").toBool(), cookieProtected);
+        QCOMPARE(player.mpvOption("cookies-file").toString(), cookiesPath);
         if (headerProtected)
         {
             player.setMpvOption("user-agent", "CineWindows-preview-test");

@@ -192,6 +192,14 @@ if (Test-Path $mpvRendererFile) {
         $content = $content -replace 'Q_STATIC_LOGGING_CATEGORY', 'static Q_LOGGING_CATEGORY'
         Write-Host "Patched mpvrenderer.cpp: Q_STATIC_LOGGING_CATEGORY -> static Q_LOGGING_CATEGORY (Qt 6.8 compat)"
     }
+    $openGlHeader = '#include <QQuickOpenGLUtils>'
+    if (-not $content.Contains($openGlHeader)) {
+        $includeAnchor = '#include "mpvrenderer.h"'
+        if (-not $content.Contains($includeAnchor)) {
+            throw "Cannot add the Qt OpenGL state header to $mpvRendererFile."
+        }
+        $content = $content.Replace($includeAnchor, "$includeAnchor`n`n$openGlHeader")
+    }
     $renderEntry = '    QOpenGLFramebufferObject *fbo = framebufferObject();'
     $guardedRenderEntry = @'
     QQuickOpenGLUtils::resetOpenGLState();

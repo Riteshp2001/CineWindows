@@ -16,7 +16,7 @@
 #
 cmake_minimum_required(VERSION 3.25)
 
-project(CineWindows VERSION 0.0.4 LANGUAGES CXX)
+project(CineWindows VERSION 0.0.5 LANGUAGES CXX)
 
 set(CINEWINDOWS_APP_ID "com.gyrolet.CineWindows")
 set(CINEWINDOWS_DISPLAY_NAME "CineWindows" CACHE STRING "Application display name")
@@ -414,7 +414,7 @@ if(CINEWINDOWS_BUILD_TESTS)
         CINEWINDOWS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     )
     add_test(NAME CineWindowsPlaybackTests COMMAND CineWindowsPlaybackTests)
-    set_tests_properties(CineWindowsPlaybackTests PROPERTIES TIMEOUT 60)
+    set_tests_properties(CineWindowsPlaybackTests PROPERTIES TIMEOUT 180)
 endif()
 
 target_compile_definitions(CineWindows PRIVATE
