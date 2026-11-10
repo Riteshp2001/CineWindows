@@ -240,7 +240,11 @@ private Q_SLOTS:
         const QString cookiesPath = directory.filePath("cookies.txt");
         QFile cookies(cookiesPath);
         QVERIFY(cookies.open(QIODevice::WriteOnly));
-        QVERIFY(cookies.write("# Netscape HTTP Cookie File\n127.0.0.1\tFALSE\t/\tFALSE\t4102444800\tcine_preview\tallowed\n") > 0);
+        QVERIFY(cookies.write("# Netscape HTTP Cookie File\n") > 0);
+        const QList<QByteArray> cookieDomains{
+            QByteArray("127.0.0.1"), QByteArray("127.0.0.1:") + QByteArray::number(server.serverPort())};
+        for (const QByteArray& domain : cookieDomains)
+            QVERIFY(cookies.write(domain + "\tFALSE\t/\tFALSE\t4102444800\tcine_preview\tallowed\n") > 0);
         cookies.close();
 
         QQuickWindow window;
